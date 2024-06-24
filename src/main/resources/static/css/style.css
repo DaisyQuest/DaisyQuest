@@ -1,0 +1,50 @@
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    color: #333;
+}
+
+input, button {
+    margin: 10px 0;
+    padding: 10px;
+    font-size: 16px;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+#playerInfo, #questList, #activeQuest {
+    margin-top: 20px;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.quest-info {
+    font-size: 0.9em;
+}
+
+.quest-info strong {
+    display: block;
+    margin-top: 10px;
+}
+
+.quest-info ul {
+    padding-left: 15px;
+}
+.smooth-progress {
+    transition: width 0.1s linear;
+}

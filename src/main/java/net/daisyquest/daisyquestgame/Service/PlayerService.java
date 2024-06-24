@@ -4,6 +4,7 @@ package net.daisyquest.daisyquestgame.Service;
 
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Repository.PlayerRepository;
+import net.daisyquest.daisyquestgame.Service.Initializer.PlayerInitializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,9 @@ public class PlayerService {
     private PlayerRepository playerRepository;
 
     public Player createPlayer(Player player) {
+
+
+        PlayerInitializer.initPlayer(player);
         return playerRepository.save(player);
     }
 

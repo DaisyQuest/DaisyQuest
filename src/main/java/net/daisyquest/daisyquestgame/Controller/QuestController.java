@@ -2,6 +2,7 @@ package net.daisyquest.daisyquestgame.Controller;
 
 
 import net.daisyquest.daisyquestgame.Model.Quest;
+import net.daisyquest.daisyquestgame.Model.QuestCompletionResult;
 import net.daisyquest.daisyquestgame.Service.QuestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +43,25 @@ public class QuestController {
     public ResponseEntity<Void> deleteQuest(@PathVariable String id) {
         questService.deleteQuest(id);
         return ResponseEntity.ok().build();
+    }
+    @PostMapping("/{questId}/start")
+    public ResponseEntity<Quest> startQuest(@PathVariable String questId, @RequestParam String playerId) {
+        Quest startedQuest = questService.startQuest(questId, playerId);
+        if (startedQuest != null) {
+            return ResponseEntity.ok(startedQuest);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/{questId}/complete")
+    public ResponseEntity<QuestCompletionResult> completeQuest(@PathVariable String questId, @RequestParam String playerId) {
+        QuestCompletionResult result = questService.completeQuest(questId, playerId);
+        if (result != null) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }
 

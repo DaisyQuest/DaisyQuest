@@ -21,12 +21,12 @@ public class CombatHandler implements ActivityHandler {
     @Override
     public void handleActivity(Player player, Activity activity) {
         // Assuming the activity.getHandlerClass() returns "PvE" or "PvP"
-        if ("PvE".equals(activity.getHandlerClass())) {
-            handlePvECombat(player, activity);
-        } else if ("PvP".equals(activity.getHandlerClass())) {
-            // For simplicity, we'll just simulate PvP combat here
-            simulatePvPCombat(player);
-        }
+//        if ("PvE".equals(activity.getHandlerClass())) {
+//            handlePvECombat(player, activity);
+//        } else if ("PvP".equals(activity.getHandlerClass())) {
+//            // For simplicity, we'll just simulate PvP combat here
+//            simulatePvPCombat(player);
+//        }
     }
 
     private void handlePvECombat(Player player, Activity activity) {

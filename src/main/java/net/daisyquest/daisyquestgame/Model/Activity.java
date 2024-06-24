@@ -13,7 +13,10 @@ public class Activity {
     @Id
     private String id;
     private String name;
+    private String description;
     private int duration;
     private Map<String, Integer> requirements;
-    private String handlerClass;
+    private int experienceReward;
+    private Map<String, Integer> attributeRewards;
+    private Map<String, Integer> itemRewards;
 }
