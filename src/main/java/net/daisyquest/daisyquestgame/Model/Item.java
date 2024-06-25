@@ -14,5 +14,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
         private String name;
         private String description;
         private Map<String, Integer> attributeModifiers;
+        private int sellPrice;
     }
 

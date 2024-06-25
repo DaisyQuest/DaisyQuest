@@ -25,6 +25,11 @@
         .quest-info ul, .activity-info ul {
             padding-left: 15px;
         }
+        .inventory-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -34,17 +39,37 @@
     </div>
 </nav>
 
-<div class="container game-container">
+<div class="container-fluid game-container">
     <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Player Info</h5>
                     <div id="playerInfo"></div>
                 </div>
             </div>
+            <div class="card">
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="inventoryTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory" type="button" role="tab" aria-controls="inventory" aria-selected="true">Inventory</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="crafting-tab" data-bs-toggle="tab" data-bs-target="#crafting" type="button" role="tab" aria-controls="crafting" aria-selected="false">Crafting</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="inventoryTabContent">
+                        <div class="tab-pane fade show active" id="inventory" role="tabpanel" aria-labelledby="inventory-tab">
+                            <div id="inventoryList"></div>
+                        </div>
+                        <div class="tab-pane fade" id="crafting" role="tabpanel" aria-labelledby="crafting-tab">
+                            <p>Crafting coming soon!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-8">
+        <div class="col-md-9">
             <ul class="nav nav-tabs" id="myTab" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="quests-tab" data-bs-toggle="tab" data-bs-target="#quests" type="button" role="tab" aria-controls="quests" aria-selected="true">Quests</button>
@@ -71,15 +96,36 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
+            <div class="card mt-3">
                 <div class="card-body">
                     <h5 class="card-title">Active Task</h5>
                     <div id="activeTask"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for sending items -->
+<div class="modal fade" id="sendItemModal" tabindex="-1" aria-labelledby="sendItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sendItemModalLabel">Send Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="sendItemForm">
+                    <div class="mb-3">
+                        <label for="recipientUsername" class="form-label">Recipient Username</label>
+                        <input type="text" class="form-control" id="recipientUsername" required>
+                    </div>
+                    <input type="hidden" id="itemIdToSend">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="sendItem()">Send</button>
             </div>
         </div>
     </div>

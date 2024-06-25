@@ -106,7 +106,7 @@ public class CombatHandler implements ActivityHandler {
 
     private void penalizePlayer(Player player) {
         // Implement penalty logic, e.g., lose some items or experience
-        if (player.getInventory().size() > 0) {
+        if (!player.getInventory().isEmpty()) {
             player.getInventory().remove(random.nextInt(player.getInventory().size()));
         }
     }

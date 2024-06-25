@@ -11,6 +11,9 @@ public class ItemService {
     @Autowired
     private ItemRepository itemRepository;
 
+    public Item getItemByName(String name) {
+        return itemRepository.findItemByName(name);
+    }
     public Item createItem(Item item) {
         return itemRepository.save(item);
     }

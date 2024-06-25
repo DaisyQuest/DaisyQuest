@@ -1,6 +1,7 @@
 package net.daisyquest.daisyquestgame.Service;
 
 
+import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Quest;
 import net.daisyquest.daisyquestgame.Model.QuestCompletionResult;
@@ -19,6 +20,8 @@ public class QuestService {
     private QuestRepository questRepository;
     @Autowired
     private PlayerService playerService;
+    @Autowired
+    private ItemService itemService;
     public Quest createQuest(Quest quest) {
         return questRepository.save(quest);
     }
@@ -75,15 +78,22 @@ public class QuestService {
             }
             result.setAttributeIncreases(attributeIncreases);
 
-            // Add rewards
+            // Add item rewards
             List<QuestCompletionResult.Reward> rewards = new ArrayList<>();
-            if(quest.getItemRewards() != null) {
+            if (quest.getItemRewards() != null) {
                 for (Map.Entry<String, Integer> entry : quest.getItemRewards().entrySet()) {
-                    QuestCompletionResult.Reward reward = new QuestCompletionResult.Reward();
-                    reward.setName(entry.getKey());
-                    reward.setAmount(entry.getValue());
-                    rewards.add(reward);
-                    // Here you would also update the player's inventory
+                    String itemName = entry.getKey();
+                    int quantity = entry.getValue();
+
+                    Item item = itemService.getItemByName(itemName.replaceAll("\"", ""));
+                    if (item != null) {
+                        playerService.addItemToInventory(player, item, quantity);
+
+                        QuestCompletionResult.Reward reward = new QuestCompletionResult.Reward();
+                        reward.setName(itemName);
+                        reward.setAmount(quantity);
+                        rewards.add(reward);
+                    }
                 }
             }
             result.setRewards(rewards);

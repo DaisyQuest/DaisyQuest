@@ -1,9 +1,11 @@
 package net.daisyquest.daisyquestgame.Service.Initializer;
 
 import net.daisyquest.daisyquestgame.Model.Attribute;
+import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Quest;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -11,6 +13,13 @@ public class PlayerInitializer {
     public static void initPlayer(Player p1){
         initializeAttributes(p1);
         initializeQuests(p1);
+        initalizeInventory(p1);
+    }
+
+    private static void initalizeInventory(Player p1) {
+        if(p1.getInventory() == null){
+            p1.setInventory(new ArrayList<Item>());
+        }
     }
 
     private static void initializeQuests(Player p1) {

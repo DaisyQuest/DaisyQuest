@@ -1,5 +1,4 @@
 let playerId;
-
 document.addEventListener('DOMContentLoaded', () => {
     playerId = localStorage.getItem('playerId');
     if (!playerId) {
@@ -7,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         updatePlayerInfo();
         updateQuestList();
+        updateActivityList();
+        updateInventory();
     }
 });
 
@@ -26,6 +27,72 @@ function updatePlayerInfo() {
             ).join('')}
                 </ul>
             `;
+        });
+}
+
+function updateInventory() {
+    fetch(`/api/players/${playerId}/inventory`)
+        .then(response => response.json())
+        .then(inventory => {
+            const inventoryList = document.getElementById('inventoryList');
+            inventoryList.innerHTML = inventory.map(item => `
+                <div class="inventory-item">
+                    <h6>${item.name}</h6>
+                    <p>${item.description}</p>
+                    <p>Sell Price: ${item.sellPrice} gold</p>
+                    <button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>
+                    <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
+                    <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
+                </div>
+            `).join('');
+        });
+}
+
+function useItem(itemId) {
+    fetch(`/api/players/${playerId}/use-item/${itemId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(result => {
+            alert(`Item used! ${result.message}`);
+            updatePlayerInfo();
+            updateInventory();
+        });
+}
+
+function dropItem(itemId) {
+    if (confirm('Are you sure you want to drop this item?')) {
+        fetch(`/api/players/${playerId}/drop-item/${itemId}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(result => {
+                alert(`Item dropped! ${result.message}`);
+                updateInventory();
+            });
+    }
+}
+
+function openSendItemModal(itemId) {
+    document.getElementById('itemIdToSend').value = itemId;
+    new bootstrap.Modal(document.getElementById('sendItemModal')).show();
+}
+
+function sendItem() {
+    const itemId = document.getElementById('itemIdToSend').value;
+    const recipientUsername = document.getElementById('recipientUsername').value;
+
+    fetch(`/api/players/${playerId}/send-item`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ itemId, recipientUsername }),
+    })
+        .then(response => response.json())
+        .then(result => {
+            alert(`Item sent! ${result.message}`);
+            updateInventory();
+            bootstrap.Modal.getInstance(document.getElementById('sendItemModal')).hide();
+        })
+        .catch(error => {
+            alert('Error sending item: ' + error.message);
         });
 }
 
@@ -140,6 +207,7 @@ function completeQuest(questId) {
             document.getElementById('activeQuest').innerHTML = '';
         });
 
+}
     function updateActivityList() {
         fetch('/api/activities')
             .then(response => response.json())
@@ -176,7 +244,7 @@ function completeQuest(questId) {
             `;
             });
     }
-}
+
     function startTaskTimer(duration, taskId, taskType) {
         let timeRemaining = duration;
         const timerElement = document.getElementById('timeRemaining');
@@ -206,4 +274,6 @@ function completeQuest(questId) {
                 updateActivityList();
                 document.getElementById('activeTask').innerHTML = '';
             });
-    }
+
+}
+
