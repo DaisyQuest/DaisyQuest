@@ -1,6 +1,8 @@
 let playerId;
 let attributes = [];
 let currentCombatId = null;
+let playerSpells = [];
+let selectedSpell = null;
 
 function startCombat() {
     console.log('Starting combat');
@@ -21,9 +23,18 @@ function startCombat() {
             updateCombatUI(combat);
             document.getElementById('combatLobby').style.display = 'none';
             document.getElementById('combatArea').style.display = 'block';
+            fetchPlayerSpells(); // Fetch player spells when combat starts
             pollCombatStatus();
         })
         .catch(error => console.error('Error starting combat:', error));
+}
+function fetchPlayerSpells() {
+    fetch(`/api/players/${playerId}/spells`)
+        .then(response => response.json())
+        .then(spells => {
+            playerSpells = spells;
+        })
+        .catch(error => console.error('Error fetching player spells:', error));
 }
 
 function pollCombatStatus() {
@@ -53,6 +64,7 @@ function pollCombatStatus() {
 }
 
 function updateCombatUI(combat) {
+    console.log(playerSpells)
     console.log('Updating combat UI:', combat);
     const combatInfo = document.getElementById('combatInfo');
     combatInfo.innerHTML = `
@@ -70,37 +82,60 @@ function updateCombatUI(combat) {
         </ul>
     `;
 
+    if (combat.spellCooldowns && combat.spellCooldowns[playerId]) {
+        console.log(combat.spellCooldowns);
+        console.log(combat.spellCooldowns[playerId]);
+        const cooldowns = combat.spellCooldowns[playerId];
+        const cooldownInfo = Object.entries(cooldowns)
+            .map(([spellId, cooldown]) => {
+                const spell = playerSpells.find(s => s.id === spellId);
+                return spell ? `${spell.name}: ${cooldown}` : null;
+            })
+            .filter(Boolean)
+            .join(', ');
+
+        combatInfo.innerHTML += `
+            <p>Spell Cooldowns: ${cooldownInfo}</p>
+        `;
+    }else{
+        console.log('goofy');
+    }
+
+
     const isPlayerTurn = combat.currentTurnPlayerId === playerId;
     const actionButtons = document.querySelectorAll('.action-button');
+    const turnStart = combat.turnStartTime;
     actionButtons.forEach(button => button.disabled = !isPlayerTurn);
+    const tTimer = document.getElementById('timerThing');
+    tTimer.innerHTML ='';
+        tTimer.innerHTML += '<p>Turn Start Time: ' + convertTimestampToReadableDate(turnStart) + '</p>'
 
     // Hide target selection if it's not the player's turn
     const targetSelection = document.getElementById('targetSelection');
     targetSelection.style.display = isPlayerTurn ? 'block' : 'none';
 }
-
+function convertTimestampToReadableDate(timestamp) {
+    var date = new Date(timestamp);
+    var formattedDate = date.toLocaleString(); // Converts to local date string
+    return formattedDate;
+}
 let selectedAction = null;
+
+
 function performAction(actionType) {
     selectedAction = actionType;
     const targetSelection = document.getElementById('targetSelection');
-    targetSelection.style.display = 'block';
+    const spellSelection = document.getElementById('spellSelection');
 
-    // Populate target selection
-    const targetSelect = document.getElementById('targetSelect');
-    targetSelect.innerHTML = '';
-    fetch(`/api/combat/${currentCombatId}`)
-        .then(response => response.json())
-        .then(combat => {
-            combat.playerIds.forEach(id => {
-                if (id !== playerId && combat.playerHealth[id] > 0) {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = id;
-                    targetSelect.appendChild(option);
-                }
-            });
-        })
-        .catch(error => console.error('Error fetching combat data:', error));
+    if (actionType === 'SPELL') {
+        spellSelection.style.display = 'block';
+        targetSelection.style.display = 'none';
+        updateSpellSelection();
+    } else {
+        spellSelection.style.display = 'none';
+        targetSelection.style.display = 'block';
+        updateTargetSelection();
+    }
 }
 
 
@@ -191,6 +226,7 @@ function updatePlayerInfo() {
                 <h6>Player: ${player.username}</h6>
                 <p>Level: ${player.level}</p>
                 <p>Total Experience: ${player.totalExperience}</p>
+                <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
                 <h6>Attributes:</h6>
                 <ul class="list-group">
                     ${Object.entries(player.attributes || {}).map(([key, value]) =>
@@ -685,17 +721,23 @@ function confirmAction() {
         return;
     }
 
+    let actionData = {
+        playerId: playerId,
+        type: selectedAction,
+        targetPlayerId: targetPlayerId,
+        actionPoints: 1
+    };
+
+    if (selectedAction === 'SPELL' && selectedSpell) {
+        actionData.spellId = selectedSpell.id;
+    }
+
     fetch(`/api/combat/${currentCombatId}/action`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            playerId: playerId,
-            type: selectedAction,
-            targetPlayerId: targetPlayerId,
-            actionPoints: 1  // Assume all actions cost 1 point for simplicity
-        })
+        body: JSON.stringify(actionData)
     })
         .then(response => response.json())
         .then(updatedCombat => {
@@ -706,8 +748,60 @@ function confirmAction() {
             }
         })
         .catch(error => console.error('Error performing action:', error));
+
+    // Reset selectedSpell after the action
+    selectedSpell = null;
 }
 
+function confirmSpellSelection() {
+    const spellId = document.getElementById('spellSelect').value;
+    selectedSpell = playerSpells.find(spell => spell.id === spellId);
+    document.getElementById('spellSelection').style.display = 'none';
+    document.getElementById('targetSelection').style.display = 'block';
+    updateTargetSelection();
+}
+
+function updateSpellSelection() {
+    const spellSelect = document.getElementById('spellSelect');
+    spellSelect.innerHTML = '';
+    playerSpells.forEach(spell => {
+        const option = document.createElement('option');
+        option.value = spell.id;
+        option.textContent = `${spell.name} (Mana: ${spell.manaCost})`;
+        spellSelect.appendChild(option);
+    });
+}
+
+function updateTargetSelection() {
+    const targetSelect = document.getElementById('targetSelect');
+
+    targetSelect.innerHTML = '';
+
+    fetch(`/api/combat/${currentCombatId}`)
+
+        .then(response => response.json())
+
+        .then(combat => {
+
+            combat.playerIds.forEach(id => {
+
+                if (id !== playerId && combat.playerHealth[id] > 0) {
+
+                    const option = document.createElement('option');
+
+                    option.value = id;
+
+                    option.textContent = id;
+
+                    targetSelect.appendChild(option);
+
+                }
+
+            });
+
+        })
+
+}
 
 
 // Periodically check for combat updates (in case it's not the player's turn)

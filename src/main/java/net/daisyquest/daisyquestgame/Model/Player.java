@@ -24,4 +24,8 @@ public class Player {
     private int totalExperience;
     private int level;
     private Map<String, Integer> currencies; // New field for currencies
+    private List<Spell> knownSpells; // New field for spells
+    private int currentMana; // New field for current mana
+    private int maxMana; // New field for maximum mana
+
 }

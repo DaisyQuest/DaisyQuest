@@ -3,6 +3,7 @@ package net.daisyquest.daisyquestgame.Controller;
 import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Shop;
+import net.daisyquest.daisyquestgame.Model.Spell;
 import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import net.daisyquest.daisyquestgame.Service.PlayerService;
 import net.daisyquest.daisyquestgame.Service.ShopService;
@@ -81,6 +82,15 @@ public class PlayerController {
         Player player = playerService.getPlayer(id);
         if (player != null) {
             return ResponseEntity.ok(player.getInventory());
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{id}/spells")
+    public ResponseEntity<List<Spell>> getSpells(@PathVariable String id) {
+        Player player = playerService.getPlayer(id);
+        if (player != null) {
+            return ResponseEntity.ok(player.getKnownSpells());
         }
         return ResponseEntity.notFound().build();
     }

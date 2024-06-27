@@ -9,12 +9,13 @@ public class Action {
     private ActionType type;
     private String targetPlayerId;
     private int actionPoints;
-
-    public Action(String playerId, ActionType type, String targetPlayerId, int actionPoints) {
+    private String spellId; // New field for spell actions
+    public Action(String playerId, ActionType type, String targetPlayerId, int actionPoints, String spellId) {
         this.playerId = playerId;
         this.type = type;
         this.targetPlayerId = targetPlayerId;
         this.actionPoints = actionPoints;
+        this.spellId = spellId; // New field for spell actions
     }
 
     public enum ActionType {

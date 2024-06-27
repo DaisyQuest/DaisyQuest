@@ -108,7 +108,7 @@ public class IntegrationTests {
     }
 
     @Test
-    public void testQuestCompletion() {
+    public void testQuestCompletion() throws UsernameAlreadyExistsException {
         // Create a player
         Player player = new Player();
         player.setUsername("questTestUser");

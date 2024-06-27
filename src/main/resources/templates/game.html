@@ -125,13 +125,18 @@
                                 <div id="combatInfo"></div>
                                 <div id="turnInfo">
                                     <p>Current Turn: <span id="currentTurn"></span></p>
-                                    <p>Time Remaining: <span id="turnTimer"></span></p>
+                                    <p id = "timerThing">Time Remaining: <span id="turnTimer"></span></p>
                                 </div>
                                 <div id="actionButtons">
                                     <button class="btn btn-secondary action-button" onclick="performAction('ATTACK')">Attack</button>
                                     <button class="btn btn-secondary action-button" onclick="performAction('SPECIAL_ATTACK')">Special Attack</button>
                                     <button class="btn btn-secondary action-button" onclick="performAction('SPELL')">Spell</button>
                                     <button class="btn btn-secondary action-button" onclick="performAction('TACTICS')">Tactics</button>
+                                </div>
+                                <div id="spellSelection" style="display: none;">
+                                    <h6>Select Spell:</h6>
+                                    <select id="spellSelect"></select>
+                                    <button class="btn btn-primary" onclick="confirmSpellSelection()">Select Spell</button>
                                 </div>
                                 <div id="targetSelection" style="display: none;">
                                     <h6>Select Target:</h6>

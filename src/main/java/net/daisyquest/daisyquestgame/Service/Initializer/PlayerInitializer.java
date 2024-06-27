@@ -12,7 +12,7 @@ import java.util.*;
 @Component
 public class PlayerInitializer {
 
-    public static void initPlayer(Player p1, List<Currency> p_cur){
+    public static void initPlayer(Player p1, List<Currency> p_cur, List<Spell> p_spells){
         if(p1 == null){
             p1 = new Player();
         }
@@ -21,6 +21,17 @@ public class PlayerInitializer {
         initializeQuests(p1);
         initalizeInventory(p1);
         initializeCurrency(p1, p_cur);
+        initalizeSpells(p1, p_spells);
+    }
+
+    private static void initalizeSpells(Player p1, List<Spell> pSpells) {
+        if(p1.getKnownSpells() == null){
+            List<Spell> spells = new ArrayList<>();
+            spells.addAll(pSpells);
+            p1.setKnownSpells(spells);
+
+        }
+
     }
 
     private static void initializeCurrency(Player p1, List<Currency> p_cur) {

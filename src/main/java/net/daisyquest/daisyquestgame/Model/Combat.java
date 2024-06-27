@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.Data;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,4 +24,6 @@ public class Combat {
     private Map<String, Integer> playerHealth;
     private Map<String, Integer> playerActionPoints;
     private Instant createdAt;
+    private Map<String, Map<String, Integer>> spellCooldowns = new HashMap<>(); // New field for tracking spell cooldowns
+
 }

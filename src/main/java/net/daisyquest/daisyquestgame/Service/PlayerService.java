@@ -21,18 +21,21 @@ public class PlayerService {
 
     @Autowired
     private CurrencyRepository currencyRepository;
+
+    @Autowired
+    private SpellService spellService;
     // Player CRUD operations
     public Player createPlayer(Player player) throws UsernameAlreadyExistsException {
         if (playerRepository.existsByUsername(player.getUsername())) {
             throw new UsernameAlreadyExistsException("Username already exists: " + player.getUsername());
         }
-        PlayerInitializer.initPlayer(player, currencyRepository.findAll());
+        PlayerInitializer.initPlayer(player, currencyRepository.findAll(), List.of(spellService.getSpell("fireball")));
         return playerRepository.save(player);
     }
 
     public Player getPlayer(String id) {
         Player p =  playerRepository.findById(id).orElse(null);
-        PlayerInitializer.initPlayer(p, currencyRepository.findAll());
+        PlayerInitializer.initPlayer(p, currencyRepository.findAll(), List.of(spellService.getSpell("fireball")));
         return p;
     }
 
