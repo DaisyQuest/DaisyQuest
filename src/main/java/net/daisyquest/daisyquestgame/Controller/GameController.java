@@ -11,6 +11,11 @@ public class GameController {
         return "index";
     }
 
+    @GetMapping("/register")
+    public String register() {
+        return "register";
+    }
+
     @GetMapping("/game")
     public String game() {
         return "game";

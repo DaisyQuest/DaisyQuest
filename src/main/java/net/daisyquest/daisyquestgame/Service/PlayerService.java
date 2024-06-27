@@ -1,11 +1,11 @@
 package net.daisyquest.daisyquestgame.Service;
 
-
-
 import net.daisyquest.daisyquestgame.Model.Attribute;
 import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
+import net.daisyquest.daisyquestgame.Repository.CurrencyRepository;
 import net.daisyquest.daisyquestgame.Repository.PlayerRepository;
+import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import net.daisyquest.daisyquestgame.Service.Initializer.PlayerInitializer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,15 +19,21 @@ public class PlayerService {
     @Autowired
     private PlayerRepository playerRepository;
 
-    public Player createPlayer(Player player) {
-
-
-        PlayerInitializer.initPlayer(player);
+    @Autowired
+    private CurrencyRepository currencyRepository;
+    // Player CRUD operations
+    public Player createPlayer(Player player) throws UsernameAlreadyExistsException {
+        if (playerRepository.existsByUsername(player.getUsername())) {
+            throw new UsernameAlreadyExistsException("Username already exists: " + player.getUsername());
+        }
+        PlayerInitializer.initPlayer(player, currencyRepository.findAll());
         return playerRepository.save(player);
     }
 
     public Player getPlayer(String id) {
-        return playerRepository.findById(id).orElse(null);
+        Player p =  playerRepository.findById(id).orElse(null);
+        PlayerInitializer.initPlayer(p, currencyRepository.findAll());
+        return p;
     }
 
     public Player getPlayerByUsername(String username) {
@@ -38,8 +44,6 @@ public class PlayerService {
         return playerRepository.findAll();
     }
 
-
-
     public void deletePlayer(String id) {
         playerRepository.deleteById(id);
     }
@@ -48,8 +52,9 @@ public class PlayerService {
         return playerRepository.save(player);
     }
 
+    // Inventory management
     public void addItemToInventory(Player player, Item item, int quantity) {
-        for(int i = 0; i < quantity; i++) {
+        for (int i = 0; i < quantity; i++) {
             player.getInventory().add(item);
         }
         updatePlayer(player);
@@ -57,84 +62,83 @@ public class PlayerService {
 
     public String useItem(String playerId, String itemId) {
         Player player = getPlayer(playerId);
-        if (player != null) {
-            Optional<Item> itemOpt = player.getInventory().stream()
-                    .filter(item -> item.getId().equals(itemId))
-                    .findFirst();
+        if (player == null) return "Player not found.";
 
-            if (itemOpt.isPresent()) {
-                Item item = itemOpt.get();
-                // Apply item effects
-                item.getAttributeModifiers().forEach((attributeName, value) -> {
-                    Attribute attribute = player.getAttributes().get(attributeName);
-                    if (attribute != null) {
-                        attribute.setLevel(attribute.getLevel() + value);
-                    }
-                });
-                player.getInventory().remove(item);
-                updatePlayer(player);
-                return "Item used successfully. Effects applied.";
-            }
-            return "Item not found in inventory.";
-        }
-        return "Player not found.";
+        Optional<Item> itemOpt = findItemInInventory(player, itemId);
+        if (itemOpt.isEmpty()) return "Item not found in inventory.";
+
+        Item item = itemOpt.get();
+        applyItemEffects(player, item);
+        player.getInventory().remove(item);
+        updatePlayer(player);
+        return "Item used successfully. Effects applied.";
     }
 
     public String dropItem(String playerId, String itemId) {
         Player player = getPlayer(playerId);
-        if (player != null) {
-            Optional<Item> itemOpt = player.getInventory().stream()
-                    .filter(item -> item.getId().equals(itemId))
-                    .findFirst();
+        if (player == null) return "Player not found.";
 
-            if (itemOpt.isPresent()) {
-                player.getInventory().remove(itemOpt.get());
-                updatePlayer(player);
-                return "Item dropped successfully.";
-            }
-            return "Item not found in inventory.";
-        }
-        return "Player not found.";
+        Optional<Item> itemOpt = findItemInInventory(player, itemId);
+        if (itemOpt.isEmpty()) return "Item not found in inventory.";
+
+        player.getInventory().remove(itemOpt.get());
+        updatePlayer(player);
+        return "Item dropped successfully.";
     }
 
     public String sendItem(String senderId, String itemId, String recipientUsername) {
         Player sender = getPlayer(senderId);
-        Player recipient = playerRepository.findByUsername(recipientUsername);
+        Player recipient = getPlayerByUsername(recipientUsername);
 
-        if (sender == null) {
-            return "Sender not found.";
-        }
-        if (recipient == null) {
-            return "Recipient not found.";
-        }
+        if (sender == null) return "Sender not found.";
+        if (recipient == null) return "Recipient not found.";
 
-        Optional<Item> itemOpt = sender.getInventory().stream()
-                .filter(item -> item.getId().equals(itemId))
-                .findFirst();
+        Optional<Item> itemOpt = findItemInInventory(sender, itemId);
+        if (itemOpt.isEmpty()) return "Item not found in sender's inventory.";
 
-        if (itemOpt.isPresent()) {
-            Item item = itemOpt.get();
-            sender.getInventory().remove(item);
-            recipient.getInventory().add(item);
-            updatePlayer(sender);
-            updatePlayer(recipient);
-            return "Item sent successfully.";
-        }
-        return "Item not found in sender's inventory.";
+        Item item = itemOpt.get();
+        sender.getInventory().remove(item);
+        recipient.getInventory().add(item);
+        updatePlayer(sender);
+        updatePlayer(recipient);
+        return "Item sent successfully.";
     }
 
     public List<Item> getInventory(String playerId) {
         Player player = getPlayer(playerId);
-        if (player != null) {
-            return player.getInventory();
-        }
-        return List.of(); // Return empty list if player not found
+        return player != null ? player.getInventory() : List.of();
     }
 
+    // Experience and leveling
     public void addExperience(Player player, int amount) {
         player.setTotalExperience(player.getTotalExperience() + amount);
         checkLevelUp(player);
         updatePlayer(player);
+    }
+
+    public void addAttributeExperience(Player player, String attributeName, int amount) {
+        Attribute attribute = player.getAttributes().get(attributeName.toLowerCase());
+        if (attribute != null) {
+            attribute.setExperience(attribute.getExperience() + amount);
+            checkAttributeLevelUp(attribute);
+            updatePlayer(player);
+        }
+    }
+
+    // Private helper methods
+    private Optional<Item> findItemInInventory(Player player, String itemId) {
+        return player.getInventory().stream()
+                .filter(item -> item.getId().equals(itemId))
+                .findFirst();
+    }
+
+    private void applyItemEffects(Player player, Item item) {
+        item.getAttributeModifiers().forEach((attributeName, value) -> {
+            Attribute attribute = player.getAttributes().get(attributeName);
+            if (attribute != null) {
+                attribute.setLevel(attribute.getLevel() + value);
+            }
+        });
     }
 
     private void checkLevelUp(Player player) {
@@ -143,22 +147,7 @@ public class PlayerService {
 
         while (player.getTotalExperience() >= xpForNextLevel) {
             player.setLevel(player.getLevel() + 1);
-            // You could add more effects here, like increasing base stats
             xpForNextLevel = calculateXPForLevel(player.getLevel() + 1);
-        }
-    }
-
-    private int calculateXPForLevel(int level) {
-        // This is a simple XP curve. Adjust as needed for your game balance.
-        return 100 * (level - 1) * (level - 1);
-    }
-
-    public void addAttributeExperience(Player player, String attributeName, int amount) {
-        Attribute attribute = player.getAttributes().get(attributeName);
-        if (attribute != null) {
-            attribute.setExperience(attribute.getExperience() + amount);
-            checkAttributeLevelUp(attribute);
-            updatePlayer(player);
         }
     }
 
@@ -173,8 +162,11 @@ public class PlayerService {
         }
     }
 
+    private int calculateXPForLevel(int level) {
+        return 100 * (level - 1) * (level - 1);
+    }
+
     private int calculateAttributeXPForLevel(int level) {
-        // This is a simple XP curve for attributes. Adjust as needed.
         return 50 * level * level;
     }
 }

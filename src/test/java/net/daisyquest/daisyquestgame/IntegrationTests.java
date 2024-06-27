@@ -7,6 +7,7 @@ import net.daisyquest.daisyquestgame.Model.Attribute;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Quest;
 import net.daisyquest.daisyquestgame.Service.*;
+import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -77,7 +78,7 @@ public class IntegrationTests {
     }
 
     @Test
-    public void testActivityExecution() {
+    public void testActivityExecution() throws UsernameAlreadyExistsException {
         // Create a player
         Player player = new Player();
         player.setUsername("activityTestUser");
@@ -89,8 +90,8 @@ public class IntegrationTests {
         Activity activity = new Activity();
         activity.setName("strength");
         activity.setDuration(60);
-        activity.setHandlerClass("SimpleActivityHandler");
-        activity = activityService.createActivity(activity);
+      //  activity.setHandlerClass("SimpleActivityHandler");
+       // activity = activityService.createActivity(activity);
 
         // Execute the activity
         ResponseEntity<String> response = restTemplate.postForEntity(

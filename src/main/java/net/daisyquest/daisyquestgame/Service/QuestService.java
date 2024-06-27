@@ -71,9 +71,9 @@ public class QuestService {
             for (Map.Entry<String, Integer> entry : quest.getAttributeRewards().entrySet()) {
                 String attribute = entry.getKey();
                 int increase = entry.getValue();
-                player.getAttributes().get(attribute).setExperience(
-                        player.getAttributes().get(attribute).getExperience() + increase
-                );
+
+                //
+                playerService.addAttributeExperience(player,  player.getAttributes().get(attribute).getName(), increase);
                 attributeIncreases.put(attribute, increase);
             }
             result.setAttributeIncreases(attributeIncreases);

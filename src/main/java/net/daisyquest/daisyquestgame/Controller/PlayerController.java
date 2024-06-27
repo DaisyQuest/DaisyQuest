@@ -2,13 +2,18 @@ package net.daisyquest.daisyquestgame.Controller;
 
 import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
+import net.daisyquest.daisyquestgame.Model.Shop;
+import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import net.daisyquest.daisyquestgame.Service.PlayerService;
+import net.daisyquest.daisyquestgame.Service.ShopService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/players")
@@ -17,9 +22,36 @@ public class PlayerController {
     @Autowired
     private PlayerService playerService;
 
+    @Autowired
+    private ShopService shopService;
+    @PostMapping("/register")
+    public ResponseEntity<?> registerPlayer(@RequestBody Player player) {
+        try {
+            Player newPlayer = playerService.createPlayer(player);
+            return ResponseEntity.ok(newPlayer);
+        } catch (UsernameAlreadyExistsException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> loginPlayer(@RequestBody Player player) {
+        Player existingPlayer = playerService.getPlayerByUsername(player.getUsername());
+        if (existingPlayer != null) {
+            return ResponseEntity.ok(existingPlayer);
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username");
+        }
+    }
+
     @PostMapping
-    public ResponseEntity<Player> createPlayer(@RequestBody Player player) {
-        return ResponseEntity.ok(playerService.createPlayer(player));
+    public ResponseEntity<?> createPlayer(@RequestBody Player player) {
+        try {
+            Player newPlayer = playerService.createPlayer(player);
+            return ResponseEntity.ok(newPlayer);
+        } catch (UsernameAlreadyExistsException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
@@ -72,4 +104,38 @@ public class PlayerController {
         String result = playerService.sendItem(id, itemId, recipientUsername);
         return ResponseEntity.ok(Map.of("message", result));
     }
+
+    @GetMapping("/{id}/attributes")
+    public ResponseEntity<Set<String>> getPlayerAttributes(@PathVariable String id) {
+        Player player = playerService.getPlayer(id);
+        if (player != null) {
+            return ResponseEntity.ok(player.getAttributes().keySet());
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{id}/shop")
+    public ResponseEntity<Shop> getPlayerShop(@PathVariable String id) {
+        Shop shop = shopService.getPlayerShop(id);
+        return ResponseEntity.ok(shop);
+    }
+
+    @PostMapping("/{id}/shop/list-item")
+    public ResponseEntity<Map<String, String>> listItemForSale(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String itemId = (String) body.get("itemId");
+        int price = Integer.parseInt(body.get("price").toString()); // Parse the price as an integer
+        String currencyId = (String) body.get("currencyId");
+        Integer quantity = body.get("quantity") != null ? Integer.parseInt(body.get("quantity").toString()) : null;
+
+        String result = shopService.listItemForSale(id, itemId, price, currencyId, quantity);
+        return ResponseEntity.ok(Map.of("message", result));
+    }
+
+    @PostMapping("/{id}/shop/remove-item/{shopItemId}")
+    public ResponseEntity<Map<String, String>> removeShopItem(@PathVariable String id, @PathVariable String shopItemId) {
+        String result = shopService.removeShopItem(id, shopItemId);
+        return ResponseEntity.ok(Map.of("message", result));
+    }
+
+
 }

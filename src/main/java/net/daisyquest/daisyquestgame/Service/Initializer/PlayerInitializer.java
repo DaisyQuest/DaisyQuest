@@ -1,19 +1,35 @@
 package net.daisyquest.daisyquestgame.Service.Initializer;
 
-import net.daisyquest.daisyquestgame.Model.Attribute;
-import net.daisyquest.daisyquestgame.Model.Item;
-import net.daisyquest.daisyquestgame.Model.Player;
-import net.daisyquest.daisyquestgame.Model.Quest;
+import net.daisyquest.daisyquestgame.Model.*;
+import net.daisyquest.daisyquestgame.Model.Currency;
+import net.daisyquest.daisyquestgame.Service.CurrencyService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
+
+@Component
 public class PlayerInitializer {
-    public static void initPlayer(Player p1){
+
+    public static void initPlayer(Player p1, List<Currency> p_cur){
         initializeAttributes(p1);
         initializeQuests(p1);
         initalizeInventory(p1);
+        initializeCurrency(p1, p_cur);
+    }
+
+    private static void initializeCurrency(Player p1, List<Currency> p_cur) {
+        if(p1.getCurrencies() == null){
+            Map<String, Integer> newMap = new HashMap<>();
+            List<Currency> currencyList = p_cur;
+            currencyList.forEach(o-> {
+                if(!newMap.containsKey(o.getName())) {
+                    newMap.put(o.getName(), 100);
+                }
+            });
+            p1.setCurrencies(newMap);
+        }
     }
 
     private static void initalizeInventory(Player p1) {
@@ -35,7 +51,11 @@ public class PlayerInitializer {
         Attribute hp = new Attribute("Hitpoints", 10, 1000);
         Attribute combat = new Attribute("Combat", 1, 1);
 
-        p1.getAttributes().put("hitpoints", hp);
-        p1.getAttributes().put("combat", combat);
+        if(!p1.getAttributes().containsKey("hitpoints")) {
+            p1.getAttributes().put("hitpoints", hp);
+        }
+        if(!p1.getAttributes().containsKey("combat")) {
+            p1.getAttributes().put("combat", combat);
+        }
     }
 }

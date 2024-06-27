@@ -1,6 +1,6 @@
-function login() {
+function register() {
     const username = document.getElementById('username').value;
-    fetch('/api/players/login', {
+    fetch('/api/players/register', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -14,11 +14,11 @@ function login() {
             return response.json();
         })
         .then(data => {
-            localStorage.setItem('playerId', data.id);
-            window.location.href = '/game';
+            alert('Registration successful! Please log in.');
+            window.location.href = '/';
         })
         .catch((error) => {
             console.error('Error:', error);
-            alert('Failed to log in: ' + error.message);
+            alert('Failed to register: ' + error.message);
         });
 }
