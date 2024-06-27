@@ -10,10 +10,14 @@ public class Action {
     private String targetPlayerId;
     private int actionPoints;
 
+    public Action(String playerId, ActionType type, String targetPlayerId, int actionPoints) {
+        this.playerId = playerId;
+        this.type = type;
+        this.targetPlayerId = targetPlayerId;
+        this.actionPoints = actionPoints;
+    }
+
     public enum ActionType {
-        ATTACK,
-        SPECIAL_ATTACK,
-        SPELL,
-        TACTICS
+        ATTACK, SPECIAL_ATTACK, SPELL, TACTICS
     }
 }

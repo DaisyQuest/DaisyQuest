@@ -13,6 +13,10 @@ import java.util.*;
 public class PlayerInitializer {
 
     public static void initPlayer(Player p1, List<Currency> p_cur){
+        if(p1 == null){
+            p1 = new Player();
+        }
+
         initializeAttributes(p1);
         initializeQuests(p1);
         initalizeInventory(p1);

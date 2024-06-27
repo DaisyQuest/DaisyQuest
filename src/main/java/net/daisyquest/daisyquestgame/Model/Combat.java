@@ -4,6 +4,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.Data;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -13,13 +14,13 @@ public class Combat {
     @Id
     private String id;
     private List<String> playerIds;
-    private Map<String, String> playerTeams; // playerId -> teamId
+    private Map<String, String> playerTeams;
     private String currentTurnPlayerId;
     private int turnNumber;
-    private boolean isActive;
+    private boolean active;
     private long turnStartTime;
     private int turnDurationSeconds;
-    private Map<String, Integer> playerActionPoints;
     private Map<String, Integer> playerHealth;
+    private Map<String, Integer> playerActionPoints;
+    private Instant createdAt;
 }
-
