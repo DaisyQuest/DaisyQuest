@@ -22,6 +22,13 @@ public class PlayerInitializer {
         initalizeInventory(p1);
         initializeCurrency(p1, p_cur);
         initalizeSpells(p1, p_spells);
+        initializeSocial(p1);
+    }
+
+    private static void initializeSocial(Player p1) {
+        if(p1.getChatRoomIds() == null){
+            p1.setChatRoomIds(new ArrayList<>());
+        }
     }
 
     private static void initalizeSpells(Player p1, List<Spell> pSpells) {

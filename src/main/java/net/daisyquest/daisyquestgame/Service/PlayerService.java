@@ -35,7 +35,7 @@ public class PlayerService {
 
     public Player getPlayer(String id) {
         Player p =  playerRepository.findById(id).orElse(null);
-        PlayerInitializer.initPlayer(p, currencyRepository.findAll(), List.of(spellService.getSpell("fireball")));
+        PlayerInitializer.initPlayer(p, currencyRepository.findAll(), List.of(spellService.getSpell("fireball"), spellService.getSpell("iceball"), spellService.getSpell("thunder")));
         return p;
     }
 

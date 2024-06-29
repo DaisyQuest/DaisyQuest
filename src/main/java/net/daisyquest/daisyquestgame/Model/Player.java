@@ -17,6 +17,7 @@ public class Player {
     @Id
     private String id;
     private String username;
+    private String emailAddress;
     private Map<String, Attribute> attributes;
     private List<Item> inventory;
     private Set<String> completedQuests;
@@ -28,4 +29,7 @@ public class Player {
     private int currentMana; // New field for current mana
     private int maxMana; // New field for maximum mana
 
+    //chat
+    private List<String> chatRoomIds;
+    private int unreadMessages;
 }

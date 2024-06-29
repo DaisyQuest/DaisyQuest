@@ -26,7 +26,20 @@ button {
 button:hover {
     background-color: #45a049;
 }
-
+#chatMessages {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+.chat-input {
+    display: flex;
+}
+.chat-input input {
+    flex-grow: 1;
+    margin-right: 10px;
+}
 #playerInfo, #questList, #activeQuest {
     margin-top: 20px;
     border: 1px solid #ddd;

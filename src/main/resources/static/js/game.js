@@ -1,20 +1,50 @@
+// Global variables
 let playerId;
 let attributes = [];
 let currentCombatId = null;
 let playerSpells = [];
 let selectedSpell = null;
+let selectedAction = null;
 
+// Event Listeners
+document.addEventListener('DOMContentLoaded', initializeGame);
+document.getElementById('startCombatBtn').addEventListener('click', startCombat);
+document.getElementById('spellSelect').addEventListener('change', handleSpellSelection);
+
+// Initialization
+function initializeGame() {
+    playerId = localStorage.getItem('playerId');
+    if (!playerId) {
+        window.location.href = '/';
+    } else {
+        updatePlayerInfo();
+        fetchAttributes().then(() => {
+            updateQuestList();
+            updateActivityList();
+            updateShopList();
+            updatePlayerShop();
+        });
+        updateInventory();
+    }
+}
+
+function fetchAttributes() {
+    return fetch(`/api/players/${playerId}/attributes`)
+        .then(response => response.json())
+        .then(data => {
+            attributes = data;
+            createAttributeTabs('quest');
+            createAttributeTabs('activity');
+        });
+}
+
+// Combat Functions
 function startCombat() {
     console.log('Starting combat');
     fetch('/api/combat/start', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            playerIds: [playerId, 'AI1', 'AI2'],
-            playerTeams: {}
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerIds: [playerId, 'AI1', 'AI2'], playerTeams: {} })
     })
         .then(response => response.json())
         .then(combat => {
@@ -23,11 +53,12 @@ function startCombat() {
             updateCombatUI(combat);
             document.getElementById('combatLobby').style.display = 'none';
             document.getElementById('combatArea').style.display = 'block';
-            fetchPlayerSpells(); // Fetch player spells when combat starts
+            fetchPlayerSpells();
             pollCombatStatus();
         })
         .catch(error => console.error('Error starting combat:', error));
 }
+
 function fetchPlayerSpells() {
     fetch(`/api/players/${playerId}/spells`)
         .then(response => response.json())
@@ -48,7 +79,6 @@ function pollCombatStatus() {
         .then(response => response.json())
         .then(combat => {
             console.log('Received combat update:', combat);
-            console.log('Received combat update:', combat.active);
             if (combat.active) {
                 updateCombatUI(combat);
                 setTimeout(pollCombatStatus, 2000);
@@ -59,13 +89,19 @@ function pollCombatStatus() {
         })
         .catch(error => {
             console.error('Error polling combat status:', error);
-            setTimeout(pollCombatStatus, 2000);  // Continue polling even if there's an error
+            setTimeout(pollCombatStatus, 2000);
         });
 }
 
 function updateCombatUI(combat) {
-    console.log(playerSpells)
     console.log('Updating combat UI:', combat);
+    updateCombatInfo(combat);
+    updateSpellCooldowns(combat);
+    updateActionButtons(combat);
+    updateSelectionVisibility(combat);
+}
+
+function updateCombatInfo(combat) {
     const combatInfo = document.getElementById('combatInfo');
     combatInfo.innerHTML = `
         <p>Combat ID: ${combat.id}</p>
@@ -81,10 +117,10 @@ function updateCombatUI(combat) {
             ${Object.entries(combat.playerActionPoints).map(([id, ap]) => `<li>${id}: ${ap}</li>`).join('')}
         </ul>
     `;
+}
 
+function updateSpellCooldowns(combat) {
     if (combat.spellCooldowns && combat.spellCooldowns[playerId]) {
-        console.log(combat.spellCooldowns);
-        console.log(combat.spellCooldowns[playerId]);
         const cooldowns = combat.spellCooldowns[playerId];
         const cooldownInfo = Object.entries(cooldowns)
             .map(([spellId, cooldown]) => {
@@ -94,53 +130,142 @@ function updateCombatUI(combat) {
             .filter(Boolean)
             .join(', ');
 
-        combatInfo.innerHTML += `
+        document.getElementById('combatInfo').innerHTML += `
             <p>Spell Cooldowns: ${cooldownInfo}</p>
-        `;
-    }else{
-        console.log('goofy');
+       `;
     }
+}
 
-
+function updateActionButtons(combat) {
     const isPlayerTurn = combat.currentTurnPlayerId === playerId;
     const actionButtons = document.querySelectorAll('.action-button');
-    const turnStart = combat.turnStartTime;
     actionButtons.forEach(button => button.disabled = !isPlayerTurn);
-    const tTimer = document.getElementById('timerThing');
-    tTimer.innerHTML ='';
-        tTimer.innerHTML += '<p>Turn Start Time: ' + convertTimestampToReadableDate(turnStart) + '</p>'
+    document.getElementById('actionButtons').style.display = isPlayerTurn ? 'block' : 'none';
+}
 
-    // Hide target selection if it's not the player's turn
+function updateSelectionVisibility(combat) {
+    const isPlayerTurn = combat.currentTurnPlayerId === playerId;
+    const spellSelection = document.getElementById('spellSelection');
     const targetSelection = document.getElementById('targetSelection');
-    targetSelection.style.display = isPlayerTurn ? 'block' : 'none';
+    if (!isPlayerTurn) {
+        spellSelection.style.display = 'none';
+        targetSelection.style.display = 'none';
+    } else {
+        targetSelection.style.display = 'block';
+    }
 }
-function convertTimestampToReadableDate(timestamp) {
-    var date = new Date(timestamp);
-    var formattedDate = date.toLocaleString(); // Converts to local date string
-    return formattedDate;
-}
-let selectedAction = null;
-
 
 function performAction(actionType) {
     selectedAction = actionType;
-    const targetSelection = document.getElementById('targetSelection');
     const spellSelection = document.getElementById('spellSelection');
+    const targetSelection = document.getElementById('targetSelection');
+
+    spellSelection.style.display = 'none';
+    targetSelection.style.display = 'none';
 
     if (actionType === 'SPELL') {
         spellSelection.style.display = 'block';
-        targetSelection.style.display = 'none';
         updateSpellSelection();
+        updateSpellInfo();
     } else {
-        spellSelection.style.display = 'none';
-        targetSelection.style.display = 'block';
         updateTargetSelection();
+        targetSelection.style.display = 'block';
     }
 }
 
+function handleSpellSelection() {
+    const spellId = document.getElementById('spellSelect').value;
+    selectedSpell = playerSpells.find(spell => spell.id === spellId);
+    updateSpellInfo();
+    document.getElementById('targetSelection').style.display = 'block';
+    updateTargetSelection();
+}
+
+function updateSpellSelection() {
+    const spellSelect = document.getElementById('spellSelect');
+    spellSelect.innerHTML = '';
+    playerSpells.forEach(spell => {
+        const option = document.createElement('option');
+        option.value = spell.id;
+        option.textContent = spell.name;
+        spellSelect.appendChild(option);
+    });
+    updateSpellInfo();
+}
+
+function updateSpellInfo() {
+    const spellId = document.getElementById('spellSelect').value;
+    selectedSpell = playerSpells.find(spell => spell.id === spellId);
+
+    if (selectedSpell) {
+        document.getElementById('spellInfoName').textContent = selectedSpell.name;
+        document.getElementById('spellInfoDescription').textContent = selectedSpell.description;
+        document.getElementById('spellInfoManaCost').textContent = `Mana Cost: ${selectedSpell.manaCost}`;
+        document.getElementById('spellInfoCooldown').textContent = `Cooldown: ${selectedSpell.cooldown} turns`;
+    }
+}
+
+function updateTargetSelection() {
+    const targetSelect = document.getElementById('targetSelect');
+    targetSelect.innerHTML = '';
+
+    fetch(`/api/combat/${currentCombatId}`)
+        .then(response => response.json())
+        .then(combat => {
+            combat.playerIds.forEach(id => {
+                if (id !== playerId && combat.playerHealth[id] > 0) {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = id;
+                    targetSelect.appendChild(option);
+                }
+            });
+        })
+        .catch(error => console.error('Error updating target selection:', error));
+}
+
+function confirmAction() {
+    const targetPlayerId = document.getElementById('targetSelect').value;
+    if (!targetPlayerId) {
+        alert('Please select a target.');
+        return;
+    }
+
+    let actionData = {
+        playerId: playerId,
+        type: selectedAction,
+        targetPlayerId: targetPlayerId,
+        actionPoints: 1
+    };
+
+    if (selectedAction === 'SPELL') {
+        if (!selectedSpell) {
+            alert('Please select a spell.');
+            return;
+        }
+        actionData.spellId = selectedSpell.id;
+    }
+
+    fetch(`/api/combat/${currentCombatId}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(actionData)
+        })
+        .then(response => response.json())
+        .then(updatedCombat => {
+            updateCombatUI(updatedCombat);
+            document.getElementById('spellSelection').style.display = 'none';
+            document.getElementById('targetSelection').style.display = 'none';
+            if (!updatedCombat.active) {
+                showCombatResults(updatedCombat);
+            }
+        })
+        .catch(error => console.error('Error performing action:', error));
+
+    selectedSpell = null;
+}
 
 function showCombatResults(combat) {
-    console.log('Showing combat results:', combat);
     document.getElementById('combatArea').style.display = 'none';
     document.getElementById('combatResults').style.display = 'block';
     const resultsDiv = document.getElementById('combatResults');
@@ -149,49 +274,107 @@ function showCombatResults(combat) {
         <p>Winner: ${determineWinner(combat)}</p>
         <p>Final Health:</p>
         <ul>
-            ${Object.entries(combat.playerHealth).map(([id, health]) => `<li>${id}: ${health}</li>`).join('')}
+            ${Object.entries(combat.playerHealth).map(([id, health]) =>` <li>${id}: ${health}</li>`).join('')
+}
         </ul>
-        <button onclick="returnToLobby()">Return to Lobby</button>
-    `;
-}
-
-function determineWinner(combat) {
-    return Object.entries(combat.playerHealth)
-        .find(([id, health]) => health > 0)[0];
-}
-
-function returnToLobby() {
-    currentCombatId = null;
-    document.getElementById('combatResults').style.display = 'none';
-    document.getElementById('combatLobby').style.display = 'block';
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    playerId = localStorage.getItem('playerId');
-    if (!playerId) {
-        window.location.href = '/';
-    } else {
-        updatePlayerInfo();
-        fetchAttributes().then(() => {
-            updateQuestList();
-            updateActivityList();
-            updateShopList();
-            updatePlayerShop();
-        });
-        updateInventory();
+        <button onclick="returnToLobby()">Return to Lobby</button> 
+        `
     }
-});
 
-document.getElementById('startCombatBtn').addEventListener('click', startCombat);
+    function determineWinner(combat) {
+    return Object.entries(combat.playerHealth)
+    .find(([id, health]) => health > 0)[0];
+    }
 
-function fetchAttributes() {
-    return fetch(`/api/players/${playerId}/attributes`)
-        .then(response => response.json())
-        .then(data => {
-            attributes = data;
-            createAttributeTabs('quest');
-            createAttributeTabs('activity');
-        });
+    function returnToLobby() {
+        currentCombatId = null;
+        document.getElementById('combatResults').style.display = 'none';
+        document.getElementById('combatLobby').style.display = 'block';
+    }
+
+    function endCombat() {
+        currentCombatId = null;
+        document.getElementById('combatResults').style.display = 'none';
+        document.getElementById('combatArea').style.display = 'none';
+        document.getElementById('combatLobby').style.display = 'block';
+        updatePlayerInfo();
+    }
+
+// Player Info and Inventory Functions
+    function updatePlayerInfo() {
+        fetch(`/api/players/${playerId}`)
+            .then(response => response.json())
+            .then(player => {
+                const playerInfo = document.getElementById('playerInfo');
+                playerInfo.innerHTML = `
+                <h6>Player: ${player.username}</h6>
+                <p>Level: ${player.level}</p>
+                <p>Total Experience: ${player.totalExperience}</p>
+                <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
+                <h6>Attributes:</h6>
+                <ul class="list-group">
+                    ${Object.entries(player.attributes || {}).map(([key, value]) =>
+                    `<li class="list-group-item">${key}: Level ${value.level} (XP: ${value.experience})</li>`
+                ).join('')}
+                </ul>
+                <h6>Currencies:</h6>
+                <ul class="list-group">
+                    ${Object.entries(player.currencies || {}).map(([key, value]) =>
+                    `<li class="list-group-item">${key}: ${value}</li>`
+                ).join('')}
+                </ul>
+            `;
+            });
+    }
+
+    function updateInventory() {
+        fetch(`/api/players/${playerId}/inventory`)
+            .then(response => response.json())
+            .then(inventory => {
+                const inventoryList = document.getElementById('inventoryList');
+                inventoryList.innerHTML = inventory.map(item => `
+                <div class="inventory-item">
+                    <h6>${item.name}</h6>
+                    <p>${item.description}</p>
+                    <p>Sell Price: ${item.sellPrice} gold</p>
+                    <button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>
+                    <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
+                    <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
+                    <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
+                </div>
+            `).join('');
+            });
+    }
+
+// Quest and Activity Functions
+    function updateQuestList() {
+        fetch('/api/quests')
+            .then(response => response.json())
+            .then(quests => {
+                attributes.forEach(attr => {
+                    const questList = document.getElementById(`quest-${attr}`);
+                    const filteredQuests = quests.filter(quest => quest.requirements && quest.requirements[attr]);
+                    questList.innerHTML = createTaskList(filteredQuests, 'quest');
+                });
+            });
+    }
+
+    function updateActivityList() {
+        fetch('/api/activities')
+            .then(response => response.json())
+            .then(activities => {
+                attributes.forEach(attr => {
+                    const activityList = document.getElementById(`activity-${attr}`);
+                    const filteredActivities = activities.filter(activity => activity.requirements && activity.requirements[attr]);
+                    activityList.innerHTML = createTaskList(filteredActivities, 'activity');
+                });
+            });
+    }
+
+function convertTimestampToReadableDate(timestamp) {
+    var date = new Date(timestamp);
+    var formattedDate = date.toLocaleString();
+    return formattedDate;
 }
 
 function createAttributeTabs(taskType) {
@@ -215,74 +398,6 @@ function createAttributeTabs(taskType) {
         content.setAttribute('aria-labelledby', `${taskType}-${attr}-tab`);
         tabContent.appendChild(content);
     });
-}
-
-function updatePlayerInfo() {
-    fetch(`/api/players/${playerId}`)
-        .then(response => response.json())
-        .then(player => {
-            const playerInfo = document.getElementById('playerInfo');
-            playerInfo.innerHTML = `
-                <h6>Player: ${player.username}</h6>
-                <p>Level: ${player.level}</p>
-                <p>Total Experience: ${player.totalExperience}</p>
-                <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
-                <h6>Attributes:</h6>
-                <ul class="list-group">
-                    ${Object.entries(player.attributes || {}).map(([key, value]) =>
-                `<li class="list-group-item">${key}: Level ${value.level} (XP: ${value.experience})</li>`
-            ).join('')}
-                </ul>
-                <h6>Currencies:</h6>
-                <ul class="list-group">
-                    ${Object.entries(player.currencies || {}).map(([key, value]) =>
-                `<li class="list-group-item">${key}: ${value}</li>`
-            ).join('')}
-                </ul>
-            `;
-        });
-}
-
-function updateInventory() {
-    fetch(`/api/players/${playerId}/inventory`)
-        .then(response => response.json())
-        .then(inventory => {
-            const inventoryList = document.getElementById('inventoryList');
-            inventoryList.innerHTML = inventory.map(item => `
-                <div class="inventory-item">
-                    <h6>${item.name}</h6>
-                    <p>${item.description}</p>
-                    <p>Sell Price: ${item.sellPrice} gold</p>
-                    <button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>
-                    <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
-                    <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
-                    <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
-                </div>
-            `).join('');
-        });
-}
-
-function updateQuestList() {
-    fetch('/api/quests')
-        .then(response => response.json())
-        .then(quests => {
-            attributes.forEach(attr => {
-                const questList = document.getElementById(`quest-${attr}`);
-                const filteredQuests = quests.filter(quest => quest.requirements && quest.requirements[attr]);
-                questList.innerHTML = createTaskList(filteredQuests)});
-        });
-}
-
-function updateActivityList() {
-    fetch('/api/activities')
-        .then(response => response.json())
-        .then(activities => {
-            attributes.forEach(attr => {
-                const activityList = document.getElementById(`activity-${attr}`);
-                const filteredActivities = activities.filter(activity => activity.requirements && activity.requirements[attr]);
-                activityList.innerHTML = createTaskList(filteredActivities, 'activity');
-            });
-        });
 }
 
 function createTaskList(tasks, taskType) {
@@ -319,6 +434,7 @@ function createTaskList(tasks, taskType) {
     `;
 }
 
+// Quest and Activity Functions
 function startQuest(questId) {
     fetch(`/api/quests/${questId}/start?playerId=${playerId}`, { method: 'POST' })
         .then(response => response.json())
@@ -332,10 +448,8 @@ function startQuest(questId) {
                     <div id="questProgress" class="progress-bar smooth-progress" role="progressbar" style="width: 0%"></div>
                 </div>
             `;
-            startQuestTimer(quest.duration, questId);
-        });
+            startQuestTimer(quest.duration, questId)});
 }
-
 function startActivity(activityId) {
     fetch(`/api/activities/${activityId}/start?playerId=${playerId}`, { method: 'POST' })
         .then(response => response.json())
@@ -567,138 +681,7 @@ function removeShopItem(shopItemId) {
     }
 }
 
-function updateQuestList() {
-    fetch('/api/quests')
-        .then(response => response.json())
-        .then(quests => {
-            attributes.forEach(attr => {
-                const questList = document.getElementById(`quest-${attr}`);
-                const filteredQuests = quests.filter(quest => quest.requirements && quest.requirements[attr]);
-                questList.innerHTML = createTaskList(filteredQuests, 'quest');
-            });
-        });
-}
-
-function updateActivityList() {
-    fetch('/api/activities')
-        .then(response => response.json())
-        .then(activities => {
-            attributes.forEach(attr => {
-                const activityList = document.getElementById(`activity-${attr}`);
-                const filteredActivities = activities.filter(activity => activity.requirements && activity.requirements[attr]);
-                activityList.innerHTML = createTaskList(filteredActivities, 'activity');
-            });
-        });
-}
-
-function createTaskList(tasks, taskType) {
-    return `
-        <ul class="list-group">
-            ${tasks.map(task => `
-                <li class="list-group-item">
-                    <h6>${task.name}</h6>
-                    <p>${task.description}</p>
-                    <div class="task-info">
-                        <strong>Rewards:</strong>
-                        <ul>
-                            <li>Experience: ${task.experienceReward}</li>
-                            ${Object.entries(task.attributeRewards || {}).map(([attr, value]) =>
-        `<li>${attr}: +${value}</li>`
-    ).join('')}
-                            ${Object.entries(task.itemRewards || {}).map(([item, quantity]) =>
-        `<li>${item}: ${quantity}</li>`
-    ).join('')}
-                        </ul>
-                        <strong>Requirements:</strong>
-                        <ul>
-                            ${Object.entries(task.requirements || {}).map(([attr, value]) =>
-        `<li>${attr}: ${value}</li>`
-    ).join('')}
-                        </ul>
-                    </div>
-                    <button class="btn btn-primary btn-sm mt-2" onclick="start${taskType === 'quest' ? 'Quest' : 'Activity'}('${task.id}')">
-                        Start ${taskType === 'quest' ? 'Quest' : 'Activity'}
-                    </button>
-                </li>
-            `).join('')}
-        </ul>
-    `;
-}
-
-
-function startQuestTimer(duration, questId) {
-    const startTime = Date.now();
-    const endTime = startTime + duration * 1000;
-    const timerElement = document.getElementById('timeRemaining');
-    const progressBar = document.getElementById('questProgress');
-
-    progressBar.style.transition = 'width 0.1s linear';
-
-    function updateTimer() {
-        const currentTime = Date.now();
-        const timeRemaining = Math.max(0, endTime - currentTime);
-        const progress = 1 - (timeRemaining / (duration * 1000));
-
-        timerElement.textContent = (timeRemaining / 1000).toFixed(1);
-        progressBar.style.width = `${progress * 100}%`;
-
-        if (timeRemaining > 0) {
-            requestAnimationFrame(updateTimer);
-        } else {
-            completeQuest(questId);
-        }
-    }
-
-    requestAnimationFrame(updateTimer);
-}
-
-function completeQuest(questId) {
-    fetch(`/api/quests/${questId}/complete?playerId=${playerId}`, {method: 'POST'})
-        .then(response => response.json())
-        .then(result => {
-            alert(`Quest completed!\nExperience gained: ${result.experienceGained}\nAttribute increases: ${JSON.stringify(result.attributeIncreases)}`);
-            updatePlayerInfo();
-            updateQuestList();
-            document.getElementById('activeTask').innerHTML = '';
-        });
-}
-
-// Periodically check for combat updates
-setInterval(() => {
-    if (currentCombatId) {
-        fetch(`/api/combat/${currentCombatId}`)
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error('Combat session not found');
-                    }
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(combat => {
-                updateCombatUI(combat);
-                if (!combat.active) {
-                    showCombatResults(combat);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching combat update:', error);
-                if (error.message === 'Combat session not found') {
-                    alert('The combat session has ended or expired. Returning to lobby.');
-                    endCombat();
-                }
-            });
-    }
-}, 5000);  // Check every 5 seconds
-
-function endCombat() {
-    currentCombatId = null;
-    document.getElementById('combatResults').style.display = 'none';
-    document.getElementById('combatArea').style.display = 'none';
-    document.getElementById('combatLobby').style.display = 'block';
-    updatePlayerInfo();
-}
+// Combat Timer Function
 function updateTurnTimer(startTime, duration) {
     const timerElement = document.getElementById('turnTimer');
     const updateTimer = () => {
@@ -713,95 +696,6 @@ function updateTurnTimer(startTime, duration) {
     updateTimer();
 }
 
-
-function confirmAction() {
-    const targetPlayerId = document.getElementById('targetSelect').value;
-    if (!targetPlayerId) {
-        alert('Please select a target.');
-        return;
-    }
-
-    let actionData = {
-        playerId: playerId,
-        type: selectedAction,
-        targetPlayerId: targetPlayerId,
-        actionPoints: 1
-    };
-
-    if (selectedAction === 'SPELL' && selectedSpell) {
-        actionData.spellId = selectedSpell.id;
-    }
-
-    fetch(`/api/combat/${currentCombatId}/action`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(actionData)
-    })
-        .then(response => response.json())
-        .then(updatedCombat => {
-            updateCombatUI(updatedCombat);
-            document.getElementById('targetSelection').style.display = 'none';
-            if (!updatedCombat.active) {
-                showCombatResults(updatedCombat);
-            }
-        })
-        .catch(error => console.error('Error performing action:', error));
-
-    // Reset selectedSpell after the action
-    selectedSpell = null;
-}
-
-function confirmSpellSelection() {
-    const spellId = document.getElementById('spellSelect').value;
-    selectedSpell = playerSpells.find(spell => spell.id === spellId);
-    document.getElementById('spellSelection').style.display = 'none';
-    document.getElementById('targetSelection').style.display = 'block';
-    updateTargetSelection();
-}
-
-function updateSpellSelection() {
-    const spellSelect = document.getElementById('spellSelect');
-    spellSelect.innerHTML = '';
-    playerSpells.forEach(spell => {
-        const option = document.createElement('option');
-        option.value = spell.id;
-        option.textContent = `${spell.name} (Mana: ${spell.manaCost})`;
-        spellSelect.appendChild(option);
-    });
-}
-
-function updateTargetSelection() {
-    const targetSelect = document.getElementById('targetSelect');
-
-    targetSelect.innerHTML = '';
-
-    fetch(`/api/combat/${currentCombatId}`)
-
-        .then(response => response.json())
-
-        .then(combat => {
-
-            combat.playerIds.forEach(id => {
-
-                if (id !== playerId && combat.playerHealth[id] > 0) {
-
-                    const option = document.createElement('option');
-
-                    option.value = id;
-
-                    option.textContent = id;
-
-                    targetSelect.appendChild(option);
-
-                }
-
-            });
-
-        })
-
-}
 
 
 // Periodically check for combat updates (in case it's not the player's turn)

@@ -21,6 +21,26 @@ public class SpellService {
         fireball.setEffect(Spell.SpellEffect.DAMAGE);
         spells.put(fireball.getId(), fireball);
 
+
+
+        Spell iceball = new Spell();
+        iceball.setId("iceball");
+        iceball.setName("Iceball");
+        iceball.setDescription("Launches a ball of ice at the target");
+        iceball.setManaCost(30);
+        iceball.setCooldown(20);
+        iceball.setEffect(Spell.SpellEffect.DAMAGE);
+        spells.put(iceball.getId(), iceball);
+
+
+        Spell thunder = new Spell();
+        thunder.setId("thunder");
+        thunder.setName("Thunder");
+        thunder.setDescription("Thunder!!!");
+        thunder.setManaCost(50);
+        thunder.setCooldown(45);
+        thunder.setEffect(Spell.SpellEffect.DAMAGE);
+        spells.put(thunder.getId(), thunder);
         // Add more spells as needed
     }
 
