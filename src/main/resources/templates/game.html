@@ -54,6 +54,106 @@
             font-weight: bold;
         }
 
+
+        .crafting-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .inventory-panel, .ingredients-panel {
+            flex: 1;
+            width: 45%;  /* Subtracting half of the gap */
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .crafting-controls {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 0 10px;
+        }
+
+        .crafting-controls input {
+            width: 50px;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .crafting-controls button {
+            width: 40px;
+            height: 40px;
+            margin: 5px 0;
+            font-size: 1.2em;
+            padding: 0;
+        }
+
+        .crafting-item {
+            display: flex;
+            width:40% !important;
+            align-items: center;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 5px;
+        }
+
+        .crafting-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .crafting-item img {
+            width: 32px;
+            height: 32px;
+            margin-right: 10px;
+        }
+
+        .craft-button {
+            width: 100%;
+            margin-top: 20px;
+        }
+        #chatMessages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .chat-input {
+            display: flex;
+        }
+        .chat-input input {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        #playerInfo, #questList, #activeQuest {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        .quest-info {
+            font-size: 0.9em;
+        }
+
+        .quest-info strong {
+            display: block;
+            margin-top: 10px;
+        }
+
+        .quest-info ul {
+            padding-left: 15px;
+        }
+        .smooth-progress {
+            transition: width 0.1s linear;
+        }
     </style>
 </head>
 <body>
@@ -81,19 +181,11 @@
                                     aria-selected="true">Inventory
                             </button>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="crafting-tab" data-bs-toggle="tab" data-bs-target="#crafting"
-                                    type="button" role="tab" aria-controls="crafting" aria-selected="false">Crafting
-                            </button>
-                        </li>
                     </ul>
                     <div class="tab-content" id="inventoryTabContent">
                         <div class="tab-pane fade show active" id="inventory" role="tabpanel"
                              aria-labelledby="inventory-tab">
                             <div id="inventoryList"></div>
-                        </div>
-                        <div class="tab-pane fade" id="crafting" role="tabpanel" aria-labelledby="crafting-tab">
-                            <p>Crafting coming soon!</p>
                         </div>
                     </div>
                 </div>
@@ -124,6 +216,12 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="combat-tab" data-bs-toggle="tab" data-bs-target="#combat" type="button"
                             role="tab" aria-controls="combat" aria-selected="false">Combat
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="crafting-tab" data-bs-toggle="tab" data-bs-target="#crafting"
+                            type="button"
+                            role="tab" aria-controls="crafting" aria-selected="false">Crafting
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -244,8 +342,25 @@
                                 <button class="btn btn-primary" onclick="sendChatMessage()">Send</button>
                             </div>
                         </div>
+
                     </div>
 
+                </div>
+
+                <div class="tab-pane fade" id="crafting" role="tabpanel" aria-labelledby="crafting-tab">
+                    <h5>Crafting</h5>
+                    <div class="crafting-container">
+                        <div class="inventory-panel">
+                            <h6>Inventory</h6>
+                            <div id="craftingInventoryList"></div>
+                        </div>
+
+                        <div class="ingredients-panel">
+                            <h6>Ingredients</h6>
+                            <div id="craftingIngredientsList"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary craft-button" onclick="attemptCrafting()">Craft</button>
                 </div>
 
                 <div class="card mt-3">
@@ -254,74 +369,77 @@
                         <div id="activeTask"></div>
                     </div>
                 </div>
-            </div>
 
-            <div class="modal fade" id="sendItemModal" tabindex="-1" aria-labelledby="sendItemModalLabel"
-                 aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="sendItemModalLabel">Send Item</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="sendItemForm">
-                                <div class="mb-3">
-                                    <label for="recipientUsername" class="form-label">Recipient Username</label>
-                                    <input type="text" class="form-control" id="recipientUsername" required>
-                                </div>
-                                <input type="hidden" id="itemIdToSend">
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-primary" onclick="sendItem()">Send</button>
-                        </div>
+
+            </div>
+        </div>
+
+        <div class="modal fade" id="sendItemModal" tabindex="-1" aria-labelledby="sendItemModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sendItemModalLabel">Send Item</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="sendItemForm">
+                            <div class="mb-3">
+                                <label for="recipientUsername" class="form-label">Recipient Username</label>
+                                <input type="text" class="form-control" id="recipientUsername" required>
+                            </div>
+                            <input type="hidden" id="itemIdToSend">
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="sendItem()">Send</button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="modal fade" id="listItemModal" tabindex="-1" aria-labelledby="listItemModalLabel"
-                 aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="listItemModalLabel">List Item for Sale</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="listItemForm">
-                                <div class="mb-3">
-                                    <label for="itemPrice" class="form-label">Price</label>
-                                    <input type="number" class="form-control" id="itemPrice" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="itemCurrency" class="form-label">Currency</label>
-                                    <select class="form-control" id="itemCurrency" required>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="itemQuantity" class="form-label">Quantity (leave blank for
-                                        unlimited)</label>
-                                    <input type="number" class="form-control" id="itemQuantity">
-                                </div>
-                                <input type="hidden" id="itemIdToList">
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="button" class="btn btn-primary" onclick="listItemForSale()">List Item</button>
-                        </div>
+        <div class="modal fade" id="listItemModal" tabindex="-1" aria-labelledby="listItemModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="listItemModalLabel">List Item for Sale</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="listItemForm">
+                            <div class="mb-3">
+                                <label for="itemPrice" class="form-label">Price</label>
+                                <input type="number" class="form-control" id="itemPrice" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="itemCurrency" class="form-label">Currency</label>
+                                <select class="form-control" id="itemCurrency" required>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="itemQuantity" class="form-label">Quantity (leave blank for
+                                    unlimited)</label>
+                                <input type="number" class="form-control" id="itemQuantity">
+                            </div>
+                            <input type="hidden" id="itemIdToList">
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="listItemForSale()">List Item</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-            <script th:src="@{/js/game.js}"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-            <script th:src="@{/js/chat.js}"></script>
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</div>
+<script th:src="@{/js/game.js}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script th:src="@{/js/chat.js}"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

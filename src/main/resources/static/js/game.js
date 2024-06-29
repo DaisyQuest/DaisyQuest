@@ -5,7 +5,8 @@ let currentCombatId = null;
 let playerSpells = [];
 let selectedSpell = null;
 let selectedAction = null;
-
+let craftingInventory = [];
+let craftingIngredients = [];
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
 document.getElementById('startCombatBtn').addEventListener('click', startCombat);
@@ -23,11 +24,137 @@ function initializeGame() {
             updateActivityList();
             updateShopList();
             updatePlayerShop();
+            initializeCrafting();
         });
         updateInventory();
     }
 }
 
+// Start CRAFTING
+function initializeCrafting() {
+    updateCraftingInventory();
+}
+
+function updateCraftingInventory() {
+    fetch(`/api/players/${playerId}/inventory`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch inventory');
+            }
+            return response.json();
+        })
+        .then(inventory => {
+            craftingInventory = inventory;
+            updateCraftingUI();
+        })
+        .catch(error => {
+            console.error('Error updating crafting inventory:', error);
+            alert('Failed to load inventory. Please try again.');
+        });
+}
+
+function updateCraftingUI() {
+    const inventoryList = document.getElementById('craftingInventoryList');
+    const ingredientsList = document.getElementById('craftingIngredientsList');
+
+    if (!inventoryList || !ingredientsList) {
+        console.error('Crafting list elements not found');
+        return;
+    }
+
+    inventoryList.innerHTML = craftingInventory.map(item => createCraftingItemHTML(item, 'inventory')).join('');
+    ingredientsList.innerHTML = craftingIngredients.map(item => createCraftingItemHTML(item, 'ingredients')).join('');
+}
+
+function createCraftingItemHTML(item, listType) {
+    return `
+        <div class="crafting-item">
+            <div>
+                <img src="https://place-hold.it/32" alt="${item.name}">
+                ${item.name} (${item.quantity || 1})
+            <button class="btn btn-sm btn-${listType === 'inventory' ? 'primary' : 'danger'}" 
+                    onclick="moveItem('${listType === 'inventory' ? 'right' : 'left'}', '${item.id}')">
+                ${listType === 'inventory' ? '→' : '←'}
+            </button>
+            </div>
+
+        </div>
+    `;
+}
+
+function moveItem(direction, itemId) {
+    const quantity = 1;//parseInt(document.getElementById('craftingQuantity').value, 10) || 1;
+
+    if (direction === 'right') {
+        const item = craftingInventory.find(i => i.id === itemId);
+        if (item && (item.quantity || 1) >= quantity) {
+            const movedItem = { ...item, quantity: quantity };
+            const existingIngredient = craftingIngredients.find(i => i.id === itemId);
+            if (existingIngredient) {
+                existingIngredient.quantity += quantity;
+            } else {
+                craftingIngredients.push(movedItem);
+            }
+            item.quantity -= quantity;
+            if (item.quantity <= 0) {
+                craftingInventory = craftingInventory.filter(i => i.id !== itemId);
+            }
+        }
+    } else {
+        const item = craftingIngredients.find(i => i.id === itemId);
+        if (item) {
+            const inventoryItem = craftingInventory.find(i => i.id === itemId);
+            if (inventoryItem) {
+                inventoryItem.quantity += item.quantity;
+            } else {
+                craftingInventory.push({ ...item });
+            }
+            craftingIngredients = craftingIngredients.filter(i => i.id !== itemId);
+        }
+    }
+
+    updateCraftingUI();
+}
+
+function attemptCrafting() {
+    const ingredientsMap = craftingIngredients.reduce((acc, item) => {
+        acc[item.id] = item.quantity || 1;
+        return acc;
+    }, {});
+
+    if (Object.keys(ingredientsMap).length === 0) {
+        alert('Please add ingredients before crafting.');
+        return;
+    }
+
+    fetch(`/api/players/${playerId}/craft`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ingredientsMap)
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Crafting failed');
+            }
+            return response.json();
+        })
+        .then(result => {
+            alert(result.message);
+            updateCraftingInventory();
+            craftingIngredients = [];
+            updateCraftingUI();
+            updatePlayerInfo();
+        })
+        .catch(error => {
+            console.error('Error crafting:', error);
+            alert('Error crafting: ' + error.message);
+        });
+}
+
+
+// End CRAFTING
 function fetchAttributes() {
     return fetch(`/api/players/${playerId}/attributes`)
         .then(response => response.json())
@@ -750,3 +877,10 @@ function updatePlayerShop() {
             }
         });
 }
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('crafting-tab').addEventListener('shown.bs.tab', function (e) {
+        updateCraftingInventory();
+    });
+});
+window.moveItem = moveItem;
+window.attemptCrafting = attemptCrafting;

@@ -4,6 +4,7 @@ import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Shop;
 import net.daisyquest.daisyquestgame.Model.Spell;
+import net.daisyquest.daisyquestgame.Service.CraftingService;
 import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import net.daisyquest.daisyquestgame.Service.PlayerService;
 import net.daisyquest.daisyquestgame.Service.ShopService;
@@ -144,6 +145,15 @@ public class PlayerController {
     @PostMapping("/{id}/shop/remove-item/{shopItemId}")
     public ResponseEntity<Map<String, String>> removeShopItem(@PathVariable String id, @PathVariable String shopItemId) {
         String result = shopService.removeShopItem(id, shopItemId);
+        return ResponseEntity.ok(Map.of("message", result));
+    }
+
+    @Autowired
+    private CraftingService craftingService;
+
+    @PostMapping("/{id}/craft")
+    public ResponseEntity<Map<String, String>> craftItem(@PathVariable String id, @RequestBody Map<String, Integer> itemIdsAndAmounts) {
+        String result = craftingService.craftItem(id, itemIdsAndAmounts);
         return ResponseEntity.ok(Map.of("message", result));
     }
 

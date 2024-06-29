@@ -26,38 +26,4 @@ button {
 button:hover {
     background-color: #45a049;
 }
-#chatMessages {
-    height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    padding: 10px;
-    margin-bottom: 10px;
-}
-.chat-input {
-    display: flex;
-}
-.chat-input input {
-    flex-grow: 1;
-    margin-right: 10px;
-}
-#playerInfo, #questList, #activeQuest {
-    margin-top: 20px;
-    border: 1px solid #ddd;
-    padding: 10px;
-}
 
-.quest-info {
-    font-size: 0.9em;
-}
-
-.quest-info strong {
-    display: block;
-    margin-top: 10px;
-}
-
-.quest-info ul {
-    padding-left: 15px;
-}
-.smooth-progress {
-    transition: width 0.1s linear;
-}
