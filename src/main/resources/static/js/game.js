@@ -7,6 +7,7 @@ let selectedSpell = null;
 let selectedAction = null;
 let craftingInventory = [];
 let craftingIngredients = [];
+let currentPlayer;
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
 document.getElementById('startCombatBtn').addEventListener('click', startCombat);
@@ -30,7 +31,296 @@ function initializeGame() {
     }
 }
 
+
+//Sprites:
+//Player:
+let currentSprite = {
+    background: 0,
+    face: 0,
+    eyes: 0,
+    hairhat: 0
+};
+
+const spriteCounts = {
+    background: 10,
+    face: 10,
+    eyes: 10,
+    hairhat: 10
+};
+
+function updateSpritePreview() {
+    const preview = document.getElementById('spritePreview');
+    preview.innerHTML = `
+        <img src="/sprites/background_${currentSprite.background}.png">
+        <img src="/sprites/face_${currentSprite.face}.png">
+        <img src="/sprites/eyes_${currentSprite.eyes}.png">
+        <img src="/sprites/hairhat_${currentSprite.hairhat}.png">
+    `;
+}
+
+function updateSpriteSelector(type, direction) {
+    currentSprite[type] = (currentSprite[type] + direction + spriteCounts[type]) % spriteCounts[type];
+    const selector = document.querySelector(`.sprite-selector[data-type="${type}"]`);
+    selector.querySelector('.sprite-image').src = `/sprites/${type}_${currentSprite[type]}.png`;
+    selector.querySelector('.sprite-count').textContent = `${currentSprite[type] + 1} / ${spriteCounts[type]}`;
+    updateSpritePreview();
+}
+
+document.querySelectorAll('.sprite-selector').forEach(selector => {
+    const type = selector.dataset.type;
+    selector.querySelector('.left-btn').addEventListener('click', () => updateSpriteSelector(type, -1));
+    selector.querySelector('.right-btn').addEventListener('click', () => updateSpriteSelector(type, 1));
+});
+
+function saveSprite() {
+    fetch(`/api/players/${playerId}/sprite`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            subspriteBackground: `background_${currentSprite.background}`,
+            subspriteFace: `face_${currentSprite.face}`,
+            subspriteEyes: `eyes_${currentSprite.eyes}`,
+            subspriteHairHat: `hairhat_${currentSprite.hairhat}`
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Sprite updated successfully');
+            // Close the modal or show a success message
+        })
+        .catch(error => console.error('Error updating sprite:', error));
+}
+
+// Initialize the sprite selection interface
+updateSpritePreview();
+document.querySelectorAll('.sprite-selector').forEach(selector => {
+    const type = selector.dataset.type;
+    updateSpriteSelector(type, 0);
+});
+
+//End Sprites
+
+//WORLD MAP START
+let selectedLand = null;
+
+function initializeWorldMap() {
+    fetch('/api/land/init')
+        .then(response => response.json())
+        .then(worldMap => {
+            const worldMapElement = document.getElementById('worldMap');
+            worldMapElement.style.setProperty('--map-width', worldMap.width);
+
+            for (let y = 0; y < worldMap.height; y++) {
+                for (let x = 0; x < worldMap.width; x++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'land-tile';
+                    tile.dataset.x = x;
+                    tile.dataset.y = y;
+                    tile.onclick = () => selectLand(x, y);
+                    worldMapElement.appendChild(tile);
+                }
+            }
+
+            // Select the first tile by default
+            selectLand(0, 0);
+        })
+        .catch(error => {
+            console.error('Error initializing world map:', error);
+        });
+}
+
+function selectLand(x, y) {
+    fetch(`/api/land?x=${x}&y=${y}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Land not found');
+            }
+            return response.json();
+        })
+        .then(land => {
+            selectedLand = land;
+            updateLandDetails();
+        })
+        .catch(error => {
+            console.error('Error fetching land details:', error);
+            updateLandDetails(null);
+        });
+}
+
+function updateLandDetails(land = selectedLand) {
+    const landInfo = document.getElementById('landInfo');
+    console.log(land);
+    if (land) {
+        landInfo.innerHTML = `
+            <p>Coordinates: (${land.xcoordinate}, ${land.ycoordinate})</p>
+            <p>Type: ${land.landType || 'Unknown'}</p>
+            <p>Owner: ${land.owner ? land.owner.username : 'Unclaimed'}</p>
+            <p>For Sale: ${land.forSale ? 'Yes' : 'No'}</p>
+        `;
+
+        document.getElementById('buyButton').style.display = land.forSale ? 'inline-block' : 'none';
+        document.getElementById('sellButton').style.display = land.owner && !land.forSale ? 'inline-block' : 'none';
+        document.getElementById('partitionButton').style.display = land.owner ? 'inline-block' : 'none';
+    } else {
+        landInfo.innerHTML = '<p>No land selected or land data unavailable.</p>';
+        document.getElementById('buyButton').style.display = 'none';
+        document.getElementById('sellButton').style.display = 'none';
+        document.getElementById('partitionButton').style.display = 'none';
+    }
+}
+
+function buyLand() {
+    const buyerId = playerId; // Replace with actual logged-in player ID
+    const currencyType = 'Mana Crystals'; // Replace with selected currency
+
+    fetch('/api/land/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `landId=${selectedLand.id}&buyerId=${buyerId}&currencyType=${currencyType}`
+    })
+        .then(response => response.json())
+        .then(updatedLand => {
+            selectedLand = updatedLand;
+            updateLandDetails();
+            updateMapTile(updatedLand);
+        });
+}
+
+function sellLand() {
+    const prices = { gold: 1000 }; // Replace with actual price input
+
+    fetch('/api/land/sell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ landId: selectedLand.id, prices: prices })
+    })
+        .then(response => response.json())
+        .then(updatedLand => {
+            selectedLand = updatedLand;
+            updateLandDetails();
+            updateMapTile(updatedLand);
+        });
+}
+
+function partitionLand() {
+    document.getElementById('partitionModal').style.display = 'block';
+}
+
+function submitPartition() {
+    const area = document.getElementById('partitionArea').value;
+    const payoutInterval = document.getElementById('payoutInterval').value;
+
+    fetch(`/api/land/${selectedLand.id}/partition`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `area=${area}&payoutInterval=${payoutInterval}`
+    })
+        .then(response => response.json())
+        .then(updatedLand => {
+            selectedLand = updatedLand;
+            updateLandDetails();
+            closeModal();
+        });
+}
+
+function closeModal() {
+    document.getElementById('partitionModal').style.display = 'none';
+}
+
+function updateMapTile(land) {
+    const tile = document.querySelector(`.land-tile[data-x="${land.xcoordinate}"][data-y="${land.ycoordinate}"]`);
+    tile.classList.toggle('owned', !!land.owner);
+    tile.classList.toggle('for-sale', land.forSale);
+}
+
+// Initialize the map when the page loads
+document.addEventListener('DOMContentLoaded', () => initializeWorldMap(20, 20));
+//WORLD MAP END
+
+
+
 // Start CRAFTING
+
+//Start Recipe Book
+
+async function openRecipeBook() {
+    try {
+        const recipes = await fetchRecipes();
+        const itemDetails = await fetchItemDetails(recipes);
+        displayRecipes(recipes, itemDetails);
+        new bootstrap.Modal(document.getElementById('recipeBookModal')).show();
+    } catch (error) {
+        console.error('Error opening recipe book:', error);
+        alert('Failed to open recipe book. Please try again.');
+    }
+}
+
+async function fetchRecipes() {
+    const response = await fetch('/api/recipes/discovered');
+    if (!response.ok) {
+        throw new Error('Failed to fetch recipes');
+    }
+    return response.json();
+}
+
+async function fetchItemDetails(recipes) {
+    const allItemIds = new Set();
+    recipes.forEach(recipe => {
+        Object.keys(recipe.requiredItemIdsAndAmounts).forEach(id => allItemIds.add(id));
+        allItemIds.add(recipe.resultItemId);
+    });
+
+    const itemDetailsPromises = Array.from(allItemIds).map(id =>
+        fetch(`/api/items/${id}`).then(response => response.json())
+    );
+
+    const itemDetails = await Promise.all(itemDetailsPromises);
+    return itemDetails.reduce((acc, item) => {
+        acc[item.id] = item;
+        return acc;
+    }, {});
+}
+
+function displayRecipes(recipes, itemDetails) {
+    const recipeBookContent = document.getElementById('recipeBookContent');
+    if (recipes.length === 0) {
+        recipeBookContent.innerHTML = '<p>No recipes discovered yet.</p>';
+        return;
+    }
+
+    const recipeHtml = recipes.map(recipe => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">${recipe.name}</h5>
+                <p class="card-text">
+                    <strong>Ingredients:</strong> ${formatIngredients(recipe.requiredItemIdsAndAmounts, itemDetails)}
+                </p>
+                <p class="card-text">
+                    <strong>Result:</strong> ${itemDetails[recipe.resultItemId]?.name || 'Unknown Item'}
+                </p>
+                <p class="card-text">
+                    <small class="text-muted">Discovered by: ${recipe.discoveredBy}</small>
+                </p>
+            </div>
+        </div>
+    `).join('');
+
+    recipeBookContent.innerHTML = recipeHtml;
+}
+
+function formatIngredients(ingredients, itemDetails) {
+    return Object.entries(ingredients)
+        .map(([itemId, amount]) => {
+            const itemName = itemDetails[itemId]?.name || 'Unknown Item';
+            return `${itemName} (${amount})`;
+        })
+        .join(', ');
+}
+
+//End Recipe Book
+
 function initializeCrafting() {
     updateCraftingInventory();
 }
@@ -428,31 +718,78 @@ function showCombatResults(combat) {
     }
 
 // Player Info and Inventory Functions
-    function updatePlayerInfo() {
-        fetch(`/api/players/${playerId}`)
-            .then(response => response.json())
-            .then(player => {
-                const playerInfo = document.getElementById('playerInfo');
-                playerInfo.innerHTML = `
-                <h6>Player: ${player.username}</h6>
-                <p>Level: ${player.level}</p>
-                <p>Total Experience: ${player.totalExperience}</p>
-                <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
-                <h6>Attributes:</h6>
-                <ul class="list-group">
-                    ${Object.entries(player.attributes || {}).map(([key, value]) =>
-                    `<li class="list-group-item">${key}: Level ${value.level} (XP: ${value.experience})</li>`
-                ).join('')}
-                </ul>
-                <h6>Currencies:</h6>
-                <ul class="list-group">
-                    ${Object.entries(player.currencies || {}).map(([key, value]) =>
-                    `<li class="list-group-item">${key}: ${value}</li>`
-                ).join('')}
-                </ul>
+ // Declare this at the top of your script
+
+function updatePlayerInfo() {
+    fetch(`/api/players/${playerId}`)
+        .then(response => response.json())
+        .then(player => {
+            currentPlayer = player; // Store the player data globally
+            const playerInfo = document.getElementById('playerInfo');
+            playerInfo.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="sprite-preview mb-3">
+                            <img src="/sprites/${player.subspriteBackground || 'background_0'}.png">
+                            <img src="/sprites/${player.subspriteFace || 'face_0'}.png">
+                            <img src="/sprites/${player.subspriteEyes || 'eyes_0'}.png">
+                            <img src="/sprites/${player.subspriteHairHat || 'hairhat_0'}.png">
+                        </div>
+                        <button class="btn btn-primary btn-sm mb-3" onclick="openSpriteSelectionModal()">Customize Sprite</button>
+                    </div>
+                    <div class="col-md-8">
+                        <h6>Player: ${player.username}</h6>
+                        <p>Level: ${player.level}</p>
+                        <p>Total Experience: ${player.totalExperience}</p>
+                        <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
+                        <h6>Attributes:</h6>
+                        <ul class="list-group">
+                            ${Object.entries(player.attributes || {}).map(([key, value]) =>
+                `<li class="list-group-item">${key}: Level ${value.level} (XP: ${value.experience})</li>`
+            ).join('')}
+                        </ul>
+                        <h6 class="mt-3">Currencies:</h6>
+                        <ul class="list-group">
+                            ${Object.entries(player.currencies || {}).map(([key, value]) =>
+                `<li class="list-group-item">${key}: ${value}</li>`
+            ).join('')}
+                        </ul>
+                    </div>
+                </div>
             `;
+        })
+        .catch(error => {
+            console.error('Error updating player info:', error);
+            alert('Failed to update player info. Please refresh the page.');
+        });
+}
+
+function openSpriteSelectionModal() {
+    // Fetch the latest player data
+    fetch(`/api/players/${playerId}`)
+        .then(response => response.json())
+        .then(player => {
+            // Initialize the sprite selection with the player's current sprite
+            currentSprite = {
+                background: parseInt(player.subspriteBackground?.split('_')[1] || '0'),
+                face: parseInt(player.subspriteFace?.split('_')[1] || '0'),
+                eyes: parseInt(player.subspriteEyes?.split('_')[1] || '0'),
+                hairhat: parseInt(player.subspriteHairHat?.split('_')[1] || '0')
+            };
+            updateSpritePreview();
+            document.querySelectorAll('.sprite-selector').forEach(selector => {
+                const type = selector.dataset.type;
+                updateSpriteSelector(type, 0);
             });
-    }
+
+            // Open the modal
+            new bootstrap.Modal(document.getElementById('spriteSelectionModal')).show();
+        })
+        .catch(error => {
+            console.error('Error fetching player data:', error);
+            alert('Failed to load player data. Please try again.');
+        });
+}
 
     function updateInventory() {
         fetch(`/api/players/${playerId}/inventory`)

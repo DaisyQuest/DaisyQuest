@@ -9,6 +9,9 @@ import net.daisyquest.daisyquestgame.Service.RecipeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -35,7 +38,11 @@ public class CraftingService {
         if (matchingRecipe == null) {
             return "No matching recipe found.";
         }
-
+        if (matchingRecipe.getDiscoveredBy() == null) {
+            matchingRecipe.setDiscoveredBy(player.getUsername());
+            matchingRecipe.setDiscoveryDateTime(Instant.now().toEpochMilli());
+            recipeService.updateRecipe(matchingRecipe);
+        }
         if (!playerHasRequiredItems(player, itemIdsAndAmounts)) {
             return "Player does not have the required items.";
         }

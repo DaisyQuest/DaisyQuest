@@ -32,4 +32,15 @@ public class Player {
     //chat
     private List<String> chatRoomIds;
     private int unreadMessages;
+
+
+    //sprite
+    private String subspriteBackground;
+    private String subspriteFace;
+    private String subspriteEyes;
+    private String subspriteHairHat;
+
+    private int resources;
+
+
 }

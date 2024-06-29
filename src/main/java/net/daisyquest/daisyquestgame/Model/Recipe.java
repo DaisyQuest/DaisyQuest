@@ -18,5 +18,5 @@ public class Recipe {
     private Map<String, Integer> attributeRequirements;
     private String resultItemId;
     private String discoveredBy;
-    private Date discoveryDate;
+    private long discoveryDateTime;
 }

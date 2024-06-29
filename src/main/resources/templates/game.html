@@ -114,11 +114,18 @@
             height: 32px;
             margin-right: 10px;
         }
-
-        .craft-button {
-            width: 100%;
+        .crafting-actions {
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
             margin-top: 20px;
         }
+
+        .craft-button, .recipe-book-button {
+            width: auto;
+            min-width: 100px;
+        }
+
         #chatMessages {
             height: 300px;
             overflow-y: auto;
@@ -153,6 +160,86 @@
         }
         .smooth-progress {
             transition: width 0.1s linear;
+        }
+        .sprite-preview {
+            width: 64px;
+            height: 64px;
+            position: relative;
+        }
+
+        .sprite-preview img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sprite-selector {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .sprite-selector .sprite-image {
+            width: 64px;
+            height: 64px;
+            margin: 0 10px;
+        }
+
+        .sprite-selector .sprite-count {
+            margin-left: 10px;
+        }
+
+        .world-map {
+            display: grid;
+            grid-template-columns: repeat(var(--map-width), 1fr);
+            gap: 1px;
+            background-color: #ccc;
+            padding: 1px;
+        }
+
+        .land-tile {
+            width: 50px;
+            height: 50px;
+            background-color: #8bc34a;
+            border: 1px solid #4caf50;
+            cursor: pointer;
+        }
+
+        .land-tile:hover {
+            opacity: 0.8;
+        }
+
+        .land-tile.owned {
+            background-color: #2196f3;
+        }
+
+        .land-tile.for-sale {
+            background-color: #ff9800;
+        }
+
+        .land-details {
+            margin-top: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
         }
     </style>
 </head>
@@ -227,6 +314,11 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button"
                             role="tab" aria-controls="chat" aria-selected="false">Chat
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#worldMapH" type="button"
+                            role="tab" aria-controls="chat" aria-selected="false">World Map
                     </button>
                 </li>
             </ul>
@@ -346,7 +438,39 @@
                     </div>
 
                 </div>
+                <div class="tab-pane fade" id="worldMapH" role="tabpanel" aria-labelledby="world-tab">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">World Map</h5>
+                            <div id="worldMaps"></div>
+                            <div id="worldMap" class="world-map">
+                                <!-- Map tiles will be dynamically inserted here -->
+                            </div>
 
+                            <div id="landDetails" class="land-details">
+                                <h3>Land Details</h3>
+                                <div id="landInfo"></div>
+                                <button id="buyButton" onclick="buyLand()">Buy Land</button>
+                                <button id="sellButton" onclick="sellLand()">Sell Land</button>
+                                <button id="partitionButton" onclick="partitionLand()">Partition Land</button>
+                            </div>
+
+                            <div id="partitionModal" class="modal">
+                                <div class="modal-content">
+                                    <h3>Partition Land</h3>
+                                    <label for="partitionArea">Area:</label>
+                                    <input type="number" id="partitionArea" min="0.1" max="1" step="0.1">
+                                    <label for="payoutInterval">Payout Interval:</label>
+                                    <input type="number" id="payoutInterval" min="1">
+                                    <button onclick="submitPartition()">Create Partition</button>
+                                    <button onclick="closeModal()">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
                 <div class="tab-pane fade" id="crafting" role="tabpanel" aria-labelledby="crafting-tab">
                     <h5>Crafting</h5>
                     <div class="crafting-container">
@@ -360,9 +484,29 @@
                             <div id="craftingIngredientsList"></div>
                         </div>
                     </div>
-                    <button class="btn btn-primary craft-button" onclick="attemptCrafting()">Craft</button>
+                    <div class="crafting-actions">
+                        <button class="btn btn-primary craft-button" onclick="attemptCrafting()">Craft</button>
+                        <button class="btn btn-secondary recipe-book-button" onclick="openRecipeBook()">Recipe Book</button>
+                    </div>
+
+                    <div class="modal fade" id="recipeBookModal" tabindex="-1" aria-labelledby="recipeBookModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="recipeBookModalLabel">Recipe Book</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body" id="recipeBookContent">
+                                    <!-- Recipes will be dynamically inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
+
+
+                <!-- Active Task future: Task(s) -->
                 <div class="card mt-3">
                     <div class="card-body">
                         <h5 class="card-title">Active Task</h5>
@@ -399,6 +543,70 @@
             </div>
         </div>
 
+<!--       Sprite select modal -->
+        <div id="spriteSelectionModal" class="modal fade" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Customize Your Sprite</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 offset-md-3 mb-4">
+                                <div id="spritePreview" class="sprite-preview"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="sprite-selector" data-type="background">
+                                    <button class="btn btn-outline-primary left-btn">&lt;</button>
+                                    <img src="" alt="Background" class="sprite-image">
+                                    <button class="btn btn-outline-primary right-btn">&gt;</button>
+                                    <div class="sprite-count">1 / 10</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="sprite-selector" data-type="face">
+                                    <button class="btn btn-outline-primary left-btn">&lt;</button>
+                                    <img src="" alt="Face" class="sprite-image">
+                                    <button class="btn btn-outline-primary right-btn">&gt;</button>
+                                    <div class="sprite-count">1 / 10</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="sprite-selector" data-type="eyes">
+                                    <button class="btn btn-outline-primary left-btn">&lt;</button>
+                                    <img src="" alt="Eyes" class="sprite-image">
+                                    <button class="btn btn-outline-primary right-btn">&gt;</button>
+                                    <div class="sprite-count">1 / 10</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="sprite-selector" data-type="hairhat">
+                                    <button class="btn btn-outline-primary left-btn">&lt;</button>
+                                    <img src="" alt="Hair/Hat" class="sprite-image">
+                                    <button class="btn btn-outline-primary right-btn">&gt;</button>
+                                    <div class="sprite-count">1 / 10</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="saveSprite()">Save changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!--        end sprite select modal-->
         <div class="modal fade" id="listItemModal" tabindex="-1" aria-labelledby="listItemModalLabel"
              aria-hidden="true">
             <div class="modal-dialog">

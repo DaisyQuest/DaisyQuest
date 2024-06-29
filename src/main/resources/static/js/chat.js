@@ -68,6 +68,7 @@ function onConnected() {
     stompClient.subscribe('/topic/public', onMessageReceived);
     const joinMessage = {
         senderId: username,
+        content: username + ' joined the chat!',
         type: 'JOIN'
     };
     console.log('Sending join message:', joinMessage);

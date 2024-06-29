@@ -16,6 +16,11 @@ public class RecipeService {
         return recipeRepository.save(recipe);
     }
 
+
+    public List<Recipe> getDiscoveredRecipes() {
+        return recipeRepository.findByDiscoveredByIsNotNull();
+    }
+
     public Recipe getRecipe(String id) {
         return recipeRepository.findById(id).orElse(null);
     }

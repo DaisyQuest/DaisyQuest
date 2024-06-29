@@ -1,5 +1,6 @@
 package net.daisyquest.daisyquestgame.Controller;
 
+import lombok.Data;
 import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Shop;
@@ -156,6 +157,10 @@ public class PlayerController {
         String result = craftingService.craftItem(id, itemIdsAndAmounts);
         return ResponseEntity.ok(Map.of("message", result));
     }
-
+    @PutMapping("/{id}/sprite")
+    public ResponseEntity<Player> updatePlayerSprite(@PathVariable String id, @RequestBody SpriteUpdateRequest request) {
+        Player updatedPlayer = playerService.updatePlayerSprite(id, request);
+        return ResponseEntity.ok(updatedPlayer);
+    }
 
 }
