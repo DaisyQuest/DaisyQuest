@@ -5,68 +5,184 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Castle Defense</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     <style>
+        body {
+            background-color: #f4f7fa;
+            color: #333;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container-fluid {
+            padding: 20px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .btn {
+            border-radius: 20px;
+            padding: 8px 20px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .glossary-section {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .glossary-card {
+            margin-bottom: 15px;
+        }
+
+        .glossary-card.border-success {
+            border: 5px solid #28a745;
+        }
+
+        .info-button {
+            cursor: pointer;
+            color: #007bff;
+            transition: color 0.3s ease;
+        }
+
+        .info-button:hover {
+            color: #0056b3;
+        }
+
         .simulation-log {
-            max-height: 300px;
-            overflow-y: auto;
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #castleInfo {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        h1, h2, h3 {
+            color: #007bff;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-<div class="container mt-5">
-    <h1>Castle Defense</h1>
-    <div id="castleInfo" class="mt-4"></div>
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <h2>Buildings</h2>
-            <div id="buildingsList"></div>
-            <button class="btn btn-primary mt-2" onclick="showAddBuildingModal()">Add Building</button>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Building Types Glossary -->
+        <div class="col-md-2 glossary-section">
+            <h3>Building Types</h3>
+            <div id="buildingTypeGlossary"></div>
         </div>
-        <div class="col-md-6">
-            <h2>Troops</h2>
-            <div id="troopsList"></div>
-            <button class="btn btn-primary mt-2" onclick="showAddTroopModal()">Add Troop</button>
+
+        <!-- Main Content -->
+        <div class="col-md-8 main-content">
+            <h1 class="mt-4">Castle Defense</h1>
+            <div id="castleInfo" class="mt-4"></div>
+            <div class="row mt-4">
+                <img src="/sprites/castle.png" alt="castle" style="width: 20%"/>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h2>Buildings</h2>
+                    <div id="buildingsList"></div>
+                    <button class="btn btn-primary mt-2" onclick="showAddBuildingModal()">Add Building</button>
+                </div>
+                <div class="col-md-6">
+                    <h2>Troops</h2>
+                    <div id="troopsList"></div>
+                    <button class="btn btn-primary mt-2" onclick="showAddTroopModal()">Add Troop</button>
+                </div>
+            </div>
+            <div class="mt-4">
+                <h2>Simulation Logs</h2>
+                <div id="simulationLogs" class="simulation-log"></div>
+            </div>
         </div>
-    </div>
-    <div class="mt-4">
-        <h2>Simulation Logs</h2>
-        <div id="simulationLogs" class="simulation-log"></div>
+
+        <!-- Troop Types Glossary -->
+        <div class="col-md-2 glossary-section">
+            <h3>Troop Types</h3>
+            <div id="troopTypeGlossary"></div>
+        </div>
     </div>
 </div>
+    <div class="modal fade" id="addBuildingModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Building</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <select id="buildingTypeSelect" class="form-select"></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="addBuilding()">Add Building</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- Add Building Modal -->
-<div class="modal fade" id="addBuildingModal" tabindex="-1">
+    <!-- Add Troop Modal -->
+    <div class="modal fade" id="addTroopModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Troop</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <select id="troopTypeSelect" class="form-select"></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="addTroop()">Add Troop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+<div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add Building</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="infoModalTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <select id="buildingTypeSelect" class="form-select"></select>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="addBuilding()">Add Building</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add Troop Modal -->
-<div class="modal fade" id="addTroopModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Troop</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <select id="troopTypeSelect" class="form-select"></select>
+            <div class="modal-body" id="infoModalBody">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="addTroop()">Add Troop</button>
             </div>
         </div>
     </div>
@@ -75,7 +191,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script><script>
     const playerId = localStorage.getItem('playerId');
     let castleId;
-
+    let castleData = null;
     if (!playerId) {
         window.location.href = '/login';
     }
@@ -86,32 +202,32 @@
     }
 
     function fetchCastleStatus() {
-        console.log('Castle Time!');
-        console.log('playerId at CastleTime: ' + playerId);
+        console.log('Fetching castle status...');
         fetch(`/api/players/${playerId}/castle`)
             .then(response => {
-             if(!response.ok)  fetch('/api/castle/create/' + playerId).then(resp => response = resp.json());
-
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        return fetch('/api/castle/create/' + playerId).then(resp => resp.json());
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 return response.json();
             })
             .then(castle => {
-                console.log('castle at CastleTime: ' + castle);
-                console.log('castle at CastleTime: ' + castle.id);
-
-
+                console.log('Received castle data:', castle);
                 if (!castle) {
-                    fetch('/api/castle/create/' + playerId);
-                    return;
+                    throw new Error('No castle data received');
                 }
+                castleData = castle;  // Store the castle data
                 castleId = castle.id;
                 updateCastleInfo(castle);
                 updateBuildingsList(castle.buildings);
                 updateTroopsList(castle.troops);
                 fetchSimulationLogs(castle.id);
+                updateGlossary();
             })
             .catch(error => handleError(error, 'Failed to fetch castle status. Please try again.'));
     }
-
     function updateCastleInfo(castle) {
         document.getElementById('castleInfo').innerHTML = `
         <h2>Castle Status</h2>
@@ -122,30 +238,155 @@
     `;
     }
 
-    function updateBuildingsList(buildings) {
-        const buildingsList = document.getElementById('buildingsList');
-        buildingsList.innerHTML = buildings.map(building => `
-        <div class="card mb-2">
-            <div class="card-body">
-                <h5 class="card-title">${building.buildingType.name}</h5>
-                <p class="card-text">Level: ${building.level}</p>
-                <p class="card-text">HP: ${building.hp}</p>
+    function updateTroopsList(troops) {
+        console.log('Updating troops list:', troops);
+        const troopsList = document.getElementById('troopsList');
+        if (troops && troops.length > 0) {
+            troopsList.innerHTML = troops.map(troop => `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        ${troop.troopType ? troop.troopType.name : 'Unknown Troop'}
+                        <i class="bi bi-info-circle info-button" onclick="showInfo('troop', '${troop.id}')"></i>
+                    </h5>
+                    <p class="card-text">Level: ${troop.level || 'N/A'}</p>
+                    <p class="card-text">HP: ${troop.hp || 'N/A'}</p>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+        } else {
+            troopsList.innerHTML = '<p>No troops available.</p>';
+        }
     }
 
-    function updateTroopsList(troops) {
-        const troopsList = document.getElementById('troopsList');
-        troopsList.innerHTML = troops.map(troop => `
-        <div class="card mb-2">
-            <div class="card-body">
-                <h5 class="card-title">${troop.troopType.name}</h5>
-                <p class="card-text">Level: ${troop.level}</p>
-                <p class="card-text">HP: ${troop.hp}</p>
+
+    function getAvailableTroopTypes() {
+        if (!castleData || !castleData.buildings) return [];
+        return castleData.buildings.flatMap(building =>
+            building.buildingType.availableTroops ? building.buildingType.availableTroops.map(troop => troop.id) : []
+        );
+    }
+
+
+    function updateBuildingsList(buildings) {
+        console.log('Updating buildings list:', buildings);
+        const buildingsList = document.getElementById('buildingsList');
+        if (buildings && buildings.length > 0) {
+            buildingsList.innerHTML = buildings.map(building => `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        ${building.buildingType ? building.buildingType.name : 'Unknown Building'}
+                        <i class="bi bi-info-circle info-button" onclick="showInfo('building', '${building.id}')"></i>
+                    </h5>
+                    <p class="card-text">Level: ${building.level || 'N/A'}</p>
+                    <p class="card-text">HP: ${building.hp || 'N/A'}</p>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+        } else {
+            buildingsList.innerHTML = '<p>No buildings available.</p>';
+        }
+    }
+
+    function showInfo(type, id) {
+        if (!castleData) {
+            handleError(new Error('Castle data not available'), 'Please refresh the page and try again.');
+            return;
+        }
+
+        let item;
+        if (type === 'building') {
+            item = castleData.buildings.find(building => building.id === id);
+        } else if (type === 'troop') {
+            item = castleData.troops.find(troop => troop.id === id);
+        }
+
+        if (!item) {
+            handleError(new Error(`${type} not found`), `The ${type} information is not available.`);
+            return;
+        }
+
+        const modalTitle = document.getElementById('infoModalTitle');
+        const modalBody = document.getElementById('infoModalBody');
+
+        if (type === 'building') {
+            modalTitle.textContent = item.buildingType ? item.buildingType.name : 'Building';
+            modalBody.innerHTML = `
+            <p>Type: ${item.buildingType ? item.buildingType.name : 'N/A'}</p>
+            <p>Level: ${item.level || 'N/A'}</p>
+            <p>HP: ${item.hp || 'N/A'}</p>
+            <p>Defence Power: ${item.defencePower || 'N/A'}</p>
+            <p>Castle HP Contribution: ${item.buildingType ? item.buildingType.castleHPContribution : 'N/A'}</p>
+            <p>Threat Level: ${item.buildingType ? item.buildingType.threatLevel : 'N/A'}</p>
+        `;
+        } else if (type === 'troop') {
+            modalTitle.textContent = item.troopType ? item.troopType.name : 'Troop';
+            modalBody.innerHTML = `
+            <p>Type: ${item.troopType ? item.troopType.name : 'N/A'}</p>
+            <p>Level: ${item.level || 'N/A'}</p>
+            <p>HP: ${item.hp || 'N/A'}</p>
+            <p>Attack Power: ${item.attackPower || 'N/A'}</p>
+            <p>Defence Power: ${item.defensePower || 'N/A'}</p>
+        `;
+        }
+
+        new bootstrap.Modal(document.getElementById('infoModal')).show();
+    }
+
+    function updateGlossary() {
+        fetchTroopTypes()
+            .then(troopTypes => {
+                console.log('Fetched troop types:', troopTypes);
+                const troopTypeGlossary = document.getElementById('troopTypeGlossary');
+                const availableTroopTypes = getAvailableTroopTypes();
+                if (troopTypes && troopTypes.length > 0) {
+                    troopTypeGlossary.innerHTML = troopTypes.map(type => `
+                    <div class="card glossary-card ${availableTroopTypes.includes(type.id) ? 'border-success' : ''}">
+                        <div class="card-header">${type.name || 'Unknown'}</div>
+                        <div class="card-body">
+                            <p><strong>Base HP:</strong> ${type.baseHp || 'N/A'}</p>
+                            <p><strong>Base Attack:</strong> ${type.baseAttackPower || 'N/A'}</p>
+                            <p><strong>Base Defence:</strong> ${type.baseDefencePower || 'N/A'}</p>
+                            <p><strong>Attack Types:</strong> ${type.attackTypes ? type.attackTypes.map(at => at.name).join(', ') : 'N/A'}</p>
+                            <p><strong>Defense Types:</strong> ${type.defenseTypes ? type.defenseTypes.map(dt => dt.name).join(', ') : 'N/A'}</p>
+                        </div>
+                    </div>
+                `).join('');
+                } else {
+                    troopTypeGlossary.innerHTML = '<p>No troop types available.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching troop types:', error);
+                document.getElementById('troopTypeGlossary').innerHTML = '<p>Error loading troop types.</p>';
+            });
+
+        fetchBuildingTypes()
+            .then(buildingTypes => {
+                console.log('Fetched building types:', buildingTypes);
+                const buildingTypeGlossary = document.getElementById('buildingTypeGlossary');
+                if (buildingTypes && buildingTypes.length > 0) {
+                    buildingTypeGlossary.innerHTML = buildingTypes.map(type => `
+                        <div class="card glossary-card">
+                            <div class="card-header">${type.name || 'Unknown'}</div>
+                            <div class="card-body">
+                                <p><strong>Base HP:</strong> ${type.baseHp || 'N/A'}</p>
+                                <p><strong>Base Defence:</strong> ${type.baseDefencePower || 'N/A'}</p>
+                                <p><strong>HP Contribution:</strong> ${type.castleHPContribution || 'N/A'}</p>
+                                <p><strong>Threat Level:</strong> ${type.threatLevel || 'N/A'}</p>
+                                <p><strong>Limit Per Castle:</strong> ${type.limitPerCastle || 'N/A'}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    buildingTypeGlossary.innerHTML = '<p>No building types available.</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching building types:', error);
+                document.getElementById('buildingTypeGlossary').innerHTML = '<p>Error loading building types.</p>';
+            });
     }
 
     function fetchSimulationLogs(castleId, page = 0, size = 10) {
@@ -220,16 +461,16 @@
             .catch(error => handleError(error, 'Failed to fetch troop types. Please try again.'));
     }
 
-    function fetchBuildingTypes() {
-        return fetch('/api/castle/building-types')
+    function fetchTroopTypes() {
+        return fetch('/api/castle/troop-types')
             .then(response => {
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return response.json();
             });
     }
 
-    function fetchTroopTypes() {
-        return fetch('/api/castle/troop-types')
+    function fetchBuildingTypes() {
+        return fetch('/api/castle/building-types')
             .then(response => {
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 return response.json();

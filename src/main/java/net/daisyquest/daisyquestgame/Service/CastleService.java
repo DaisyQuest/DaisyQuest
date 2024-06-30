@@ -51,6 +51,7 @@ public class CastleService {
         castle.setBuildings(new ArrayList<>());
         castle.setTroops(new ArrayList<>());
         castle.setOwner(player);
+        castle.setHealth(100000);
         return castleRepository.save(castle);
     }
 

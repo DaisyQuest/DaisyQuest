@@ -21,4 +21,9 @@ public class Troop {
     private double dpMod;
     private boolean isHostile;
     private boolean isNeutral = false;
+    private int killCount = 0;
+    private String title;
+
+    private int experience = 0;
+
 }

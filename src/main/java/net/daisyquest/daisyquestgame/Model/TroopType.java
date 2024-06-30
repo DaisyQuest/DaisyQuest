@@ -16,6 +16,7 @@ public class TroopType {
     private int baseHp;
     private int baseAttackPower;
     private int baseDefencePower;
+    private int experienceValue;
     @DBRef
     private List<AttackType> attackTypes;
     @DBRef
