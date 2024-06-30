@@ -206,7 +206,7 @@
         fetch(`/api/players/${playerId}/castle`)
             .then(response => {
                 if (!response.ok) {
-                    if (response.status === 404) {
+                    if (response.status === 404 || response.status === 400) {
                         return fetch('/api/castle/create/' + playerId).then(resp => resp.json());
                     }
                     throw new Error(`HTTP error! status: ${response.status}`);
