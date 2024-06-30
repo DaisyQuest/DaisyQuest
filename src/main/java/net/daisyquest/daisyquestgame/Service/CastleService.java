@@ -150,6 +150,17 @@ public class CastleService {
         return troop;
     }
 
+    @Transactional
+    public Troop switchTroopPosition(String troopId) {
+        Troop troop = troopRepository.findById(troopId)
+                .orElseThrow(() -> new IllegalArgumentException("Troop not found"));
+
+        troop.setPosition(troop.getPosition() == Troop.Position.FRONTLINE ?
+                Troop.Position.BACKLINE : Troop.Position.FRONTLINE);
+
+        return troopRepository.save(troop);
+    }
+
     public Castle calculateCastleStats(String castleId) {
         Castle castle = castleRepository.findById(castleId)
                 .orElseThrow(() -> new IllegalArgumentException("Castle not found"));

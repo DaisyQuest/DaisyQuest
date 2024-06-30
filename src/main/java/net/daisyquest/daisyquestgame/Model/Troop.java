@@ -26,4 +26,10 @@ public class Troop {
 
     private int experience = 0;
 
+    private Position position = Position.FRONTLINE;
+
+    public enum Position {
+        FRONTLINE, BACKLINE, ATTACKING
+    }
+
 }

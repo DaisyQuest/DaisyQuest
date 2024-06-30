@@ -21,4 +21,7 @@ public class TroopType {
     private List<AttackType> attackTypes;
     @DBRef
     private List<DefenseType> defenseTypes;
+
+    private int attackRange;
+
 }

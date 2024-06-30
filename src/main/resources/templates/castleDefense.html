@@ -251,12 +251,32 @@
                     </h5>
                     <p class="card-text">Level: ${troop.level || 'N/A'}</p>
                     <p class="card-text">HP: ${troop.hp || 'N/A'}</p>
+                    <p class="card-text">Position: ${troop.position}</p>
+                    <p class="card-text">Kill Count: ${troop.killCount}</p>
+                    <p class="card-text">Title: ${troop.title || 'N/A'}</p>
+                    <button class="btn btn-primary" onclick="switchTroopPosition('${troop.id}')">
+                        Switch to ${troop.position === 'FRONTLINE' ? 'BACKLINE' : 'FRONTLINE'}
+                    </button>
                 </div>
             </div>
         `).join('');
         } else {
             troopsList.innerHTML = '<p>No troops available.</p>';
         }
+    }
+
+    function switchTroopPosition(troopId) {
+        fetch(`/api/castle/troops/${troopId}/switch-position`, {
+            method: 'POST'
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to switch troop position');
+                return response.json();
+            })
+            .then(() => {
+                fetchCastleStatus(); // Refresh the castle status to show the updated troop position
+            })
+            .catch(error => handleError(error, 'Failed to switch troop position. Please try again.'));
     }
 
 

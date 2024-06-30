@@ -93,6 +93,8 @@ public class CastleController {
         }
     }
 
+
+
     @PostMapping("/{castleId}/troops")
     public ResponseEntity<Troop> addTroop(@PathVariable String castleId, @RequestBody String troopTypeId) {
         try {
@@ -102,5 +104,15 @@ public class CastleController {
             return ResponseEntity.badRequest().body(null);
         }
     }
+    @PostMapping("/troops/{troopId}/switch-position")
+    public ResponseEntity<Troop> switchTroopPosition(@PathVariable String troopId) {
+        try {
+            Troop updatedTroop = castleService.switchTroopPosition(troopId);
+            return ResponseEntity.ok(updatedTroop);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
 }
 

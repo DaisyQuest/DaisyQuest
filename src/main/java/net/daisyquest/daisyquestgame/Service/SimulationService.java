@@ -27,7 +27,8 @@ public class SimulationService {
     private BuildingRepository buildingRepository;
     @Autowired
     private TroopTypeRepository troopTypeRepository;
-
+    @Autowired
+    private TroopTitleRepository troopTitleRepository;
     @Autowired
     private Random random;
 
@@ -45,7 +46,7 @@ public class SimulationService {
     private void simulateAttack(Castle castle) {
         List<Troop> defendingTroops = new ArrayList<>(castle.getTroops());
         List<Troop> attackingTroops = generateAttackingTroops(castle.getThreatLevel());
-        List<Troop> neutralTroops = generateNeutralTroops();
+        List<Building> buildings = new ArrayList<>(castle.getBuildings());
 
         SimulationLog log = new SimulationLog();
         log.setCastleId(castle.getId());
@@ -54,15 +55,14 @@ public class SimulationService {
         log.setInitialAttackerCount(attackingTroops.size());
         List<String> events = new ArrayList<>();
 
-        while (!attackingTroops.isEmpty() && !defendingTroops.isEmpty()) {
-            String roundResult = simulateBattleRound(attackingTroops, defendingTroops, neutralTroops, castle.getTacticLevel());
+        while (!attackingTroops.isEmpty() && (!defendingTroops.isEmpty() || !buildings.isEmpty())) {
+            String roundResult = simulateBattleRound(attackingTroops, defendingTroops, buildings, castle);
             events.add(roundResult);
         }
 
-        boolean castleSurvived = !defendingTroops.isEmpty();
+        boolean castleSurvived = !defendingTroops.isEmpty() || !buildings.isEmpty();
         if (!castleSurvived) {
-            destroyBuildings(castle);
-            events.add("Castle defenses breached. Some buildings destroyed.");
+            events.add("Castle defenses breached. All buildings and troops destroyed.");
         }
 
         log.setEvents(events);
@@ -70,66 +70,168 @@ public class SimulationService {
         log.setFinalAttackerCount(attackingTroops.size());
         log.setCastleSurvived(castleSurvived);
 
-        int damageToCastle = calculateDamageToCastle(castle, attackingTroops.size());
+        int damageToCastle = calculateDamageToCastle(castle, attackingTroops);
         log.setDamageToCastle(damageToCastle);
 
-        updateCastleAfterBattle(castle, defendingTroops, attackingTroops.size());
+        updateCastleAfterBattle(castle, defendingTroops, buildings, attackingTroops);
 
         saveSimulationLog(log);
     }
 
-    private String simulateBattleRound(List<Troop> attackingTroops, List<Troop> defendingTroops, List<Troop> neutralTroops, int tacticLevel) {
+    private String simulateBattleRound(List<Troop> attackingTroops, List<Troop> defendingTroops, List<Building> buildings, Castle castle) {
         StringBuilder roundResult = new StringBuilder("Battle round: ");
-        Collections.shuffle(attackingTroops);
-        Collections.shuffle(defendingTroops);
 
-        for (int i = 0; i < Math.min(attackingTroops.size(), defendingTroops.size()); i++) {
-            Troop attacker = attackingTroops.get(i);
-            Troop defender = findOptimalDefender(attacker, defendingTroops, tacticLevel);
-
-            int initialDefenderHp = defender.getHp();
-            int initialAttackerHp = attacker.getHp();
-            resolveCombat(attacker, defender);
-
-            roundResult.append(attacker.getTroopType().getName())
-                    .append(" attacked ")
-                    .append(defender.getTroopType().getName())
-                    .append(", dealing ")
-                    .append(initialDefenderHp - defender.getHp())
-                    .append(" damage. ");
-            if (defender.getHp() <= 0) {
-                defendingTroops.remove(defender);
-                roundResult.append("Defender defeated. ");
+        // Attacking phase
+        for (Troop attacker : attackingTroops) {
+            Object target = selectTarget(defendingTroops, buildings);
+            if (target instanceof Troop) {
+                roundResult.append(resolveCombat(attacker, (Troop) target));
+            } else if (target instanceof Building) {
+                roundResult.append(attackBuilding(attacker, (Building) target));
             }
-            if (attacker.getHp() <= 0) {
-                attackingTroops.remove(attacker);
-                roundResult.append("Attacker defeated. ");
-            }
-
-            resolveCombat(defender, attacker);
-            roundResult.append(defender.getTroopType().getName())
-                    .append(" counteracted attacked ")
-                    .append(attacker.getTroopType().getName())
-                    .append(", dealing ")
-                    .append(initialAttackerHp - attacker.getHp())
-                    .append(" damage. ");
-
-            if (defender.getHp() <= 0) {
-                defendingTroops.remove(defender);
-                roundResult.append("Defender defeated. ");
-            }
-            if (attacker.getHp() <= 0) {
-                attackingTroops.remove(attacker);
-                roundResult.append("Attacker defeated. ");
-            }
-
         }
 
-        handleNeutralTroops(neutralTroops, attackingTroops, defendingTroops);
-        roundResult.append("Neutral troops intervened.");
+        // Defending phase
+        for (Troop defender : defendingTroops) {
+            if (canDefend(defender)) {
+                Troop target = selectRandomAttacker(attackingTroops);
+                if (target != null) {
+                    roundResult.append(resolveCombat(defender, target));
+                }
+            }
+        }
+
+        // Remove defeated troops and destroyed buildings
+        attackingTroops.removeIf(t -> t.getHp() <= 0);
+        defendingTroops.removeIf(t -> t.getHp() <= 0);
+        buildings.removeIf(b -> b.getHp() <= 0);
 
         return roundResult.toString();
     }
+
+    private Object selectTarget(List<Troop> defendingTroops, List<Building> buildings) {
+        List<Troop> frontlineTroops = defendingTroops.stream()
+                .filter(t -> t.getPosition() == Troop.Position.FRONTLINE)
+                .collect(Collectors.toList());
+
+        if (!frontlineTroops.isEmpty()) {
+            return frontlineTroops.get(random.nextInt(frontlineTroops.size()));
+        } else if (!buildings.isEmpty()) {
+            return buildings.get(random.nextInt(buildings.size()));
+        } else {
+            List<Troop> backlineTroops = defendingTroops.stream()
+                    .filter(t -> t.getPosition() == Troop.Position.BACKLINE)
+                    .collect(Collectors.toList());
+            return backlineTroops.isEmpty() ? null : backlineTroops.get(random.nextInt(backlineTroops.size()));
+        }
+    }
+
+    private boolean canDefend(Troop defender) {
+        return defender.getPosition() == Troop.Position.FRONTLINE ||
+                (defender.getPosition() == Troop.Position.BACKLINE && defender.getTroopType().getAttackRange() > 1);
+    }
+
+    private Troop selectRandomAttacker(List<Troop> attackingTroops) {
+        return attackingTroops.isEmpty() ? null : attackingTroops.get(random.nextInt(attackingTroops.size()));
+    }
+
+    private String resolveCombat(Troop attacker, Troop defender) {
+        double damageMultiplier = calculateDamageMultiplier(attacker, defender);
+        int damage = (int) (attacker.getAttackPower() * damageMultiplier - defender.getDefensePower());
+        damage = Math.max(1, damage); // Ensure at least 1 damage is dealt
+        defender.setHp(defender.getHp() - damage);
+
+        StringBuilder result = new StringBuilder();
+        result.append(attacker.getPosition() == Troop.Position.ATTACKING ? "[ATTACKERS] " : "[CASTLE] ")
+                .append(attacker.getTroopType().getName())
+                .append(" attacked ")
+                .append(defender.getPosition() == Troop.Position.ATTACKING ? "[ATTACKERS] " : "[CASTLE] ")
+                .append(defender.getTroopType().getName())
+                .append(", dealing <b>")
+                .append(damage)
+                .append("</b> damage. ")
+                .append("<br>");
+
+        if (defender.getHp() <= 0) {
+            result.append(defender.getTroopType().getName())
+                    .append(" was defeated. ").append("<br>");
+            handleTroopDefeat(attacker, defender, result);
+        }
+
+        return result.toString();
+    }
+
+    private String attackBuilding(Troop attacker, Building building) {
+        int damage = Math.max(1, attacker.getAttackPower() - building.getDefencePower());
+        building.setHp(building.getHp() - damage);
+
+        StringBuilder result = new StringBuilder();
+        result.append(attacker.getTroopType().getName())
+                .append(" attacked ")
+                .append(building.getBuildingType().getName())
+                .append(", dealing ")
+                .append(damage)
+                .append(" damage. ");
+
+        if (building.getHp() <= 0) {
+            result.append(building.getBuildingType().getName())
+                    .append(" was destroyed. ");
+        }
+
+        return result.toString();
+    }
+//    private String simulateBattleRound(List<Troop> attackingTroops, List<Troop> defendingTroops, List<Troop> neutralTroops, int tacticLevel) {
+//        StringBuilder roundResult = new StringBuilder("Battle round: ");
+//        Collections.shuffle(attackingTroops);
+//        Collections.shuffle(defendingTroops);
+//
+//        for (int i = 0; i < Math.min(attackingTroops.size(), defendingTroops.size()); i++) {
+//            Troop attacker = attackingTroops.get(i);
+//            Troop defender = findOptimalDefender(attacker, defendingTroops, tacticLevel);
+//
+//            int initialDefenderHp = defender.getHp();
+//            int initialAttackerHp = attacker.getHp();
+//            resolveCombat(attacker, defender);
+//
+//            roundResult.append(attacker.getTroopType().getName())
+//                    .append(" attacked ")
+//                    .append(defender.getTroopType().getName())
+//                    .append(", dealing ")
+//                    .append(initialDefenderHp - defender.getHp())
+//                    .append(" damage. ");
+//            if (defender.getHp() <= 0) {
+//                defendingTroops.remove(defender);
+//                roundResult.append("Defender defeated. ");
+//            }
+//            if (attacker.getHp() <= 0) {
+//                attackingTroops.remove(attacker);
+//                roundResult.append("Attacker defeated. ");
+//            }
+//
+//            resolveCombat(defender, attacker);
+//            roundResult.append(defender.getTroopType().getName())
+//                    .append(" counteracted attacked ")
+//                    .append(attacker.getTroopType().getName())
+//                    .append(", dealing ")
+//                    .append(initialAttackerHp - attacker.getHp())
+//                    .append(" damage. ");
+//
+//            if (defender.getHp() <= 0) {
+//                defendingTroops.remove(defender);
+//                roundResult.append("Defender defeated. ");
+//            }
+//            if (attacker.getHp() <= 0) {
+//                attackingTroops.remove(attacker);
+//                roundResult.append("Attacker defeated. ");
+//            }
+//
+//        }
+//
+//        handleNeutralTroops(neutralTroops, attackingTroops, defendingTroops);
+//        roundResult.append("Neutral troops intervened.");
+//
+//        return roundResult.toString();
+//    }
     private Troop findOptimalDefender(Troop attacker, List<Troop> defenders, int tacticLevel) {
         if (random.nextInt(100) < tacticLevel) {
             return defenders.stream()
@@ -141,11 +243,41 @@ public class SimulationService {
         }
     }
 
-    private void resolveCombat(Troop attacker, Troop defender) {
-        double damageMultiplier = calculateDamageMultiplier(attacker, defender);
-        int damage = (int) (attacker.getAttackPower() * damageMultiplier - defender.getDefensePower());
-        damage = Math.max(1, damage); // Ensure at least 1 damage is dealt
-        defender.setHp(defender.getHp() - damage);
+    private void handleTroopDefeat(Troop victor, Troop defeated, StringBuilder result) {
+        int expGain = defeated.getTroopType().getExperienceValue();
+
+       result.append(victor.getTroopType().getName() + "("+ victor.getId()+")")
+               .append(" has gained ").append(expGain).append(" experience!").append("<br>");
+        victor.setExperience(victor.getExperience() + expGain);
+        victor.setKillCount(victor.getKillCount() + 1);
+        checkLevelUp(victor, result);
+        updateTroopTitle(victor, result);
+    }
+
+    private void checkLevelUp(Troop troop, StringBuilder result) {
+        int experienceNeededForNextLevel = calculateExperienceNeededForNextLevel(troop.getLevel());
+        while (troop.getExperience() >= experienceNeededForNextLevel) {
+            troop.setLevel(troop.getLevel() + 1);
+            troop.setHp(calculateHP(troop.getTroopType().getBaseHp(), troop.getLevel()));
+            troop.setAttackPower(calculateAttackPower(troop.getTroopType().getBaseAttackPower(), troop.getLevel()));
+            troop.setDefensePower(calculateDefensePower(troop.getTroopType().getBaseDefencePower(), troop.getLevel()));
+            experienceNeededForNextLevel = calculateExperienceNeededForNextLevel(troop.getLevel());
+        }
+    }
+
+    private int calculateExperienceNeededForNextLevel(int currentLevel) {
+        // This is a simple linear progression. Adjust as needed for your game balance.
+        return currentLevel * 100;
+    }
+
+    private void updateTroopTitle(Troop troop, StringBuilder result) {
+        List<TroopTitle> titles = troopTitleRepository.findAllByOrderByMinKillCountAsc();
+        for (int i = titles.size() - 1; i >= 0; i--) {
+            if (troop.getKillCount() >= titles.get(i).getMinKillCount()) {
+                troop.setTitle(titles.get(i).getTitle());
+                break;
+            }
+        }
     }
 
     private double calculateDamageMultiplier(Troop attacker, Troop defender) {
@@ -182,16 +314,23 @@ public class SimulationService {
             buildingRepository.deleteAll(destroyedBuildings);
         }
 
-    private void updateCastleAfterBattle(Castle castle, List<Troop> survivingTroops, int size) {
+    private void updateCastleAfterBattle(Castle castle, List<Troop> survivingTroops, List<Building> survivingBuildings, List<Troop> survivingAttackers) {
         castle.setTroops(survivingTroops);
-        int damageToCastle = calculateDamageToCastle(castle, size);
+        castle.setBuildings(survivingBuildings);
+        int damageToCastle = calculateDamageToCastle(castle, survivingAttackers);
         castle.setHealth(Math.max(0, castle.getHealth() - damageToCastle));
         castleRepository.save(castle);
     }
 
-    private int calculateDamageToCastle(Castle castle, int defSize) {
-        return 25 * defSize;
+    private int calculateDamageToCastle(Castle castle, List<Troop> attackers) {
+        if (attackers == null || attackers.isEmpty()) {
+            return 0;
+        }
+        return attackers.stream()
+                .mapToInt(Troop::getAttackPower)
+                .sum();
     }
+
 
 
 
@@ -202,7 +341,7 @@ public class SimulationService {
         Random random = new Random();
 
         // Determine number of troops based on threat level
-        int numberOfTroops = threatLevel + random.nextInt(3); // threatLevel + 0 to 2
+        int numberOfTroops = threatLevel * 10 + random.nextInt(3); // threatLevel + 0 to 2
 
         for (int i = 0; i < numberOfTroops; i++) {
             TroopType randomTroopType = allTroopTypes.get(random.nextInt(allTroopTypes.size()));
@@ -218,6 +357,7 @@ public class SimulationService {
             troop.setDpMod(1.0);
             troop.setHostile(true);
             troop.setNeutral(false);
+            troop.setPosition(Troop.Position.ATTACKING);
 
             attackingTroops.add(troop);
         }
