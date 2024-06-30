@@ -144,7 +144,7 @@
 
     const PLAYER_SIZE = 10;
 
-    function drawWorldMap() {
+    async function drawWorldMap() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const startX = Math.floor(currentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
@@ -155,54 +155,86 @@
                 const worldX = startX + x;
                 const worldY = startY + y;
 
-                // Draw land tile
-                const offsetX = x - (currentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2;
-                const offsetY = y - (currentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2;
+                const offsetX = Math.round(x - (currentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
+                const offsetY = Math.round(y - (currentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
 
                 ctx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
                 ctx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
 
-                // Draw grid
                 ctx.strokeStyle = 'rgba(255,255,255,0.2)';
                 ctx.strokeRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
             }
         }
 
         // Draw other players
-        players.forEach(player => {
+        for (const player of players) {
             if (player.id !== currentPlayer.id) {
-                const x = player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-                const y = player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+                const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
+                const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
 
-                if (x >= -PLAYER_SIZE && x < VIEWPORT_WIDTH + PLAYER_SIZE &&
-                    y >= -PLAYER_SIZE && y < VIEWPORT_HEIGHT + PLAYER_SIZE) {
-                    drawPlayer(x, y, player.username, '#3498db');
+                if (x >= -SPRITE_SIZE/2 && x < VIEWPORT_WIDTH + SPRITE_SIZE/2 &&
+                    y >= -SPRITE_SIZE/2 && y < VIEWPORT_HEIGHT + SPRITE_SIZE/2) {
+                    await drawPlayer(x, y, player, false);
                 }
             }
-        });
+        }
 
         // Draw current player
-        drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer.username, '#e74c3c');
+        await drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
 
         // Update coordinates display
         coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
     }
 
-    function drawPlayer(x, y, username, color) {
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(x, y, PLAYER_SIZE, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.strokeStyle = '#ecf0f1';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+    const SPRITE_SIZE = 32; // Adjust this based on your sprite size
+    const spriteCache = {};
 
-        // Draw player name
-        ctx.fillStyle = '#ecf0f1';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(username, x, y + PLAYER_SIZE + 10);
+    function loadSprite(spriteName) {
+        return new Promise((resolve, reject) => {
+            if (spriteCache[spriteName]) {
+                resolve(spriteCache[spriteName]);
+            } else {
+                const img = new Image();
+                img.onload = () => {
+                    spriteCache[spriteName] = img;
+                    resolve(img);
+                };
+                img.onerror = reject;
+                img.src = `/sprites/${spriteName}.png`;
+            }
+        });
     }
+
+    async function drawPlayer(x, y, player, isCurrentPlayer) {
+        const layers = [
+            player.subspriteBackground || 'background_0',
+            player.subspriteFace || 'face_0',
+            player.subspriteEyes || 'eyes_0',
+            player.subspriteHairHat || 'hairhat_0'
+        ];
+
+        try {
+            for (const layer of layers) {
+                const sprite = await loadSprite(layer);
+                ctx.drawImage(sprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+            }
+
+            // Draw player name
+            ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(player.username, x, y + SPRITE_SIZE / 2 + 15);
+
+        } catch (error) {
+            console.error('Error loading sprite:', error);
+            // Fallback to drawing a circle if sprite loading fails
+            ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
+            ctx.beginPath();
+            ctx.arc(x, y, SPRITE_SIZE / 2, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+    }
+
 
     canvas.addEventListener('click', (event) => {
         const rect = canvas.getBoundingClientRect();
