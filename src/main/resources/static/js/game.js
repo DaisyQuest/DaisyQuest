@@ -189,18 +189,34 @@ function buyLand() {
 }
 
 function sellLand() {
-    const prices = { gold: 1000 }; // Replace with actual price input
+    if (!selectedLand || !selectedLand.id) {
+        console.error('No land selected or land has no ID');
+        return;  // Exit the function if there is no land selected or if selected land doesn't have an ID
+    }
 
-    fetch('/api/land/sell', {
+    const prices = { gold: 1000 }; // Placeholder for actual prices, ensure this comes from user input or similar
+
+    // Modify the endpoint URL to include the landId as a query parameter
+    const endpoint = `/api/land/sell?landId=${encodeURIComponent(selectedLand.id)}`;
+
+    fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ landId: selectedLand.id, prices: prices })
+        body: JSON.stringify(prices) // Only send prices in the body
     })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok: ' + response.statusText);
+            }
+            return response.json();
+        })
         .then(updatedLand => {
             selectedLand = updatedLand;
-            updateLandDetails();
-            updateMapTile(updatedLand);
+            updateLandDetails();  // Make sure this function updates the UI with new land details
+            updateMapTile(updatedLand);  // Ensure this function handles the updated land data appropriately
+        })
+        .catch(error => {
+            console.error('Failed to sell land:', error);
         });
 }
 
@@ -230,11 +246,17 @@ function closeModal() {
 }
 
 function updateMapTile(land) {
+    console.log(`Coordinates: ${land.xcoordinate}, ${land.ycoordinate}`);  // Log coordinates to check their values
     const tile = document.querySelector(`.land-tile[data-x="${land.xcoordinate}"][data-y="${land.ycoordinate}"]`);
+
+    if (!tile) {
+        console.error('No tile found for the given coordinates.');  // Log an error if no tile is found
+        return;  // Optionally return to avoid errors in subsequent lines
+    }
+
     tile.classList.toggle('owned', !!land.owner);
     tile.classList.toggle('for-sale', land.forSale);
 }
-
 // Initialize the map when the page loads
 document.addEventListener('DOMContentLoaded', () => initializeWorldMap(20, 20));
 //WORLD MAP END

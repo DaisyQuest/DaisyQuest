@@ -127,6 +127,7 @@ public class LandService {
 
     @Transactional
     public Land sellLand(String landId, Map<String, Integer> prices) {
+
         Land land = landRepository.findById(landId)
                 .orElseThrow(() -> new IllegalArgumentException("Land not found"));
 

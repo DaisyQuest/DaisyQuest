@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Defense</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .simulation-log {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h1>Castle Defense</h1>
+    <div id="castleInfo" class="mt-4"></div>
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h2>Buildings</h2>
+            <div id="buildingsList"></div>
+            <button class="btn btn-primary mt-2" onclick="showAddBuildingModal()">Add Building</button>
+        </div>
+        <div class="col-md-6">
+            <h2>Troops</h2>
+            <div id="troopsList"></div>
+            <button class="btn btn-primary mt-2" onclick="showAddTroopModal()">Add Troop</button>
+        </div>
+    </div>
+    <div class="mt-4">
+        <h2>Simulation Logs</h2>
+        <div id="simulationLogs" class="simulation-log"></div>
+    </div>
+</div>
+
+<!-- Add Building Modal -->
+<div class="modal fade" id="addBuildingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Building</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <select id="buildingTypeSelect" class="form-select"></select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="addBuilding()">Add Building</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Troop Modal -->
+<div class="modal fade" id="addTroopModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Troop</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <select id="troopTypeSelect" class="form-select"></select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="addTroop()">Add Troop</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script><script>
+    const playerId = localStorage.getItem('playerId');
+    let castleId;
+
+    if (!playerId) {
+        window.location.href = '/login';
+    }
+
+    function handleError(error, customMessage) {
+        console.error('Error:', error);
+        alert(customMessage || 'An unexpected error occurred. Please try again.');
+    }
+
+    function fetchCastleStatus() {
+        console.log('Castle Time!');
+        console.log('playerId at CastleTime: ' + playerId);
+        fetch(`/api/players/${playerId}/castle`)
+            .then(response => {
+             if(!response.ok)  fetch('/api/castle/create/' + playerId).then(resp => response = resp.json());
+
+                return response.json();
+            })
+            .then(castle => {
+                console.log('castle at CastleTime: ' + castle);
+                console.log('castle at CastleTime: ' + castle.id);
+
+
+                if (!castle) {
+                    fetch('/api/castle/create/' + playerId);
+                    return;
+                }
+                castleId = castle.id;
+                updateCastleInfo(castle);
+                updateBuildingsList(castle.buildings);
+                updateTroopsList(castle.troops);
+                fetchSimulationLogs(castle.id);
+            })
+            .catch(error => handleError(error, 'Failed to fetch castle status. Please try again.'));
+    }
+
+    function updateCastleInfo(castle) {
+        document.getElementById('castleInfo').innerHTML = `
+        <h2>Castle Status</h2>
+        <p>Castle ID: ${castle.id}</p>
+        <p>Health: ${castle.health}</p>
+        <p>Threat Level: ${castle.threatLevel}</p>
+        <p>Tactic Level: ${castle.tacticLevel}</p>
+    `;
+    }
+
+    function updateBuildingsList(buildings) {
+        const buildingsList = document.getElementById('buildingsList');
+        buildingsList.innerHTML = buildings.map(building => `
+        <div class="card mb-2">
+            <div class="card-body">
+                <h5 class="card-title">${building.buildingType.name}</h5>
+                <p class="card-text">Level: ${building.level}</p>
+                <p class="card-text">HP: ${building.hp}</p>
+            </div>
+        </div>
+    `).join('');
+    }
+
+    function updateTroopsList(troops) {
+        const troopsList = document.getElementById('troopsList');
+        troopsList.innerHTML = troops.map(troop => `
+        <div class="card mb-2">
+            <div class="card-body">
+                <h5 class="card-title">${troop.troopType.name}</h5>
+                <p class="card-text">Level: ${troop.level}</p>
+                <p class="card-text">HP: ${troop.hp}</p>
+            </div>
+        </div>
+    `).join('');
+    }
+
+    function fetchSimulationLogs(castleId, page = 0, size = 10) {
+        fetch(`/api/castle/${castleId}/simulations?page=${page}&size=${size}`)
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                displaySimulationLogs(data);
+            })
+            .catch(error => handleError(error, 'Failed to fetch simulation logs. Please try again.'));
+    }
+
+    function displaySimulationLogs(data) {
+        const logsContainer = document.getElementById('simulationLogs');
+        logsContainer.innerHTML = data.content.map(log => `
+        <div class="card mb-2">
+            <div class="card-body">
+                <h5 class="card-title">Simulation on ${new Date(log.timestamp).toLocaleString()}</h5>
+                <p>Result: ${log.castleSurvived ? 'Castle Survived' : 'Castle Fell'}</p>
+                <p>Damage to Castle: ${log.damageTocastle}</p>
+                <p>Defenders: ${log.initialDefenderCount} → ${log.finalDefenderCount}</p>
+                <p>Attackers: ${log.initialAttackerCount} → ${log.finalAttackerCount}</p>
+                <ul>
+                    ${log.events.map(event => `<li>${event}</li>`).join('')}
+                </ul>
+            </div>
+        </div>
+    `).join('');
+
+        if (data.totalPages > 1) {
+            logsContainer.innerHTML += createPagination(data);
+        }
+    }
+
+    function createPagination(data) {
+        return `
+        <nav>
+            <ul class="pagination">
+                ${Array.from({length: data.totalPages}, (_, i) => `
+                    <li class="page-item ${i === data.number ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="fetchSimulationLogs(castleId, ${i})">${i + 1}</a>
+                    </li>
+                `).join('')}
+            </ul>
+        </nav>
+    `;
+    }
+
+    function showAddBuildingModal() {
+        fetchBuildingTypes()
+            .then(buildingTypes => {
+                const buildingTypeSelect = document.getElementById('buildingTypeSelect');
+                buildingTypeSelect.innerHTML = buildingTypes.map(type =>
+                    `<option value="${type.id}">${type.name}</option>`
+                ).join('');
+                new bootstrap.Modal(document.getElementById('addBuildingModal')).show();
+            })
+            .catch(error => handleError(error, 'Failed to fetch building types. Please try again.'));
+    }
+
+    function showAddTroopModal() {
+        fetchTroopTypes()
+            .then(troopTypes => {
+                const troopTypeSelect = document.getElementById('troopTypeSelect');
+                troopTypeSelect.innerHTML = troopTypes.map(type =>
+                    `<option value="${type.id}">${type.name}</option>`
+                ).join('');
+                new bootstrap.Modal(document.getElementById('addTroopModal')).show();
+            })
+            .catch(error => handleError(error, 'Failed to fetch troop types. Please try again.'));
+    }
+
+    function fetchBuildingTypes() {
+        return fetch('/api/castle/building-types')
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            });
+    }
+
+    function fetchTroopTypes() {
+        return fetch('/api/castle/troop-types')
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            });
+    }
+    function addBuilding() {
+        const buildingTypeId = document.getElementById('buildingTypeSelect').value;
+        fetch(`/api/castle/${castleId}/buildings`, {
+            method: 'POST',
+            headers: {'Content-Type': 'text/plain'},
+            body: buildingTypeId  // Send the buildingTypeId as a raw string
+        })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(() => {
+                fetchCastleStatus();
+                bootstrap.Modal.getInstance(document.getElementById('addBuildingModal')).hide();
+            })
+            .catch(error => handleError(error, 'Failed to add building. Please try again.'));
+    }
+
+    function addTroop() {
+        const troopTypeId = document.getElementById('troopTypeSelect').value;
+        fetch(`/api/castle/${castleId}/troops`, {
+            method: 'POST',
+            headers: {'Content-Type': 'text/plain'},
+            body: troopTypeId
+        })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.json();
+            })
+            .then(() => {
+                fetchCastleStatus();
+                bootstrap.Modal.getInstance(document.getElementById('addTroopModal')).hide();
+            })
+            .catch(error => handleError(error, 'Failed to add troop. Please try again.'));
+    }
+
+    // Initial load
+    fetchCastleStatus();
+</script>
+<script th:attr="data-castle-id=${castleId}"></script>
+</body>
+</html>

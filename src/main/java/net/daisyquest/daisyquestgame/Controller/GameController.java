@@ -20,4 +20,9 @@ public class GameController {
     public String game() {
         return "game";
     }
+
+    @GetMapping("/castleDefense")
+    public String castleDefense(){
+        return "castleDefense";
+    }
 }

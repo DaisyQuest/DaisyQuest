@@ -1,10 +1,8 @@
 package net.daisyquest.daisyquestgame.Controller;
 
 import lombok.Data;
-import net.daisyquest.daisyquestgame.Model.Item;
-import net.daisyquest.daisyquestgame.Model.Player;
-import net.daisyquest.daisyquestgame.Model.Shop;
-import net.daisyquest.daisyquestgame.Model.Spell;
+import net.daisyquest.daisyquestgame.Model.*;
+import net.daisyquest.daisyquestgame.Service.CastleService;
 import net.daisyquest.daisyquestgame.Service.CraftingService;
 import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import net.daisyquest.daisyquestgame.Service.PlayerService;
@@ -27,6 +25,9 @@ public class PlayerController {
 
     @Autowired
     private ShopService shopService;
+
+    @Autowired
+    private CastleService castleService;
     @PostMapping("/register")
     public ResponseEntity<?> registerPlayer(@RequestBody Player player) {
         try {
@@ -87,6 +88,12 @@ public class PlayerController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    @GetMapping("/{id}/castle")
+    public ResponseEntity<Castle> getCastleForPlayer(@PathVariable String id) {
+        return ResponseEntity.ok(castleService.getCastleByOwnerId(id));
+    }
+
 
     @GetMapping("/{id}/spells")
     public ResponseEntity<List<Spell>> getSpells(@PathVariable String id) {

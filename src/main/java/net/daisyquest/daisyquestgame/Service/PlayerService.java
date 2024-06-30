@@ -240,4 +240,8 @@ public class PlayerService {
         int newAmount = currencies.get(currencyType) + amount;
         currencies.put(currencyType, newAmount);
     }
+
+    public boolean deductResources(String id, int cost) {
+        return true;
+    }
 }
