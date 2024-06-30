@@ -25,4 +25,8 @@ public class GameController {
     public String castleDefense(){
         return "castleDefense";
     }
+    @GetMapping("/worldMap")
+    public String worldMap(){
+        return "worldMap";
+    }
 }
