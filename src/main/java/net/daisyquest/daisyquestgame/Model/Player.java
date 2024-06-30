@@ -39,6 +39,8 @@ public class Player {
     private String subspriteFace;
     private String subspriteEyes;
     private String subspriteHairHat;
+    private int worldPositionX= 10000;
+    private int worldPositionY= 10000;
 
     private int resources;
 
