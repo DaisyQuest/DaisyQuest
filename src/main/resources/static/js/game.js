@@ -8,6 +8,8 @@ let selectedAction = null;
 let craftingInventory = [];
 let craftingIngredients = [];
 let currentPlayer;
+let unclaimedRewardCount = 0;
+let combatLogs = [];
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
 document.getElementById('startCombatBtn').addEventListener('click', startCombat);
@@ -26,6 +28,9 @@ function initializeGame() {
             updateShopList();
             updatePlayerShop();
             initializeCrafting();
+            checkDailyReward();
+            displayUnclaimedRewards();
+            updateUnclaimedRewardsIndicator(unclaimedRewardCount);
         });
         updateInventory();
     }
@@ -489,9 +494,9 @@ function startCombat() {
         .then(combat => {
             console.log('Combat started:', combat);
             currentCombatId = combat.id;
-            updateCombatUI(combat);
             document.getElementById('combatLobby').style.display = 'none';
             document.getElementById('combatArea').style.display = 'block';
+            updateCombatUI(combat);
             fetchPlayerSpells();
             pollCombatStatus();
         })
@@ -507,6 +512,38 @@ function fetchPlayerSpells() {
         .catch(error => console.error('Error fetching player spells:', error));
 }
 
+function updateCombatInfo(combat) {
+    const combatInfo = document.getElementById('combatInfo');
+    if (!combatInfo) {
+        console.error('Combat info element not found');
+        return;
+    }
+    combatInfo.innerHTML = `
+        <p>Combat ID: ${combat.id}</p>
+        <p>Current Turn: ${combat.currentTurnPlayerId}</p>
+        <p>Turn Number: ${combat.turnNumber}</p>
+        <p>Is Active: ${combat.active}</p>
+        <h6>Player Health:</h6>
+        <ul style="list-style-type: none; padding-left: 0;">
+            ${Object.entries(combat.playerHealth).map(([id, health]) => {
+        const maxHealth = combat.playerHealthStarting[id];
+        const healthPercentage = (health / maxHealth) * 100;
+        return `
+                    <li style="margin-bottom: 10px;">
+                        <div>${id}: ${health} / ${maxHealth}</div>
+                        <div style="width: 200px; height: 20px; border: 1px solid black; background-color: red;">
+                            <div style="width: ${healthPercentage}%; height: 100%; background-color: green;"></div>
+                        </div>
+                    </li>
+                `;
+    }).join('')}
+        </ul>
+        <h6>Action Points:</h6>
+        <ul>
+            ${Object.entries(combat.playerActionPoints).map(([id, ap]) => `<li>${id}: ${ap}</li>`).join('')}
+        </ul>
+    `;
+}
 function pollCombatStatus() {
     if (!currentCombatId) {
         console.log('No active combat to poll');
@@ -532,31 +569,123 @@ function pollCombatStatus() {
         });
 }
 
+
+
+// Add new functions for the updated UI
+function updatePlayerCards(combat) {
+    const playerCardsContainer = document.getElementById('playerCards');
+    if (!playerCardsContainer) {
+        console.error('Player cards container not found');
+        return;
+    }
+
+    playerCardsContainer.innerHTML = '';
+
+    const playerCount = combat.playerIds.length;
+    const spriteSize = playerCount < 5 ? 128 : 64;
+
+    combat.playerIds.forEach(id => {
+        const health = combat.playerHealth[id];
+        const maxHealth = combat.playerHealthStarting[id];
+        const healthPercentage = (health / maxHealth) * 100;
+
+        const playerCard = document.createElement('div');
+        playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
+        playerCard.innerHTML = `
+            <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
+                ${getPlayerSprite(id, spriteSize)}
+            </div>
+            <h3 class="text-center mt-2">${id}</h3>
+            <div class="health-bar">
+                <div class="health-bar-fill" style="width: ${healthPercentage}%"></div>
+            </div>
+            <p class="text-center mt-2">HP: ${health} / ${maxHealth}</p>
+            <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
+        `;
+        playerCardsContainer.appendChild(playerCard);
+    });
+}
+
+
+function getPlayerSprite(playerId, size) {
+    // This is a placeholder. You'll need to implement the logic to fetch the correct sprite for each player.
+    const player = { /* fetch player data */ };
+    if (player.playerAiSprite) {
+        return `<img src="/sprites/${player.playerAiSprite}" width="${size}" height="${size}">`;
+    } else {
+        return `
+            <img src="/sprites/${player.subspriteBackground || 'background_1'}.png" width="${size}" height="${size}">
+            <img src="/sprites/${player.subspriteFace || 'face_1'}.png" width="${size}" height="${size}">
+            <img src="/sprites/${player.subspriteEyes || 'eyes_1'}.png" width="${size}" height="${size}">
+            <img src="/sprites/${player.subspriteHairHat || 'hairhat_1'}.png" width="${size}" height="${size}">
+        `;
+    }
+}
+
+function updateTurnIndicator(combat) {
+    const turnIndicator = document.getElementById('turnIndicator');
+    turnIndicator.textContent = `Current Turn: ${combat.currentTurnPlayerId}`;
+    turnIndicator.style.color = combat.currentTurnPlayerId === playerId ? '#4caf50' : '#e94560';
+}
+
+
+function fetchAndUpdateCombatLog(combatId) {
+    fetch(`/api/combat/${combatId}/logs`)
+        .then(response => response.json())
+        .then(logs => {
+            combatLogs = logs;
+            updateCombatLogDisplay();
+        })
+        .catch(error => console.error('Error fetching combat logs:', error));
+}
+
+// Update the existing updateCombatLogDisplay function
+function updateCombatLogDisplay() {
+    const combatLogDiv = document.getElementById('combatLog');
+    combatLogDiv.innerHTML = combatLogs.map(log => createCombatLogEntry(log)).join('');
+    combatLogDiv.scrollTop = combatLogDiv.scrollHeight;
+}
+
+function createCombatLogEntry(log) {
+    let color = log.actorId === playerId ? '#4caf50' :
+        log.isNeutral ? '#ffd700' : '#e94560';
+    return `
+        <div class="combat-log-entry" style="color: ${color}; ${log.actorId === playerId ? 'font-weight: bold;' : ''}">
+            [Turn ${log.turnNumber}] ${log.description}
+        </div>
+    `;
+}
+
 function updateCombatUI(combat) {
     console.log('Updating combat UI:', combat);
+
+    const combatArea = document.getElementById('combatArea');
+
+    if (!combatArea) {
+        console.error('Combat area not found in the DOM');
+        return;
+    }
+
+    // Ensure the player cards container exists
+    let playerCardsContainer = document.getElementById('playerCards');
+    if (!playerCardsContainer) {
+        console.log('Creating playerCards container');
+        playerCardsContainer = document.createElement('div');
+        playerCardsContainer.id = 'playerCards';
+        playerCardsContainer.className = 'row';
+        combatArea.appendChild(playerCardsContainer);
+    }
+
+    updatePlayerCards(combat);
+    updateTurnIndicator(combat);
     updateCombatInfo(combat);
     updateSpellCooldowns(combat);
     updateActionButtons(combat);
     updateSelectionVisibility(combat);
+    fetchAndUpdateCombatLog(combat.id);
 }
 
-function updateCombatInfo(combat) {
-    const combatInfo = document.getElementById('combatInfo');
-    combatInfo.innerHTML = `
-        <p>Combat ID: ${combat.id}</p>
-        <p>Current Turn: ${combat.currentTurnPlayerId}</p>
-        <p>Turn Number: ${combat.turnNumber}</p>
-        <p>Is Active: ${combat.active}</p>
-        <h6>Player Health:</h6>
-        <ul>
-            ${Object.entries(combat.playerHealth).map(([id, health]) => `<li>${id}: ${health}</li>`).join('')}
-        </ul>
-        <h6>Action Points:</h6>
-        <ul>
-            ${Object.entries(combat.playerActionPoints).map(([id, ap]) => `<li>${id}: ${ap}</li>`).join('')}
-        </ul>
-    `;
-}
+// Modify the existing updateCombatInfo function to include the combat log
 
 function updateSpellCooldowns(combat) {
     if (combat.spellCooldowns && combat.spellCooldowns[playerId]) {
@@ -813,24 +942,27 @@ function openSpriteSelectionModal() {
         });
 }
 
-    function updateInventory() {
-        fetch(`/api/players/${playerId}/inventory`)
-            .then(response => response.json())
-            .then(inventory => {
-                const inventoryList = document.getElementById('inventoryList');
-                inventoryList.innerHTML = inventory.map(item => `
+function updateInventory() {
+    fetch(`/api/players/${playerId}/inventory`)
+        .then(response => response.json())
+        .then(inventory => {
+            const inventoryList = document.getElementById('inventoryList');
+            inventoryList.innerHTML = inventory.map(item => `
                 <div class="inventory-item">
                     <h6>${item.name}</h6>
                     <p>${item.description}</p>
                     <p>Sell Price: ${item.sellPrice} gold</p>
-                    <button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>
+                    ${item.isChest ?
+                `<button class="btn btn-sm btn-primary" onclick="openChest('${item.id}')">Open Chest</button>` :
+                `<button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>`
+            }
                     <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
                     <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
                     <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
                 </div>
             `).join('');
-            });
-    }
+        });
+}
 
 // Quest and Activity Functions
     function updateQuestList() {
@@ -1236,6 +1368,149 @@ function updatePlayerShop() {
             }
         });
 }
+
+
+//REWARDS:
+function displayUnclaimedRewards() {
+    fetch(`/api/players/${playerId}/unclaimed-rewards`)
+        .then(response => response.json())
+        .then(unclaimedRewards => {
+            const rewardsList = document.getElementById('unclaimedRewardsList');
+
+            rewardsList.innerHTML = unclaimedRewards.map(container => `
+                <div class="unclaimed-reward">
+                    <h6>Unclaimed Reward</h6>
+                    <button class="btn btn-sm btn-primary" onclick="claimReward('${container.id}')">Claim</button>
+                </div>
+            `).join('');
+             unclaimedRewardCount = unclaimedRewards.length;
+
+        });
+}
+function checkDailyReward() {
+    fetch(`/api/rewards/can-claim-daily-reward/${playerId}`)
+        .then(response => response.json())
+        .then(canClaim => {
+            if (canClaim) {
+                document.getElementById('claimDailyRewardBtn').style.display = 'block';
+            } else {
+                document.getElementById('claimDailyRewardBtn').style.display = 'none';
+            }
+        })
+        .catch(error => console.error('Error checking daily reward:', error));
+}
+
+function openChest(chestId) {
+    fetch(`/api/rewards/open-chest/${playerId}/${chestId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(rewards => {
+            showRewardAnimation(rewards);
+        })
+        .catch(error => console.error('Error opening chest:', error));
+}
+
+function claimReward(rewardContainerId) {
+    fetch(`/api/rewards/claim-reward/${playerId}/${rewardContainerId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(result => {
+            alert('Reward claimed successfully!');
+            updatePlayerInfo();
+            updateInventory();
+        })
+        .catch(error => console.error('Error claiming reward:', error));
+}
+
+function showRewardAnimation(rewards) {
+    const modal = document.createElement('div');
+    modal.className = 'reward-modal';
+    modal.innerHTML = `
+        <div class="reward-content">
+            <h2>Rewards</h2>
+            <div class="reward-items"></div>
+            <button onclick="closeRewardModal(this.parentElement.parentElement)">Close</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const rewardItems = modal.querySelector('.reward-items');
+    rewards.forEach((reward, index) => {
+        setTimeout(() => {
+            const rewardElement = document.createElement('div');
+            rewardElement.className = 'reward-item';
+            rewardElement.innerHTML = `
+                <img src="/images/${reward.type.toLowerCase()}.png" alt="${reward.type}">
+                <p>${reward.quantity} ${reward.rewardId}</p>
+            `;
+            rewardItems.appendChild(rewardElement);
+            rewardElement.style.animation = 'pop-in 0.5s ease-out';
+        }, index * 500);
+    });
+}
+
+function closeRewardModal(modal) {
+    modal.style.animation = 'fade-out 0.3s ease-out';
+    setTimeout(() => {
+        document.body.removeChild(modal);
+    }, 300);
+}
+
+
+function claimDailyReward() {
+    fetch(`/api/rewards/claim-daily-reward/${playerId}`, { method: 'POST' })
+        .then(response => {
+            if (response.ok) {
+                alert('Daily reward claimed successfully!');
+                updatePlayerInfo();
+                displayUnclaimedRewards();
+                checkDailyReward();
+            } else if (response.status === 400) {
+                alert('You have already claimed your daily reward today.');
+            } else {
+                throw new Error('Failed to claim daily reward');
+            }
+        })
+        .catch(error => console.error('Error claiming daily reward:', error));
+}
+
+function updateUnclaimedRewardsIndicator(count) {
+    const indicator = document.getElementById('unclaimedRewardsIndicator');
+    const countSpan = document.getElementById('unclaimedRewardsCount');
+
+    if (count > 0) {
+        countSpan.textContent = count;
+        indicator.style.display = 'block';
+    } else {
+        indicator.style.display = 'none';
+    }
+}
+
+function testRandomReward() {
+    fetch(`/api/rewards/test-random-reward/${playerId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(reward => {
+            alert(`Received random reward: ${reward.quantity} ${reward.rewardId} (Type: ${reward.type})`);
+            updatePlayerInfo();  // Refresh player info to show the applied reward
+        })
+        .catch(error => console.error('Error testing random reward:', error));
+}
+
+function openRandomChest() {
+    fetch(`/api/rewards/open-random-chest/${playerId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(rewards => {
+            console.log('Opened random chest:', rewards);
+            showRewardAnimation(rewards);
+            updatePlayerInfo();  // Refresh player info to show the applied rewards
+            updateInventory();   // Refresh inventory to show the removed chest
+        })
+        .catch(error => console.error('Error opening random chest:', error));
+}
+
+
+//END REWARDS
+
+
+
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('crafting-tab').addEventListener('shown.bs.tab', function (e) {
         updateCraftingInventory();

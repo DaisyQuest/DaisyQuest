@@ -6,6 +6,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.List;
 import java.util.Set;
@@ -43,6 +45,11 @@ public class Player {
     private int worldPositionY= 10000;
 
     private int resources;
+
+    private List<RewardContainer> unclaimedRewards = new ArrayList<>();
+
+    private LocalDate lastDailyRewardClaim;
+
 
 
 }
