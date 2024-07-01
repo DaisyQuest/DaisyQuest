@@ -128,12 +128,52 @@ function initializeWorldMap() {
                 }
             }
 
+            // Return the fetch promise for the next .then() in the chain
+            return fetch('/api/land/all');
+        })
+        .then(response => response.json())
+        .then(allLands => {
+            console.log('Fetched all lands:', allLands); // Debug log
+            // Update all tiles with their initial colors
+            allLands.forEach(land => updateMapTile(land));
+
             // Select the first tile by default
             selectLand(0, 0);
         })
         .catch(error => {
             console.error('Error initializing world map:', error);
         });
+}
+
+function updateMapTile(land) {
+    const tile = document.querySelector(`.land-tile[data-x="${land.xcoordinate}"][data-y="${land.ycoordinate}"]`);
+
+    if (!tile) {
+        console.error(`No tile found for coordinates: ${land.xcoordinate}, ${land.ycoordinate}`);
+        return;
+    }
+
+    // Remove all existing status classes
+    tile.classList.remove('owned', 'player-owned', 'for-sale', 'player-for-sale', 'unclaimed');
+
+    // Add appropriate class based on land status
+    if (land.owner) {
+        if (land.owner.id === playerId) {
+            if (land.forSale) {
+                tile.classList.add('player-for-sale');
+            } else {
+                tile.classList.add('player-owned');
+            }
+        } else {
+            tile.classList.add('owned');
+        }
+    }
+    if (land.forSale && land.owner && land.owner.id !== playerId) {
+        tile.classList.add('for-sale');
+    }
+    if (!land.owner && !land.forSale) {
+        tile.classList.add('unclaimed');
+    }
 }
 
 function selectLand(x, y) {
@@ -158,16 +198,30 @@ function updateLandDetails(land = selectedLand) {
     const landInfo = document.getElementById('landInfo');
     console.log(land);
     if (land) {
+        let saleInfo = '';
+        if (land.forSale && land.salePrice) {
+            saleInfo = '<p>For Sale: Yes</p><p>Prices:</p><ul>';
+            Object.entries(land.salePrice).forEach(([currency, price]) => {
+                if (price > 0) {  // Only display currencies with a price > 0
+                    saleInfo += `<li>${currency}: ${price}</li>`;
+                }
+            });
+            saleInfo += '</ul>';
+        } else {
+            saleInfo = '<p>For Sale: No</p>';
+        }
+
         landInfo.innerHTML = `
             <p>Coordinates: (${land.xcoordinate}, ${land.ycoordinate})</p>
             <p>Type: ${land.landType || 'Unknown'}</p>
             <p>Owner: ${land.owner ? land.owner.username : 'Unclaimed'}</p>
-            <p>For Sale: ${land.forSale ? 'Yes' : 'No'}</p>
+            ${saleInfo}
         `;
 
-        document.getElementById('buyButton').style.display = land.forSale ? 'inline-block' : 'none';
-        document.getElementById('sellButton').style.display = land.owner && !land.forSale ? 'inline-block' : 'none';
-        document.getElementById('partitionButton').style.display = land.owner ? 'inline-block' : 'none';
+        const isCurrentPlayerOwner = land.owner && land.owner.id === currentPlayer.id;
+        document.getElementById('buyButton').style.display = land.forSale && !isCurrentPlayerOwner ? 'inline-block' : 'none';
+        document.getElementById('sellButton').style.display = isCurrentPlayerOwner && !land.forSale ? 'inline-block' : 'none';
+        document.getElementById('partitionButton').style.display = isCurrentPlayerOwner ? 'inline-block' : 'none';
     } else {
         landInfo.innerHTML = '<p>No land selected or land data unavailable.</p>';
         document.getElementById('buyButton').style.display = 'none';
@@ -193,21 +247,94 @@ function buyLand() {
         });
 }
 
+let availableCurrencies = [];
+
+// This function should be called whenever the player data is updated
+function updateAvailableCurrencies() {
+    if (currentPlayer && currentPlayer.currencies) {
+        // Extract the keys (currency names) from the currencies object
+        availableCurrencies = Object.keys(currentPlayer.currencies)
+            // Filter out any keys with a value of 0 or null/undefined
+            .filter(key => currentPlayer.currencies[key] > 0);
+    } else {
+        console.error('Current player or currencies not available');
+        availableCurrencies = [];
+    }
+
+    console.log('Available currencies:', availableCurrencies);
+}
+
+// Call this function when the game initializes and after any updates to player data
+updateAvailableCurrencies();
+
+function addCurrencyInput() {
+    const container = document.getElementById('currencyInputs');
+    const index = container.children.length;
+
+    if (availableCurrencies.length === 0) {
+        console.error('No available currencies');
+        return;
+    }
+
+    const inputGroup = document.createElement('div');
+    inputGroup.className = 'input-group mb-3';
+    inputGroup.innerHTML = `
+        <select class="form-select" id="currency${index}">
+            ${availableCurrencies.map(curr => `<option value="${curr}">${curr}</option>`).join('')}
+        </select>
+        <input type="number" class="form-control" id="price${index}" placeholder="Price" required>
+        <button class="btn btn-outline-secondary" type="button" onclick="removeCurrencyInput(this)">Remove</button>
+    `;
+
+    container.appendChild(inputGroup);
+}
+
 function sellLand() {
     if (!selectedLand || !selectedLand.id) {
         console.error('No land selected or land has no ID');
-        return;  // Exit the function if there is no land selected or if selected land doesn't have an ID
+        return;
     }
 
-    const prices = { gold: 1000 }; // Placeholder for actual prices, ensure this comes from user input or similar
+    // Ensure we have the latest currency data
+    updateAvailableCurrencies();
 
-    // Modify the endpoint URL to include the landId as a query parameter
+    // Clear previous inputs
+    document.getElementById('currencyInputs').innerHTML = '';
+
+    // Add an initial currency input
+    addCurrencyInput();
+
+    // Show the sell land modal
+    const sellLandModal = new bootstrap.Modal(document.getElementById('sellLandModal'));
+    sellLandModal.show();
+}
+function removeCurrencyInput(button) {
+    button.closest('.input-group').remove();
+}
+
+function confirmSellLand() {
+    const prices = {};
+    const inputs = document.getElementById('currencyInputs').children;
+
+    for (let input of inputs) {
+        const currency = input.querySelector('select').value;
+        const price = input.querySelector('input[type="number"]').value;
+        if (price) {
+            prices[currency] = parseInt(price, 10);
+        }
+    }
+
+    if (Object.keys(prices).length === 0) {
+        alert('Please enter at least one price');
+        return;
+    }
+
     const endpoint = `/api/land/sell?landId=${encodeURIComponent(selectedLand.id)}`;
 
     fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(prices) // Only send prices in the body
+        body: JSON.stringify(prices)
     })
         .then(response => {
             if (!response.ok) {
@@ -217,11 +344,19 @@ function sellLand() {
         })
         .then(updatedLand => {
             selectedLand = updatedLand;
-            updateLandDetails();  // Make sure this function updates the UI with new land details
-            updateMapTile(updatedLand);  // Ensure this function handles the updated land data appropriately
+            updateLandDetails();
+            updateMapTile(updatedLand);
+
+            // Close the modal
+            const sellLandModal = bootstrap.Modal.getInstance(document.getElementById('sellLandModal'));
+            sellLandModal.hide();
+
+            // Show a success message
+            alert('Land listed for sale successfully!');
         })
         .catch(error => {
             console.error('Failed to sell land:', error);
+            alert('Failed to list land for sale. Please try again.');
         });
 }
 
@@ -250,18 +385,8 @@ function closeModal() {
     document.getElementById('partitionModal').style.display = 'none';
 }
 
-function updateMapTile(land) {
-    console.log(`Coordinates: ${land.xcoordinate}, ${land.ycoordinate}`);  // Log coordinates to check their values
-    const tile = document.querySelector(`.land-tile[data-x="${land.xcoordinate}"][data-y="${land.ycoordinate}"]`);
 
-    if (!tile) {
-        console.error('No tile found for the given coordinates.');  // Log an error if no tile is found
-        return;  // Optionally return to avoid errors in subsequent lines
-    }
 
-    tile.classList.toggle('owned', !!land.owner);
-    tile.classList.toggle('for-sale', land.forSale);
-}
 // Initialize the map when the page loads
 document.addEventListener('DOMContentLoaded', () => initializeWorldMap(20, 20));
 //WORLD MAP END

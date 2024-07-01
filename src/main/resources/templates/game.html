@@ -202,7 +202,7 @@
         .land-tile {
             width: 50px;
             height: 50px;
-            background-color: #8bc34a;
+            background-color: #8bc34a; /* Unclaimed land */
             border: 1px solid #4caf50;
             cursor: pointer;
         }
@@ -212,16 +212,20 @@
         }
 
         .land-tile.owned {
-            background-color: #2196f3;
+            background-color: #2196f3; /* Other player-owned land */
+        }
+
+        .land-tile.player-owned {
+            background-color: #9c27b0; /* Current player-owned land */
         }
 
         .land-tile.for-sale {
             background-color: #ff9800;
         }
-
-        .land-details {
-            margin-top: 20px;
+        .land-tile.player-for-sale {
+            background-color: #ffd700; /* Gold color for player's land for sale */
         }
+
         .combat-container {
             background-color: #1a1a2e;
             border-radius: 15px;
@@ -681,7 +685,30 @@
             </div>
         </div>
 
-<!--       Sprite select modal -->
+        <div class="modal fade" id="sellLandModal" tabindex="-1" aria-labelledby="sellLandModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sellLandModalLabel">Sell Land</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="sellLandForm">
+                            <div id="currencyInputs">
+                                <!-- Currency inputs will be dynamically added here -->
+                            </div>
+                            <button type="button" class="btn btn-secondary mt-2" onclick="addCurrencyInput()">Add Currency</button>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmSellLand()">Sell Land</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--       Sprite select modal -->
         <div id="spriteSelectionModal" class="modal fade" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">

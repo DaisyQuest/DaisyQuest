@@ -70,6 +70,12 @@ public class LandController {
         return ResponseEntity.ok(worldMap);
     }
 
+    @GetMapping("/all")
+    public ResponseEntity<List<Land>> getAll() {
+        List<Land> allLands = landService.getAll();
+        return ResponseEntity.ok(allLands);
+    }
+
     @GetMapping
     public ResponseEntity<Land> getLandByCoordinates(@RequestParam int x, @RequestParam int y) {
         Land land = landService.getLandByCoordinates(x, y);
