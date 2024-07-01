@@ -1,0 +1,17 @@
+[{
+  "_id": "recipe001",
+  "name": "Iron Sword Recipe",
+  "requiredItemIdsAndAmounts": {
+    "item002": 2,
+    "item003": 1
+  },
+  "attributeRequirements": {
+    "combat": 1
+  },
+  "resultItemId": "item001",
+  "discoveredBy": "aaa",
+  "discoveryDateTime": {
+    "$numberLong": "1719664208889"
+  },
+  "_class": "net.daisyquest.daisyquestgame.Model.Recipe"
+}]

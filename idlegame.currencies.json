@@ -1,0 +1,80 @@
+[{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffbfa"
+  },
+  "name": "Gold Coins",
+  "description": "Standard currency accepted throughout the realm",
+  "symbol": "🪙"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffbfb"
+  },
+  "name": "Silver Pieces",
+  "description": "Common currency for everyday transactions",
+  "symbol": "🥈"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffbfc"
+  },
+  "name": "Copper Bits",
+  "description": "Small denomination currency for minor purchases",
+  "symbol": "🟤"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffbfd"
+  },
+  "name": "Mana Crystals",
+  "description": "Magical currency used for arcane transactions",
+  "symbol": "💎"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffbfe"
+  },
+  "name": "Dragon Scales",
+  "description": "Rare currency highly valued by collectors and craftsmen",
+  "symbol": "🐉"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffbff"
+  },
+  "name": "Elven Leaves",
+  "description": "Mystical currency used in elven territories",
+  "symbol": "🍃"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffc00"
+  },
+  "name": "Dwarven Nuggets",
+  "description": "Precious metal nuggets used as currency in dwarven kingdoms",
+  "symbol": "🪨"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffc01"
+  },
+  "name": "Merchant Tokens",
+  "description": "Special currency accepted by traveling merchants",
+  "symbol": "🪙"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffc02"
+  },
+  "name": "Celestial Shards",
+  "description": "Divine currency used for heavenly transactions",
+  "symbol": "✨"
+},
+{
+  "_id": {
+    "$oid": "667c9b70745e2c01fe3ffc03"
+  },
+  "name": "Shadow Essence",
+  "description": "Dark currency used in the underworld",
+  "symbol": "🌑"
+}]
