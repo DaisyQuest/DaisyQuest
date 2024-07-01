@@ -111,9 +111,9 @@ Our Spring Boot backend provides the following superpowers:
 ## 🚀 Get Started on Your DaisyQuest Adventure! 🚀
 
 1. Clone this repository: `git clone https://github.com/T-A-B/DaisyQuest.git`
-2. Install dependencies: `npm install`
+
 3. Configure your MongoDB connection in `application.properties`
-4. Launch the Spring Boot application: `./mvnw spring-boot:run`
+4. ./gradlew bootRun
 5. Open `index.html` in your browser and start your adventure!
 
 ## 🌈 Join the DaisyQuest Community! 🌈
