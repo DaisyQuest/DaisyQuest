@@ -24,7 +24,5 @@ public class Castle {
     @DBRef
     private Player owner;
 
-    public Castle() {
-    }
 }
 
