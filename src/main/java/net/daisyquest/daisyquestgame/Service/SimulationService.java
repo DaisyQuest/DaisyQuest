@@ -341,7 +341,7 @@ public class SimulationService {
         Random random = new Random();
 
         // Determine number of troops based on threat level
-        int numberOfTroops = threatLevel * 10 + random.nextInt(3); // threatLevel + 0 to 2
+        int numberOfTroops = threatLevel * 2 + random.nextInt(3); // threatLevel + 0 to 2
 
         for (int i = 0; i < numberOfTroops; i++) {
             TroopType randomTroopType = allTroopTypes.get(random.nextInt(allTroopTypes.size()));

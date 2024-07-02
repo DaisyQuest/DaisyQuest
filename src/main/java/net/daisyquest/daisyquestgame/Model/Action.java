@@ -17,8 +17,11 @@ public class Action {
         this.actionPoints = actionPoints;
         this.spellId = spellId; // New field for spell actions
     }
+    public Action(){
+
+    }
 
     public enum ActionType {
-        ATTACK, SPECIAL_ATTACK, SPELL, TACTICS
+        ATTACK, SPECIAL_ATTACK, SPELL, NONE, TACTICS
     }
 }

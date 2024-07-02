@@ -15,5 +15,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
         private String description;
         private Map<String, Integer> attributeModifiers;
         private int sellPrice;
+
+        boolean isChest = false;
     }
 

@@ -53,6 +53,10 @@ public class LandService {
     }
 
 
+    public List<Land> getAll(){
+        return landRepository.findAll();
+    }
+
 
     private void processLand(Land land) {
         if (land.isPartitioned()) {

@@ -1,10 +1,8 @@
 package net.daisyquest.daisyquestgame.Service;
 
 import lombok.extern.java.Log;
-import net.daisyquest.daisyquestgame.Model.Combat;
-import net.daisyquest.daisyquestgame.Model.Player;
-import net.daisyquest.daisyquestgame.Model.Action;
-import net.daisyquest.daisyquestgame.Model.Spell;
+import net.daisyquest.daisyquestgame.Model.*;
+import net.daisyquest.daisyquestgame.Repository.CombatLogRepository;
 import net.daisyquest.daisyquestgame.Repository.CombatRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +52,7 @@ public class CombatService {
             playerActionPoints.put(playerId, INITIAL_ACTION_POINTS);
         }
         combat.setPlayerHealth(playerHealth);
+        combat.setPlayerHealthStarting(Map.copyOf(playerHealth));
         combat.setPlayerActionPoints(playerActionPoints);
 
         combat.setCurrentTurnPlayerId(playerIds.get(0));
@@ -63,6 +62,25 @@ public class CombatService {
         logger.info("Combat started: {}", savedCombat);
         return savedCombat;
     }
+    @Autowired
+    private CombatLogRepository combatLogRepository;
+
+
+    private String generateActionDescription(String actionType, String actorId, String targetId, String spellId) {
+        // Implement logic to generate a human-readable description of the action
+        // This is a placeholder implementation
+
+        if(spellId != null){
+            return  String.format("%s performed %s on %s", actorId,  spellService.getSpell(spellId).getName(), targetId);
+        }
+
+        return String.format("%s performed %s on %s", actorId, actionType.equals("NONE") ? "AI_ATTACK" : actionType, targetId);
+    }
+
+    // Add a method to retrieve combat logs
+    public List<CombatLog> getCombatLogs(String combatId) {
+        return combatLogRepository.findByCombatIdOrderByTimestampAsc(combatId);
+    }
 
     public Combat performAction(String combatId, Action action) {
         logger.info("Performing action for combat {}: {}", combatId, action);
@@ -71,6 +89,38 @@ public class CombatService {
             logger.warn("Combat not found or not active: {}", combatId);
             throw new IllegalStateException("Combat not found or not active");
         }
+
+        Action fakeAction = null;
+        Action.ActionType actionType = action == null ? Action.ActionType.NONE : action.getType();
+
+        if(action == null){
+            fakeAction = new Action();
+            fakeAction.setType(actionType);
+            fakeAction.setPlayerId(combat.getCurrentTurnPlayerId());
+            fakeAction.setTargetPlayerId(null);
+            fakeAction.setSpellId(null);
+            fakeAction.setActionPoints(0);
+        }
+
+        String playerId = action == null ? fakeAction.getPlayerId() : action.getPlayerId();
+        String targetId = action == null ? null : action.getTargetPlayerId();
+        String spellId = action == null ? null : action.getSpellId();
+        CombatLog log = new CombatLog();
+        log.setCombatId(combatId);
+        log.setTurnNumber(combat.getTurnNumber());
+        log.setActorId(playerId);
+        log.setActionType(actionType.name());
+        log.setTargetId(targetId);
+        log.setDescription(generateActionDescription(actionType.name(), playerId, targetId, spellId));
+        log.setNeutral(false);
+        log.setTimestamp(Instant.now());
+        CombatLog savedLog = combatLogRepository.save(log);
+
+        // Add log reference to combat
+        if (combat.getCombatLogIds() == null) {
+            combat.setCombatLogIds(new ArrayList<>());
+        }
+        combat.getCombatLogIds().add(savedLog.getId());
 
         String currentPlayerId = combat.getCurrentTurnPlayerId();
         logger.info("Current turn: {}", currentPlayerId);

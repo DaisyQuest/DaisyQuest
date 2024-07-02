@@ -202,7 +202,7 @@
         .land-tile {
             width: 50px;
             height: 50px;
-            background-color: #8bc34a;
+            background-color: #8bc34a; /* Unclaimed land */
             border: 1px solid #4caf50;
             cursor: pointer;
         }
@@ -212,17 +212,104 @@
         }
 
         .land-tile.owned {
-            background-color: #2196f3;
+            background-color: #2196f3; /* Other player-owned land */
+        }
+
+        .land-tile.player-owned {
+            background-color: #9c27b0; /* Current player-owned land */
         }
 
         .land-tile.for-sale {
             background-color: #ff9800;
         }
-
-        .land-details {
-            margin-top: 20px;
+        .land-tile.player-for-sale {
+            background-color: #ffd700; /* Gold color for player's land for sale */
         }
 
+        .combat-container {
+            background-color: #1a1a2e;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+            color: #e94560;
+        }
+        .player-card {
+            background-color: #0f3460;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            color: #fff;
+        }
+        .player-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.3);
+        }
+        .player-sprite {
+            width: 128px;
+            height: 128px;
+            position: relative;
+            margin: 0 auto;
+        }
+        .player-sprite img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .health-bar {
+            height: 20px;
+            background-color: #e94560;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .health-bar-fill {
+            height: 100%;
+            background-color: #4caf50;
+            transition: width 0.5s ease-in-out;
+        }
+        .combat-log {
+            background-color: #0f3460;
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            color: #fff;
+        }
+        .combat-log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .combat-log-entry:hover {
+            background-color: #16213e;
+        }
+        .turn-indicator {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #4caf50;
+        }
+        #combatInfo {
+            background-color: #0f3460;
+            border-radius: 10px;
+            padding: 15px;
+            color: #fff;
+        }
+        #combatInfo ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .action-button {
+            margin: 5px;
+        }
+        .action-button:hover {
+            background-color: #e94560;
+            color: #fff;
+        }
         /*.modal {*/
         /*    display: none;*/
         /*    position: fixed;*/
@@ -241,12 +328,71 @@
         /*    border: 1px solid #888;*/
         /*    width: 80%;*/
         /*}*/
+
+        .reward-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .reward-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .reward-items {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .reward-item {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .reward-item img {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 5px;
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes fade-out {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+
     </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid">
         <a class="navbar-brand" href="#">DaisyQuest</a>
+        <div id="unclaimedRewardsIndicator" class="unclaimed-rewards-indicator">
+            Unclaimed Rewards <span id="unclaimedRewardsCount" class="badge">0</span>
+        </div>
+        <button id="claimDailyRewardBtn" style="display: none;" onclick="claimDailyReward()">Claim Daily Reward</button>
     </div>
 </nav>
 
@@ -273,6 +419,9 @@
                         <div class="tab-pane fade show active" id="inventory" role="tabpanel"
                              aria-labelledby="inventory-tab">
                             <div id="inventoryList"></div>
+                            <div id ="unclaimedRewardsList"></div>
+                            <button id="testRandomRewardBtn" class="btn btn-warning" onclick="testRandomReward()">Test Random Reward</button>
+                            <button id="openRandomChestBtn" class="btn btn-info" onclick="openRandomChest()">Open Random Chest</button>
                         </div>
                     </div>
                 </div>
@@ -362,41 +511,29 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="combat" role="tabpanel" aria-labelledby="combat-tab">
-                    <div class="card">
+                    <div class="card combat-container">
                         <div class="card-body">
-                            <h5 class="card-title">Combat</h5>
+                            <h5 class="card-title text-center">DaisyQuest Combat</h5>
+
+                            <!-- Combat Lobby -->
                             <div id="combatLobby">
                                 <button id="startCombatBtn" class="btn btn-primary">Start Combat</button>
                             </div>
-                            <div id="combatArea">
-                                <h6>Current Combat</h6>
-                                <div id="combatInfo"></div>
-                                <div id="turnInfo">
-                                    <p>Current Turn: <span id="currentTurn"></span></p>
-                                    <p id="timerThing">Time Remaining: <span id="turnTimer"></span></p>
-                                </div>
-                                <div id="actionButtons">
-                                    <button class="btn btn-secondary action-button" onclick="performAction('ATTACK')">
-                                        Attack
-                                    </button>
-                                    <button class="btn btn-secondary action-button"
-                                            onclick="performAction('SPECIAL_ATTACK')">Special Attack
-                                    </button>
-                                    <button class="btn btn-secondary action-button" onclick="performAction('SPELL')">
-                                        Spell
-                                    </button>
-                                    <button class="btn btn-secondary action-button" onclick="performAction('TACTICS')">
-                                        Tactics
-                                    </button>
-                                </div>
-                                <div id="spellSelection" style="display: none;">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <h6>Select Spell:</h6>
-                                            <select id="spellSelect" class="form-select"
-                                                    onchange="updateSpellInfo()"></select>
+
+                            <!-- Combat Area -->
+                            <div id="combatArea" style="display: none;">
+                                <div class="turn-indicator" id="turnIndicator"></div>
+                                <div class="row" id="playerCards"></div>
+                                <div class="row mt-4">
+                                    <div class="col-md-6">
+                                        <div id="actionButtons" class="d-flex justify-content-around">
+                                            <button class="btn btn-primary action-button" onclick="performAction('ATTACK')">Attack</button>
+                                            <button class="btn btn-primary action-button" onclick="performAction('SPECIAL_ATTACK')">Special Attack</button>
+                                            <button class="btn btn-primary action-button" onclick="performAction('SPELL')">Spell</button>
+                                            <button class="btn btn-primary action-button" onclick="performAction('TACTICS')">Tactics</button>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div id="spellSelection" class="mt-3" style="display: none;">
+                                            <select id="spellSelect" class="form-select mb-2" onchange="handleSpellSelection()"></select>
                                             <div id="spellInfo" class="card">
                                                 <div class="card-body">
                                                     <h5 class="card-title" id="spellInfoName"></h5>
@@ -408,17 +545,22 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        <div id="targetSelection" class="mt-3" style="display: none;">
+                                            <select id="targetSelect" class="form-select mb-2"></select>
+                                            <button class="btn btn-primary w-100" onclick="confirmAction()">Confirm Action</button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="combat-log" id="combatLog"></div>
                                     </div>
                                 </div>
-                                <div id="targetSelection" style="display: none;">
-                                    <h6>Select Target:</h6>
-                                    <select id="targetSelect"></select>
-                                    <button class="btn btn-primary" onclick="confirmAction()">Confirm Action</button>
-                                </div>
                             </div>
+
+                            <!-- Combat Results -->
                             <div id="combatResults" style="display: none;">
                                 <h6>Combat Results</h6>
                                 <div id="resultsInfo"></div>
+                                <button class="btn btn-primary" onclick="returnToLobby()">Return to Lobby</button>
                             </div>
                         </div>
                     </div>
@@ -543,7 +685,30 @@
             </div>
         </div>
 
-<!--       Sprite select modal -->
+        <div class="modal fade" id="sellLandModal" tabindex="-1" aria-labelledby="sellLandModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="sellLandModalLabel">Sell Land</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="sellLandForm">
+                            <div id="currencyInputs">
+                                <!-- Currency inputs will be dynamically added here -->
+                            </div>
+                            <button type="button" class="btn btn-secondary mt-2" onclick="addCurrencyInput()">Add Currency</button>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="confirmSellLand()">Sell Land</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--       Sprite select modal -->
         <div id="spriteSelectionModal" class="modal fade" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">

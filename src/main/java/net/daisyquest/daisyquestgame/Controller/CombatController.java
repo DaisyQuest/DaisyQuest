@@ -2,6 +2,7 @@ package net.daisyquest.daisyquestgame.Controller;
 
 import net.daisyquest.daisyquestgame.Model.Action;
 import net.daisyquest.daisyquestgame.Model.Combat;
+import net.daisyquest.daisyquestgame.Model.CombatLog;
 import net.daisyquest.daisyquestgame.Service.CombatService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,5 +70,13 @@ public class CombatController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error performing action: " + e.getMessage());
         }
+    }
+
+
+
+    @GetMapping("/{combatId}/logs")
+    public ResponseEntity<List<CombatLog>> getCombatLogs(@PathVariable String combatId) {
+        List<CombatLog> logs = combatService.getCombatLogs(combatId);
+        return ResponseEntity.ok(logs);
     }
 }

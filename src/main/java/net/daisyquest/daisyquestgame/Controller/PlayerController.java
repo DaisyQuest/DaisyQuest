@@ -2,11 +2,8 @@ package net.daisyquest.daisyquestgame.Controller;
 
 import lombok.Data;
 import net.daisyquest.daisyquestgame.Model.*;
-import net.daisyquest.daisyquestgame.Service.CastleService;
-import net.daisyquest.daisyquestgame.Service.CraftingService;
+import net.daisyquest.daisyquestgame.Service.*;
 import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
-import net.daisyquest.daisyquestgame.Service.PlayerService;
-import net.daisyquest.daisyquestgame.Service.ShopService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +25,9 @@ public class PlayerController {
 
     @Autowired
     private CastleService castleService;
+
+    @Autowired
+    private RewardService rewardService;
     @PostMapping("/register")
     public ResponseEntity<?> registerPlayer(@RequestBody Player player) {
         try {
@@ -91,7 +91,13 @@ public class PlayerController {
 
     @GetMapping("/{id}/castle")
     public ResponseEntity<Castle> getCastleForPlayer(@PathVariable String id) {
-        return ResponseEntity.ok(castleService.getCastleByOwnerId(id));
+        Castle c = castleService.getCastleByOwnerId(id);
+        if(c != null) {
+            return ResponseEntity.ok(castleService.getCastleByOwnerId(id));
+        }
+        else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
 
@@ -168,6 +174,16 @@ public class PlayerController {
     public ResponseEntity<Player> updatePlayerSprite(@PathVariable String id, @RequestBody SpriteUpdateRequest request) {
         Player updatedPlayer = playerService.updatePlayerSprite(id, request);
         return ResponseEntity.ok(updatedPlayer);
+    }
+
+    @GetMapping("/{playerId}/unclaimed-rewards")
+    public ResponseEntity<List<RewardContainer>> getUnclaimedRewards(@PathVariable String playerId) {
+        try {
+            List<RewardContainer> unclaimedRewards = rewardService.getUnclaimedRewards(playerId);
+            return ResponseEntity.ok(unclaimedRewards);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
 }
