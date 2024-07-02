@@ -91,7 +91,13 @@ public class PlayerController {
 
     @GetMapping("/{id}/castle")
     public ResponseEntity<Castle> getCastleForPlayer(@PathVariable String id) {
-        return ResponseEntity.ok(castleService.getCastleByOwnerId(id));
+        Castle c = castleService.getCastleByOwnerId(id);
+        if(c != null) {
+            return ResponseEntity.ok(castleService.getCastleByOwnerId(id));
+        }
+        else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
 
