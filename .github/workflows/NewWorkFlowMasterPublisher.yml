@@ -1,0 +1,92 @@
+name: Build and deploy Gradle app to Azure Web App
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java version
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v3
+        with:
+          name: java-app
+          path: '${{ github.workspace }}/build/libs/*.jar'
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: java-app
+
+      - name: Set up Java version
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17'
+          distribution: 'adopt'
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        env:
+          AZURE_SUBSCRIPTION_ID: '6dfef9cc-945f-4c9e-8007-064c19d7566a'
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          case $BRANCH_NAME in
+            master)
+              RESOURCE_GROUP="DaisyQuest"
+              APP_NAME="DaisyQuest"
+              ;;
+            staging)
+              RESOURCE_GROUP="DaisyQuest-Staging"
+              APP_NAME="DaisyQuest-Staging"
+              ;;
+            *)
+              RESOURCE_GROUP="DaisyQuest-Dev"
+              APP_NAME="DaisyQuest-Dev"
+              ;;
+          esac
+          ./gradlew azureWebAppDeploy \
+            -Pazure.subscription=$AZURE_SUBSCRIPTION_ID \
+            -Pazure.resourceGroup=$RESOURCE_GROUP \
+            -Pazure.appName=$APP_NAME
+
+      - name: Azure Logout
+        run: |
+          az logout
+        if: always()
