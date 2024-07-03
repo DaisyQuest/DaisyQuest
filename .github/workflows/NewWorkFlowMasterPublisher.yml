@@ -20,7 +20,7 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew clean build
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v3
         with:
