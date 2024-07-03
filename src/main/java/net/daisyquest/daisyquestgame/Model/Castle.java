@@ -14,13 +14,13 @@ import java.util.Map;
 public class Castle {
     @Id
     private String id;
-    private int health;
+    private int health = 10000;
     @DBRef
     private List<Building> buildings;
     @DBRef
     private List<Troop> troops;
-    private int threatLevel;
-    private int tacticLevel;
+    private int threatLevel = 1;
+    private int tacticLevel = 1;
     @DBRef
     private Player owner;
 

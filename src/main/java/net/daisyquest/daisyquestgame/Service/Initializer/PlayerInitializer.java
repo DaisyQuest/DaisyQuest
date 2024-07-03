@@ -32,6 +32,11 @@ public class PlayerInitializer {
     }
 
     private static void initalizeSpells(Player p1, List<Spell> pSpells) {
+        if(p1.getMaxMana() == 0){
+            p1.setMaxMana(1000);
+            p1.setCurrentMana(1000);
+        }
+
         if(p1.getKnownSpells() == null){
             List<Spell> spells = new ArrayList<>();
             spells.addAll(pSpells);

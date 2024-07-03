@@ -2,6 +2,9 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.1'
     id 'io.spring.dependency-management' version '1.1.5'
+
+    id "com.microsoft.azure.azurewebapp" version "1.7.1"
+
 }
 
 group = 'net.daisyquest'
@@ -31,6 +34,8 @@ dependencies {
     implementation 'org.springframework.session:spring-session-core'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'com.microsoft.azure:applicationinsights-spring-boot-starter:2.6.4'
+    implementation 'com.microsoft.azure:applicationinsights-logging-logback:2.6.4'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
@@ -42,4 +47,24 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
     jvmArgs '-Dmockito.mock.maker=mock-maker-inline'
+}
+
+azurewebapp {
+    subscription = '6dfef9cc-945f-4c9e-8007-064c19d7566a'
+    resourceGroup = 'DaisyQuest'
+    appName = 'DaisyQuest'
+    pricingTier = 'B1'
+    region = 'eastus'
+    runtime {
+        os = 'Linux'
+        webContainer = 'Java SE' // or 'Java SE' if you want to run an executable jar
+        javaVersion = 'Java 17'
+    }
+    appSettings {
+       // <key> = <value>
+    }
+    auth {
+        type = 'azure_cli' // support azure_cli, oauth2, device_code and service_principal
+    }
+
 }
