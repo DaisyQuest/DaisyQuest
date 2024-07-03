@@ -735,7 +735,7 @@ function updatePlayerCards(combat) {
 function getPlayerSprite(playerId, size) {
     // This is a placeholder. You'll need to implement the logic to fetch the correct sprite for each player.
     const player = { /* fetch player data */ };
-    if (player.playerAiSprite) {
+    if (playerId && playerId.startsWith('AI')) {
         return `<img src="/sprites/enemy_skeleton.png" width="${size}" height="${size}">`;
     } else {
         return `
