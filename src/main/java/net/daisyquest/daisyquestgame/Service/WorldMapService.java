@@ -19,7 +19,7 @@ import java.util.Random;
 
 @Service
 public class WorldMapService {
-    private static final int LAND_SIZE = 10000; // Size of each land tile in pixels
+    public static final int LAND_SIZE = 10000; // Size of each land tile in pixels
     @Autowired
     private WorldMapRepository worldMapRepository;
 

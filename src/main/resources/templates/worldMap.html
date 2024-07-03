@@ -430,8 +430,7 @@
                 }
 
                 const li = document.createElement('li');
-                li.textContent = `${player.username} (Level ${player.level})`;
-                nearbyPlayersList.appendChild(li);
+                li.textContent = `${player.username} (Level ${player.level})${player.isNPC ? ' [NPC]' : ''}`;                nearbyPlayersList.appendChild(li);
             }
         });
     }
@@ -602,28 +601,23 @@
             });
     }
 
-
-
-    function startCombat() {
-        console.log('Starting combat');
-        fetch('/api/combat/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerIds: [playerId, 'AI1', 'AI2'], playerTeams: {} })
-        })
+    function fetchCombatState(combatId) {
+        fetch(`/api/combat/${combatId}`)
             .then(response => response.json())
             .then(combat => {
-                console.log('Combat started:', combat);
-                currentCombatId = combat.id;
-                document.getElementById('worldMapContainer').style.display = 'none';
-                document.getElementById('combatArea').style.display = 'block';
                 updateCombatUI(combat);
                 fetchPlayerSpells();
                 pollCombatStatus();
             })
-            .catch(error => console.error('Error starting combat:', error));
+            .catch(error => console.error('Error fetching combat state:', error));
     }
 
+    function startCombat(combatId) {
+        currentCombatId = combatId;
+        document.getElementById('worldMapContainer').style.display = 'none';
+        document.getElementById('combatArea').style.display = 'block';
+        fetchCombatState(combatId);
+    }
     function fetchPlayerSpells() {
         fetch(`/api/players/${playerId}/spells`)
             .then(response => response.json())
@@ -1065,14 +1059,27 @@
         })
             .then(response => response.json())
             .then(data => {
+                console.log('Duel request response:', data); // Add this for debugging
                 if (data.success) {
-                    alert(`Duel request sent to ${selectedPlayer.username}`);
+                    if (data.combatStarted) {
+                        // Combat started immediately (NPC)
+                        console.log('Starting combat with NPC:', data.combatId);
+                        startCombat(data.combatId);
+                    } else {
+                        alert(`Duel request sent to ${selectedPlayer.username}`);
+                    }
                 } else {
                     alert(`Failed to send duel request: ${data.message}`);
                 }
             })
             .catch(error => console.error('Error sending duel request:', error));
     }
+
+
+
+
+    // Update the updateNearbyPlayersList function to show NPC status
+
 
     function handleDuelRequest(challengerId) {
         const challenger = players.find(p => p.id === challengerId);

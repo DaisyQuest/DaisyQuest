@@ -25,11 +25,11 @@ public class Player {
     private Set<String> completedQuests;
     private Set<String> achievements;
     private int totalExperience;
-    private int level;
+    private int level = 1;
     private Map<String, Integer> currencies; // New field for currencies
     private List<Spell> knownSpells; // New field for spells
-    private int currentMana; // New field for current mana
-    private int maxMana; // New field for maximum mana
+    private int currentMana = 1000; // New field for current mana
+    private int maxMana = 1000; // New field for maximum mana
 
     //chat
     private List<String> chatRoomIds;
@@ -50,6 +50,10 @@ public class Player {
 
     private LocalDate lastDailyRewardClaim;
 
+    //Duel
+    private boolean duelable = true;
+    private boolean isNPC = false;
+    private boolean markedForDeletion = false;
 
 
 }

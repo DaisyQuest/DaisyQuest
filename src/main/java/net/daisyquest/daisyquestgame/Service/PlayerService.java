@@ -244,4 +244,16 @@ public class PlayerService {
     public boolean deductResources(String id, int cost) {
         return true;
     }
+
+
+    public void markPlayerForDeletion(String playerId) {
+        Player player = getPlayer(playerId);
+        if (player != null && player.isNPC()) {
+            player.setMarkedForDeletion(true);
+            updatePlayer(player);
+            // You might want to schedule a task to actually delete this player after a certain time
+        }
+    }
+
+
 }

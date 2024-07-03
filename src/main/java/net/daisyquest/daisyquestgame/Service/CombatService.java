@@ -177,14 +177,14 @@ public class CombatService {
     }
 
     private boolean isAIPlayer(String playerId) {
-        return playerId.startsWith("AI");  // Assuming AI players have IDs starting with "AI"
+        return playerId.startsWith("AI") || playerService.getPlayer(playerId).isNPC();  // Assuming AI players have IDs starting with "AI"
     }
 
     private Action generateAIAction(Combat combat, String aiPlayerId) {
         // Simple AI decision making
         List<String> possibleTargets = combat.getPlayerIds().stream()
                 .filter(id -> !id.equals(aiPlayerId) && combat.getPlayerHealth().get(id) > 0)
-                .collect(Collectors.toList());
+                .toList();
 
         if (possibleTargets.isEmpty()) {
             throw new IllegalStateException("No valid targets for AI action");
@@ -293,6 +293,7 @@ public class CombatService {
     }
 
     private int calculateDamage(String playerId, int minDamage, int maxDamage) {
+       //todo remove legacy check
         if(playerId.startsWith("AI")){
             return minDamage + (int)(Math.random() * (maxDamage - minDamage + 1)) + 5;
         }
@@ -340,12 +341,16 @@ public class CombatService {
         logger.info("Ending combat: {}", combat.getId());
         combat.setActive(false);
 
-        // Determine winner(s)
+        // Determine winners and losers
         List<String> winners;
+        List<String> losers;
         if (combat.getPlayerTeams().isEmpty()) {
             winners = combat.getPlayerHealth().entrySet().stream()
                     .filter(entry -> entry.getValue() > 0)
                     .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+            losers = combat.getPlayerIds().stream()
+                    .filter(id -> !winners.contains(id))
                     .collect(Collectors.toList());
         } else {
             String winningTeam = combat.getPlayerHealth().entrySet().stream()
@@ -356,19 +361,89 @@ public class CombatService {
                     .filter(entry -> entry.getValue().equals(winningTeam))
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
+            losers = combat.getPlayerIds().stream()
+                    .filter(id -> !winners.contains(id))
+                    .collect(Collectors.toList());
         }
 
-        // Grant rewards to winners and penalize losers
-        for (String playerId : combat.getPlayerIds()) {
-            if(playerId.startsWith("AI")) continue;
-            Player player = playerService.getPlayer(playerId);
-            if (winners.contains(playerId)) {
-                player.setTotalExperience(player.getTotalExperience() + 100);
+        // Handle winners
+        for (String winnerId : winners) {
+            if (winnerId.startsWith("AI")) continue; // Skip AI winners
+            Player winner = playerService.getPlayer(winnerId);
+            winner.setTotalExperience(winner.getTotalExperience() + calculateExperienceGain(combat, winner));
+            playerService.updatePlayer(winner);
+        }
+
+        // Handle losers
+        for (String loserId : losers) {
+            //todo: remove this check
+            if (loserId.startsWith("AI")) {
+                handleNPCDefeat(combat, loserId);
             } else {
-                int currentGold = player.getCurrencies().getOrDefault("gold", 0);
-                player.getCurrencies().put("gold", currentGold / 2);
+                Player loser = playerService.getPlayer(loserId);
+                if(loser.isNPC()){
+                    loser.setWorldPositionX(-10000);
+                    loser.setWorldPositionY(-10000);
+                    handleNPCDefeat(combat, loserId);
+                }
+                else {
+                    applyLossPenalty(loser);
+                }
+                playerService.updatePlayer(loser);
             }
-            playerService.updatePlayer(player);
+
+        }
+
+        // Distribute NPC drops to winners
+        distributeNPCDrops(combat, winners, losers);
+    }
+
+    private int calculateExperienceGain(Combat combat, Player winner) {
+        // Implement your experience calculation logic here
+        // This could be based on the level difference, number of opponents, etc.
+        return 100; // Placeholder value
+    }
+
+    private void handleNPCDefeat(Combat combat, String npcId) {
+        // Mark NPC for deletion
+        playerService.markPlayerForDeletion(npcId);
+        // Optionally, you can remove the NPC from the world map here
+        // worldMapService.removeNPC(npcId);
+    }
+
+    private void applyLossPenalty(Player loser) {
+        int currentGold = loser.getCurrencies().getOrDefault("gold", 0);
+        loser.getCurrencies().put("gold", currentGold / 2);
+        // You can add more penalties here if needed
+    }
+
+    private void distributeNPCDrops(Combat combat, List<String> winners, List<String> losers) {
+        List<Item> npcDrops = new ArrayList<>();
+        for (String loserId : losers) {
+            if(!loserId.startsWith("AI")) {
+                Player loser = playerService.getPlayer(loserId);
+                npcDrops.addAll(loser.getInventory());
+            }
+
+        }
+
+        if (!npcDrops.isEmpty() && !winners.isEmpty()) {
+            // Distribute drops evenly among winners
+            int dropsPerWinner = npcDrops.size() / winners.size();
+            int remainingDrops = npcDrops.size() % winners.size();
+
+            for (int i = 0; i < winners.size(); i++) {
+                String winnerId = winners.get(i);
+                if (winnerId.startsWith("AI")) continue; // Skip AI winners
+
+                Player winner = playerService.getPlayer(winnerId);
+                int dropCount = dropsPerWinner + (i < remainingDrops ? 1 : 0);
+                List<Item> winnerDrops = npcDrops.subList(0, dropCount);
+                npcDrops = npcDrops.subList(dropCount, npcDrops.size());
+
+                winner.getInventory().addAll(winnerDrops);
+                playerService.updatePlayer(winner);
+            }
         }
     }
 

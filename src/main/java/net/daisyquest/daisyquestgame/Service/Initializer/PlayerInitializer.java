@@ -75,8 +75,8 @@ public class PlayerInitializer {
         if(p1.getAttributes() == null){
             p1.setAttributes(new HashMap<>());
         }
-        Attribute hp = new Attribute("Hitpoints", 10, 1000);
-        Attribute combat = new Attribute("Combat", 1, 1);
+        Attribute hp = getHitpointsAttribute(10, 1000);
+        Attribute combat = getCombatAttribute(1, 1000);
 
         if(!p1.getAttributes().containsKey("hitpoints")) {
             p1.getAttributes().put("hitpoints", hp);
@@ -84,5 +84,20 @@ public class PlayerInitializer {
         if(!p1.getAttributes().containsKey("combat")) {
             p1.getAttributes().put("combat", combat);
         }
+    }
+
+    public static Attribute getHitpointsAttribute(int level, int xp){
+        return new Attribute("Hitpoints", level, xp);
+    }
+
+    public static Attribute getCombatAttribute(int level, int xp){
+        return new Attribute("Combat", level, xp);
+    }
+
+    public static Map<String, Attribute> getInitializedCombatMapForNPC(int hpLevel, int combatLevel){
+        Map<String, Attribute> returnMap = new HashMap<>();
+        returnMap.put("hitpoints", getHitpointsAttribute(hpLevel, 0));
+        returnMap.put("combat", getCombatAttribute(combatLevel, 0));
+        return returnMap;
     }
 }

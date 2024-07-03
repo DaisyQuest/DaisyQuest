@@ -50,8 +50,21 @@ import javax.json.JsonObject;
                 return ResponseEntity.badRequest().body(new ErrorResponse("Players are too far apart"));
             }
 
-            webSocketService.sendDuelRequest(target.getId(), challenger.getId());
-            return ResponseEntity.ok(new SuccessResponse(true, "Duel request sent"));
+            if (!target.isDuelable()) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Target player is not duelable"));
+            }
+
+            if (target.isNPC()) {
+                // Automatically start combat with NPC
+                Combat combat = combatService.startCombat(Arrays.asList(challenger.getId(), target.getId()), Collections.emptyMap());
+                target.setDuelable(false);
+                playerService.updatePlayer(target);
+                return ResponseEntity.ok(new CombatStartedResponse(true ,combat.getId()));
+            } else {
+
+                webSocketService.sendDuelRequest(target.getId(), challenger.getId());
+                return ResponseEntity.ok(new SuccessResponse(true, "Duel request sent"));
+            }
         }
 
     private double calculateDistance(Player challenger, Player target) {
@@ -69,12 +82,13 @@ import javax.json.JsonObject;
             return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player IDs"));
         }
 
-        Combat combat = combatService.startCombat(Arrays.asList(challenger.getId(), target.getId()), Collections.emptyMap());
+            Combat combat = combatService.startCombat(Arrays.asList(challenger.getId(), target.getId()), Collections.emptyMap());
 
-        // Notify both players through WebSocket
-        webSocketService.sendDuelAccepted(challenger.getId(), target.getId(), combat.getId());
+            // Notify both players through WebSocket
+            webSocketService.sendDuelAccepted(challenger.getId(), target.getId(), combat.getId());
 
-        return ResponseEntity.ok(new SuccessResponse(true, "Duel accepted and combat started"));
+            return ResponseEntity.ok(new SuccessResponse(true, "Duel accepted and combat started"));
+
     }
 
 // In your WebSocketHandler or relevant WebSocket service
@@ -116,5 +130,16 @@ import javax.json.JsonObject;
         return ResponseEntity.ok(new SuccessResponse(true, "Item transferred successfully"));
     }
 
+
+
+    class DuelRequestSentResponse {
+        public boolean success;
+        public boolean combatStarted;
+
+        public DuelRequestSentResponse(boolean success) {
+            this.success = success;
+            this.combatStarted = false;
+        }
+    }
 
 }
