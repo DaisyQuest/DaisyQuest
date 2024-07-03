@@ -5,6 +5,7 @@ import net.daisyquest.daisyquestgame.Repository.ItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 @Service
 public class ItemService {
@@ -33,4 +34,15 @@ public class ItemService {
     public void deleteItem(String id) {
         itemRepository.deleteById(id);
     }
+
+    public List<Item> generateDropsFromNPC(String npcId) {
+        // Implement your drop generation logic here
+        // This could involve checking the NPC's level, type, or other attributes
+        // and then randomly generating appropriate items
+        List<Item> drops = new ArrayList<>();
+        // ... generate drops ...
+        itemRepository.findItemByName("\"Iron Sword\" ");
+        return drops;
+    }
+
 }

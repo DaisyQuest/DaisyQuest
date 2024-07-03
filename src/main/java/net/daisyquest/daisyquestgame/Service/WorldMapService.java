@@ -19,7 +19,7 @@ import java.util.Random;
 
 @Service
 public class WorldMapService {
-    private static final int LAND_SIZE = 10000; // Size of each land tile in pixels
+    public static final int LAND_SIZE = 10000; // Size of each land tile in pixels
     @Autowired
     private WorldMapRepository worldMapRepository;
 
@@ -115,26 +115,14 @@ public class WorldMapService {
         int worldPixelWidth = worldMap.getWidth() * LAND_SIZE;
         int worldPixelHeight = worldMap.getHeight() * LAND_SIZE;
 
-        // Calculate the viewport boundaries, wrapping around the world if necessary
-        int minX = (centerX - viewportWidth / 2 + worldPixelWidth) % worldPixelWidth;
-        int maxX = (centerX + viewportWidth / 2 + worldPixelWidth) % worldPixelWidth;
-        int minY = (centerY - viewportHeight / 2 + worldPixelHeight) % worldPixelHeight;
-        int maxY = (centerY + viewportHeight / 2 + worldPixelHeight) % worldPixelHeight;
+        // Calculate the viewport boundaries
+        int leftX = Math.max(0, centerX - viewportWidth / 2);
+        int rightX = Math.min(worldPixelWidth - 1, centerX + viewportWidth / 2);
+        int topY = Math.max(0, centerY - viewportHeight / 2);
+        int bottomY = Math.min(worldPixelHeight - 1, centerY + viewportHeight / 2);
 
-        // If the viewport wraps around the world, we need to make two queries
-        if (maxX < minX) {
-            List<Player> playersLeft = playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(0, maxX, minY, maxY);
-            List<Player> playersRight = playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(minX, worldPixelWidth, minY, maxY);
-            playersLeft.addAll(playersRight);
-            return playersLeft;
-        } else if (maxY < minY) {
-            List<Player> playersTop = playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(minX, maxX, 0, maxY);
-            List<Player> playersBottom = playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(minX, maxX, minY, worldPixelHeight);
-            playersTop.addAll(playersBottom);
-            return playersTop;
-        } else {
-            return playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(minX, maxX, minY, maxY);
-        }
+        // Query for players within these boundaries
+        return playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(leftX, rightX, topY, bottomY);
     }
 
     public Land getLandAtPosition(int x, int y) {

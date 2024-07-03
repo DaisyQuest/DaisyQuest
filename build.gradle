@@ -40,6 +40,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.14.0'
     implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'org.glassfish:javax.json:1.1.4'
 }
 
 tasks.named('test') {
