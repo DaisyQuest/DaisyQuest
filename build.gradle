@@ -57,7 +57,7 @@ def getCurrentBranch() {
 }
 
 ext.currentBranch = getCurrentBranch()
-//test
+//test2
 azurewebapp {
     subscription = '6dfef9cc-945f-4c9e-8007-064c19d7566a'
     resourceGroup = determineResourceGroup()
