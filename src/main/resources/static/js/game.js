@@ -736,7 +736,7 @@ function getPlayerSprite(playerId, size) {
     // This is a placeholder. You'll need to implement the logic to fetch the correct sprite for each player.
     const player = { /* fetch player data */ };
     if (player.playerAiSprite) {
-        return `<img src="/sprites/${player.playerAiSprite}" width="${size}" height="${size}">`;
+        return `<img src="/sprites/enemy_skeleton.png" width="${size}" height="${size}">`;
     } else {
         return `
             <img src="/sprites/${player.subspriteBackground || 'background_1'}.png" width="${size}" height="${size}">

@@ -20,4 +20,5 @@ public class BuildingType {
     private int castleHPContribution = 0;
     private int threatLevel = 0;
     private int limitPerCastle;
+    private String displaySprite;
 }

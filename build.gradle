@@ -2,9 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.1'
     id 'io.spring.dependency-management' version '1.1.5'
-
     id "com.microsoft.azure.azurewebapp" version "1.7.1"
-
 }
 
 group = 'net.daisyquest'
@@ -27,7 +25,6 @@ repositories {
 }
 
 dependencies {
-  //  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     implementation 'org.springframework.boot:spring-boot-starter-quartz'
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -42,29 +39,62 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'de.flapdoodle.embed:de.flapdoodle.embed.mongo:4.14.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'}
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+}
 
 tasks.named('test') {
     useJUnitPlatform()
     jvmArgs '-Dmockito.mock.maker=mock-maker-inline'
 }
 
+def getCurrentBranch() {
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
+ext.currentBranch = getCurrentBranch()
+//test2
 azurewebapp {
     subscription = '6dfef9cc-945f-4c9e-8007-064c19d7566a'
-    resourceGroup = 'DaisyQuest'
-    appName = 'DaisyQuest'
+    resourceGroup = determineResourceGroup()
+    appName = determineAppName()
     pricingTier = 'B1'
     region = 'eastus'
     runtime {
         os = 'Linux'
-        webContainer = 'Java SE' // or 'Java SE' if you want to run an executable jar
+        webContainer = 'Java SE'
         javaVersion = 'Java 17'
     }
     appSettings {
-       // <key> = <value>
+        // <key> = <value>
     }
     auth {
-        type = 'azure_cli' // support azure_cli, oauth2, device_code and service_principal
+        type = 'azure_cli'
     }
+}
 
+def determineResourceGroup() {
+    switch (currentBranch) {
+        case 'master':
+            return 'DaisyQuest'
+        case 'staging':
+            return 'DaisyQuest-Staging'
+        default:
+            return 'DaisyQuest-Dev'
+    }
+}
+
+def determineAppName() {
+    switch (currentBranch) {
+        case 'master':
+            return 'DaisyQuest'
+        case 'staging':
+            return 'DaisyQuest-Staging'
+        default:
+            return "DaisyQuest-Dev"
+    }
 }
