@@ -197,4 +197,17 @@ public class PlayerController {
         }
     }
 
+    @PostMapping("/{id}/talents/{talent}")
+    public ResponseEntity<Map<String, Object>> upgradeTalent(@PathVariable String id, @PathVariable String talent) {
+        try {
+            Player updatedPlayer = playerService.spendTalentPoint(id, Talent.valueOf(talent));
+            Map<String, Object> response = new HashMap<>();
+            response.put("talents", updatedPlayer.getTalents());
+            response.put("talentPointsAvailable", updatedPlayer.getTalentPointsAvailable());
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
 }

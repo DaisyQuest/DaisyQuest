@@ -7,10 +7,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 @Data
@@ -54,6 +51,12 @@ public class Player {
     private boolean duelable = true;
     private boolean isNPC = false;
     private boolean markedForDeletion = false;
+    private int talentPointsAvailable = 0;
 
+    private Map<Talent, Integer> talents = new EnumMap<>(Talent.class);
+
+    public Player() {
+        // Initialize talents map with all talents set to 0
+    }
 
 }

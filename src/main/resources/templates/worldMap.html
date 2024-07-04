@@ -1054,7 +1054,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 challengerId: currentPlayer.player.id,
-                targetId: selectedPlayer.player.id
+                targetId: selectedPlayer.id
             })
         })
             .then(response => response.json())
