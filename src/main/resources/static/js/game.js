@@ -998,46 +998,58 @@ function showCombatResults(combat) {
 
 function updatePlayerInfo() {
     fetch(`/api/players/${playerId}`)
-        .then(response => response.json())
-        .then(player => {
-            currentPlayer = player; // Store the player data globally
-            const playerInfo = document.getElementById('playerInfo');
-            playerInfo.innerHTML = `
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="sprite-preview mb-3">
-                            <img src="/sprites/${player.subspriteBackground || 'background_0'}.png">
-                            <img src="/sprites/${player.subspriteFace || 'face_0'}.png">
-                            <img src="/sprites/${player.subspriteEyes || 'eyes_0'}.png">
-                            <img src="/sprites/${player.subspriteHairHat || 'hairhat_0'}.png">
-                        </div>
-                        <button class="btn btn-primary btn-sm mb-3" onclick="openSpriteSelectionModal()">Customize Sprite</button>
-                    </div>
-                    <div class="col-md-8">
-                        <h6>Player: ${player.username}</h6>
-                        <p>Level: ${player.level}</p>
-                        <p>Total Experience: ${player.totalExperience}</p>
-                        <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
-                        <h6>Attributes:</h6>
-                        <ul class="list-group">
-                            ${Object.entries(player.attributes || {}).map(([key, value]) =>
-                `<li class="list-group-item">${key}: Level ${value.level} (XP: ${value.experience})</li>`
-            ).join('')}
-                        </ul>
-                        <h6 class="mt-3">Currencies:</h6>
-                        <ul class="list-group">
-                            ${Object.entries(player.currencies || {}).map(([key, value]) =>
-                `<li class="list-group-item">${key}: ${value}</li>`
-            ).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            currentPlayer = data.player;
+            const currencyDetails = data.currencyDetails;
+            updatePlayerInfoUI(currentPlayer, currencyDetails);
         })
         .catch(error => {
             console.error('Error updating player info:', error);
-            alert('Failed to update player info. Please refresh the page.');
+            document.getElementById('playerInfo').innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    Failed to update player info. Please try again later.
+                </div>
+            `;
         });
+}
+
+function updatePlayerInfoUI(player, currencyDetails) {
+    const playerInfo = document.getElementById('playerInfo');
+    playerInfo.innerHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <div class="sprite-preview mb-3">
+                    <img src="/sprites/${player.subspriteBackground || 'background_0'}.png">
+                    <img src="/sprites/${player.subspriteFace || 'face_0'}.png">
+                    <img src="/sprites/${player.subspriteEyes || 'eyes_0'}.png">
+                    <img src="/sprites/${player.subspriteHairHat || 'hairhat_0'}.png">
+                </div>
+                <button class="btn btn-primary btn-sm mb-3" onclick="openSpriteSelectionModal()">Customize Sprite</button>
+            </div>
+            <div class="col-md-8">
+                <h6>Player: ${player.username}</h6>
+                <p>Level: ${player.level}</p>
+                <p>Total Experience: ${player.totalExperience}</p>
+                <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
+                <h6 class="mt-4 mb-3">Attributes:</h6>
+                <ul class="list-group attribute-list">
+                    ${Object.entries(player.attributes || {}).map(([key, value]) => `
+                        <li class="list-group-item d-flex align-items-center">
+                            <img src="/sprites/${value.sprite}.png" alt="${key}" class="attribute-icon mr-2">
+                            <span class="attribute-name">  ${value.name}:</span>
+                            <span class="attribute-value ml-auto">Level ${value.level} (XP: ${value.experience})</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        </div>
+    `;
 }
 
 function openSpriteSelectionModal() {
@@ -1068,24 +1080,50 @@ function openSpriteSelectionModal() {
 }
 
 function updateInventory() {
-    fetch(`/api/players/${playerId}/inventory`)
-        .then(response => response.json())
-        .then(inventory => {
+    Promise.all([
+        fetch(`/api/players/${playerId}/inventory`).then(response => response.json()),
+        fetch(`/api/players/${playerId}`).then(response => response.json())
+    ])
+        .then(([inventory, playerData]) => {
             const inventoryList = document.getElementById('inventoryList');
-            inventoryList.innerHTML = inventory.map(item => `
-                <div class="inventory-item">
-                    <h6>${item.name}</h6>
-                    <p>${item.description}</p>
-                    <p>Sell Price: ${item.sellPrice} gold</p>
-                    ${item.isChest ?
+            const currencyDetails = playerData.currencyDetails;
+            const player = playerData.player;
+
+            let inventoryHTML = '<h5>Inventory</h5>';
+            inventoryHTML += inventory.map(item => `
+            <div class="inventory-item">
+                <h6>${item.name}</h6>
+                <p>${item.description}</p>
+                <p>Sell Price: ${item.sellPrice} gold</p>
+                ${item.isChest ?
                 `<button class="btn btn-sm btn-primary" onclick="openChest('${item.id}')">Open Chest</button>` :
                 `<button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>`
             }
-                    <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
-                    <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
-                    <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
-                </div>
-            `).join('');
+                <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
+                <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
+                <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
+            </div>
+        `).join('');
+
+            inventoryHTML += '<h5 class="mt-4">Currencies</h5>';
+            inventoryHTML += '<ul class="list-group">';
+            inventoryHTML += Object.entries(player.currencies || {}).map(([currencyId, amount]) => {
+                const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
+                return `<li class="list-group-item">
+                ${details.name}: ${details.symbol}${amount}
+            </li>`;
+            }).join('');
+            inventoryHTML += '</ul>';
+
+            inventoryList.innerHTML = inventoryHTML;
+        })
+        .catch(error => {
+            console.error('Error updating inventory:', error);
+            document.getElementById('inventoryList').innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                Failed to update inventory. Please try again later.
+            </div>
+        `;
         });
 }
 

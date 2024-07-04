@@ -3,6 +3,7 @@ package net.daisyquest.daisyquestgame.Service;
 import net.daisyquest.daisyquestgame.Controller.PlayerController;
 import net.daisyquest.daisyquestgame.Controller.SpriteUpdateRequest;
 import net.daisyquest.daisyquestgame.Model.Attribute;
+import net.daisyquest.daisyquestgame.Model.Currency;
 import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Repository.CurrencyRepository;
@@ -23,8 +24,9 @@ public class PlayerService {
     @Autowired
     private PlayerRepository playerRepository;
 
+
     @Autowired
-    private CurrencyRepository currencyRepository;
+    private CurrencyService currencyService;
 
     @Autowired
     private SpellService spellService;
@@ -33,13 +35,13 @@ public class PlayerService {
         if (playerRepository.existsByUsername(player.getUsername())) {
             throw new UsernameAlreadyExistsException("Username already exists: " + player.getUsername());
         }
-        PlayerInitializer.initPlayer(player, currencyRepository.findAll(), List.of(spellService.getSpell("fireball")));
+        PlayerInitializer.initPlayer(player, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball")));
         return playerRepository.save(player);
     }
 
     public Player getPlayer(String id) {
         Player p =  playerRepository.findById(id).orElse(null);
-        PlayerInitializer.initPlayer(p, currencyRepository.findAll(), List.of(spellService.getSpell("fireball"), spellService.getSpell("iceball"), spellService.getSpell("thunder")));
+        PlayerInitializer.initPlayer(p, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("iceball"), spellService.getSpell("thunder")));
         return p;
     }
 
@@ -200,47 +202,43 @@ public class PlayerService {
         playerRepository.save(player);
     }
 
-    public boolean hasSufficientCurrency(Player buyer, String currencyType, int price) {
-        Map<String, Integer> currencies = buyer.getCurrencies();
-
-        // Check if the currency type exists and the buyer has enough of it
-        return currencies.containsKey(currencyType) && currencies.get(currencyType) >= price;
+    public boolean hasSufficientCurrency(Player buyer, String currencyId, int price) {
+        Currency currency = currencyService.getCurrency(currencyId);
+        if (currency == null) {
+            throw new IllegalArgumentException("Invalid currency ID: " + currencyId);
+        }
+        Integer amount = buyer.getCurrencies().get(currencyId);
+        return amount != null && amount >= price;
     }
 
-    /**
-     * Deducts a specified amount from a player's currency, if possible.
-     * @param buyer The player whose currency is being deducted.
-     * @param currencyType The type of currency to deduct.
-     * @param price The amount to deduct.
-     */
-    public void deductCurrency(Player buyer, String currencyType, int price) {
-        if (hasSufficientCurrency(buyer, currencyType, price)) {
+    @Transactional
+    public void deductCurrency(Player buyer, String currencyId, int price) {
+        if (hasSufficientCurrency(buyer, currencyId, price)) {
             Map<String, Integer> currencies = buyer.getCurrencies();
-
-            // Deduct the currency safely after rechecking the balance
-            int newAmount = currencies.get(currencyType) - price;
-            currencies.put(currencyType, newAmount);
+            int newAmount = currencies.get(currencyId) - price;
+            currencies.put(currencyId, newAmount);
+            updatePlayer(buyer);
         } else {
-            // Handle the case where there is not enough currency
-            throw new IllegalArgumentException("Insufficient " + currencyType + " to complete the transaction.");
+            Currency currency = currencyService.getCurrency(currencyId);
+            throw new IllegalArgumentException("Insufficient " + currency.getName() + " to complete the transaction.");
         }
     }
 
-    public void addCurrency(Player owner, String currencyType, int amount) {
+    @Transactional
+    public void addCurrency(Player owner, String currencyId, int amount) {
         if (amount < 0) {
             throw new IllegalArgumentException("Cannot add a negative amount of currency.");
         }
 
+        Currency currency = currencyService.getCurrency(currencyId);
+        if (currency == null) {
+            throw new IllegalArgumentException("Invalid currency ID: " + currencyId);
+        }
+
         Map<String, Integer> currencies = owner.getCurrencies();
-
-        // Check if the currency type exists; if not, initialize it
-        currencies.putIfAbsent(currencyType, 0);
-
-        // Add the specified amount to the existing balance
-        int newAmount = currencies.get(currencyType) + amount;
-        currencies.put(currencyType, newAmount);
+        currencies.merge(currencyId, amount, Integer::sum);
+        updatePlayer(owner);
     }
-
     public boolean deductResources(String id, int cost) {
         return true;
     }

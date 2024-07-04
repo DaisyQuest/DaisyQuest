@@ -204,7 +204,7 @@ public class RewardService {
             case CURRENCY:
                 //player.addCurrency(reward.getRewardId(), reward.getQuantity());
                 Optional<Currency> c = currencyRepository.findById(reward.getRewardId());
-                c.ifPresent(currency -> player.getCurrencies().put(currency.getName(), reward.getQuantity()));
+                c.ifPresent(currency -> player.getCurrencies().put(currency.getId(), reward.getQuantity()));
                 break;
             case RESOURCE:
                 player.setResources(player.getResources() + reward.getQuantity());

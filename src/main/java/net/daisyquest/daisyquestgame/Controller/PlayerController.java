@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +29,9 @@ public class PlayerController {
 
     @Autowired
     private RewardService rewardService;
+
+    @Autowired CurrencyService currencyService;
+
     @PostMapping("/register")
     public ResponseEntity<?> registerPlayer(@RequestBody Player player) {
         try {
@@ -59,9 +63,16 @@ public class PlayerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Player> getPlayer(@PathVariable String id) {
+    public ResponseEntity<Map<String, Object>> getPlayer(@PathVariable String id) {
         Player player = playerService.getPlayer(id);
-        return player != null ? ResponseEntity.ok(player) : ResponseEntity.notFound().build();
+        if (player == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("player", player);
+        response.put("currencyDetails", currencyService.getAllCurrencyDetails());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
