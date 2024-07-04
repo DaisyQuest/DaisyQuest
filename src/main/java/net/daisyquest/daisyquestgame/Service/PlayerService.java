@@ -1,10 +1,7 @@
 package net.daisyquest.daisyquestgame.Service;
 
 import net.daisyquest.daisyquestgame.Controller.SpriteUpdateRequest;
-import net.daisyquest.daisyquestgame.Model.Attribute;
-import net.daisyquest.daisyquestgame.Model.Currency;
-import net.daisyquest.daisyquestgame.Model.Item;
-import net.daisyquest.daisyquestgame.Model.Player;
+import net.daisyquest.daisyquestgame.Model.*;
 import net.daisyquest.daisyquestgame.Repository.PlayerRepository;
 import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import net.daisyquest.daisyquestgame.Service.Initializer.PlayerInitializer;
@@ -12,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -266,6 +264,55 @@ public class PlayerService {
             // You might want to schedule a task to actually delete this player after a certain time
         }
     }
+
+
+    @Transactional
+    public void addTalentPoint(String playerId) {
+        Player player = getPlayer(playerId);
+        if (player != null) {
+            player.setTalentPointsAvailable(player.getTalentPointsAvailable() + 1);
+            updatePlayer(player);
+        } else {
+            throw new IllegalArgumentException("Player not found");
+        }
+    }
+
+    @Transactional
+    public Player spendTalentPoint(String playerId, Talent talent) {
+        Player player = getPlayer(playerId);
+        if (player == null) {
+            throw new IllegalArgumentException("Player not found");
+        }
+
+        if (player.getTalentPointsAvailable() <= 0) {
+            throw new IllegalStateException("No talent points available");
+        }
+
+        int currentPoints = player.getTalents().get(talent);
+        player.getTalents().put(talent, currentPoints + 1);
+        player.setTalentPointsAvailable(player.getTalentPointsAvailable() - 1);
+        updatePlayer(player);
+        return player;
+    }
+
+    public int getTalentLevel(String playerId, Talent talent) {
+        Player player = getPlayer(playerId);
+        if (player != null) {
+            return player.getTalents().get(talent);
+        } else {
+            throw new IllegalArgumentException("Player not found");
+        }
+    }
+
+    public Map<Talent, Integer> getAllTalents(String playerId) {
+        Player player = getPlayer(playerId);
+        if (player != null) {
+            return new EnumMap<>(player.getTalents());
+        } else {
+            throw new IllegalArgumentException("Player not found");
+        }
+    }
+
 
 
 }

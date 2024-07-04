@@ -18,11 +18,26 @@ public class PlayerInitializer {
         }
 
         initializeAttributes(p1);
+
+        initializeTalents(p1);
+
         initializeQuests(p1);
         initalizeInventory(p1);
         initializeCurrency(p1, p_cur);
+
         initalizeSpells(p1, p_spells);
         initializeSocial(p1);
+
+    }
+
+    private static void initializeTalents(Player p1) {
+        if (p1.getTalents() == null || p1.getTalents().isEmpty()){
+            EnumMap<Talent, Integer> talents = new EnumMap<>(Talent.class);
+            p1.setTalents(talents);
+            for (Talent talent : Talent.values()) {
+                talents.put(talent, 0);
+            }
+        }
     }
 
     private static void initializeSocial(Player p1) {

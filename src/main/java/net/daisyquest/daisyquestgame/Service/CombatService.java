@@ -74,7 +74,7 @@ public class CombatService {
             return  String.format("%s performed %s on %s", actorId,  spellService.getSpell(spellId).getName(), targetId);
         }
 
-        return String.format("%s performed %s on %s", actorId, actionType.equals("NONE") ? "AI_ATTACK" : actionType, targetId);
+        return String.format("%s performed %s on %s", actorId, actionType.equals("NONE") ? "UNIMPLEMENTED_ACTION" : actionType, targetId);
     }
 
     // Add a method to retrieve combat logs
@@ -149,6 +149,10 @@ public class CombatService {
             case TACTICS:
                 performTactics(combat, action);
                 break;
+            case NONE:
+                // Do nothing for NONE action
+                logger.info("AI player {} performed no action", action.getPlayerId());
+                break;
         }
 
         // Deduct action points
@@ -173,7 +177,11 @@ public class CombatService {
     }
 
     public Combat getCombat(String combatId) {
-        return combatRepository.findById(combatId).orElse(null);
+        Combat c =  combatRepository.findById(combatId).orElse(null);
+        if(c != null && c.getPlayerTeams() == null){
+            c.setPlayerTeams(new HashMap<>());
+        }
+        return c;
     }
 
     private boolean isAIPlayer(String playerId) {
@@ -181,20 +189,46 @@ public class CombatService {
     }
 
     private Action generateAIAction(Combat combat, String aiPlayerId) {
-        // Simple AI decision making
+        logger.info("Generating AI action for player: {}", aiPlayerId);
+
+        String aiTeam = combat.getPlayerTeams().get(aiPlayerId);
+
+        // Filter out teammates and defeated players
         List<String> possibleTargets = combat.getPlayerIds().stream()
-                .filter(id -> !id.equals(aiPlayerId) && combat.getPlayerHealth().get(id) > 0)
+                .filter(id -> {
+                    String targetTeam = combat.getPlayerTeams().get(id);
+                    boolean isAlive = combat.getPlayerHealth().get(id) > 0;
+                    boolean isDifferentTeam = aiTeam == null || !aiTeam.equals(targetTeam);
+                    return !id.equals(aiPlayerId) && isAlive && isDifferentTeam;
+                })
                 .toList();
 
         if (possibleTargets.isEmpty()) {
-            throw new IllegalStateException("No valid targets for AI action");
+            logger.warn("No valid targets for AI action. AI player: {}", aiPlayerId);
+            return new Action(aiPlayerId, Action.ActionType.NONE, null, 0, null);
         }
 
         String targetId = possibleTargets.get(random.nextInt(possibleTargets.size()));
         Action.ActionType actionType = Action.ActionType.values()[random.nextInt(Action.ActionType.values().length)];
 
-        return new Action(aiPlayerId, actionType, targetId, 1, null);  // Assuming all actions cost 1 AP for simplicity
+        // If the action type is SPELL, select a random spell
+        String spellId = null;
+        if (actionType == Action.ActionType.SPELL) {
+            Player aiPlayer = playerService.getPlayer(aiPlayerId);
+            List<Spell> availableSpells = aiPlayer.getKnownSpells();
+            if (!availableSpells.isEmpty()) {
+                Spell selectedSpell = availableSpells.get(random.nextInt(availableSpells.size()));
+                spellId = selectedSpell.getId();
+            } else {
+                // If no spells are available, default to ATTACK
+                actionType = Action.ActionType.ATTACK;
+            }
+        }
+
+        logger.info("AI action generated. Type: {}, Target: {}, Spell: {}", actionType, targetId, spellId);
+        return new Action(aiPlayerId, actionType, targetId, 1, spellId);
     }
+
     private void performAttack(Combat combat, Action action) {
         int damage = calculateDamage(action.getPlayerId(), 10, 20);
         applyDamage(combat, action.getTargetPlayerId(), damage);
@@ -315,27 +349,58 @@ public class CombatService {
     }
 
     private void endTurn(Combat combat) {
-        int currentPlayerIndex = combat.getPlayerIds().indexOf(combat.getCurrentTurnPlayerId());
-        int nextPlayerIndex = (currentPlayerIndex + 1) % combat.getPlayerIds().size();
-        combat.setCurrentTurnPlayerId(combat.getPlayerIds().get(nextPlayerIndex));
+        List<String> activePlayers = combat.getPlayerIds().stream()
+                .filter(id -> combat.getPlayerHealth().get(id) > 0)
+                .collect(Collectors.toList());
+
+        if (activePlayers.isEmpty()) {
+            logger.warn("No active players left in combat {}", combat.getId());
+            endCombat(combat);
+            return;
+        }
+
+        int currentPlayerIndex = activePlayers.indexOf(combat.getCurrentTurnPlayerId());
+        int nextPlayerIndex = (currentPlayerIndex + 1) % activePlayers.size();
+        String nextPlayerId = activePlayers.get(nextPlayerIndex);
+
+        combat.setCurrentTurnPlayerId(nextPlayerId);
         combat.setTurnStartTime(Instant.now().toEpochMilli());
         combat.setTurnNumber(combat.getTurnNumber() + 1);
 
         // Reset action points for the new player
-        combat.getPlayerActionPoints().put(combat.getCurrentTurnPlayerId(), INITIAL_ACTION_POINTS);
-        updateCooldowns();
-        //reload for cooldowns.. must better way
-       combat.getSpellCooldowns().putAll(combatRepository.findById(combat.getId()).get().getSpellCooldowns());
+        combat.getPlayerActionPoints().put(nextPlayerId, INITIAL_ACTION_POINTS);
+
+        updateCooldowns(combat);
+
         // End combat if max turns reached
         if (combat.getTurnNumber() > MAX_TURNS) {
+            logger.info("Max turns reached for combat {}", combat.getId());
             endCombat(combat);
         }
+
+        logger.info("Turn ended. New turn: {} for player: {}", combat.getTurnNumber(), nextPlayerId);
+    }
+
+    private void updateCooldowns(Combat combat) {
+        combat.getSpellCooldowns().forEach((playerId, cooldowns) ->
+                cooldowns.replaceAll((spellId, cooldown) -> Math.max(0, cooldown - 1)));
     }
 
     private boolean shouldCombatEnd(Combat combat) {
-        long alivePlayers = combat.getPlayerHealth().values().stream().filter(health -> health > 0).count();
-        logger.info("Checking if combat should end. Alive players: {}", alivePlayers);
-        return alivePlayers <= 1;
+        if (combat.getPlayerTeams().isEmpty()) {
+            // Free-for-all mode
+            long alivePlayers = combat.getPlayerHealth().values().stream().filter(health -> health > 0).count();
+            logger.info("Checking if combat should end. Alive players: {}", alivePlayers);
+            return alivePlayers <= 1;
+        } else {
+            // Team mode
+            Set<String> aliveTeams = combat.getPlayerHealth().entrySet().stream()
+                    .filter(entry -> entry.getValue() > 0)
+                    .map(entry -> combat.getPlayerTeams().get(entry.getKey()))
+                    .collect(Collectors.toSet());
+            logger.info("Checking if combat should end. Alive teams: {}", aliveTeams.size());
+            return aliveTeams.size() <= 1;
+        }
     }
     private void endCombat(Combat combat) {
         logger.info("Ending combat: {}", combat.getId());
@@ -412,8 +477,8 @@ public class CombatService {
     }
 
     private void applyLossPenalty(Player loser) {
-        int currentGold = loser.getCurrencies().getOrDefault("gold", 0);
-        loser.getCurrencies().put("gold", currentGold / 2);
+        int currentGold = loser.getCurrencies().getOrDefault("Shadow Essence", 0);
+        loser.getCurrencies().put("Shadow Essence", currentGold / 2);
         // You can add more penalties here if needed
     }
 
@@ -465,7 +530,8 @@ public class CombatService {
             if (isAIPlayer(currentPlayerId)) {
                 logger.info("Processing AI turn for combat {} and player {}", combat.getId(), currentPlayerId);
                 try {
-                    performAction(combat.getId(), null);
+                   Action a = generateAIAction(combat, currentPlayerId);
+                    performAction(combat.getId(), a);
                 } catch (Exception e) {
                     logger.error("Error processing AI turn for combat " + combat.getId(), e);
                 }

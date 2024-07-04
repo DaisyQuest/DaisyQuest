@@ -16,7 +16,7 @@ public class Combat {
     @Id
     private String id;
     private List<String> playerIds;
-    private Map<String, String> playerTeams;
+    private Map<String, String> playerTeams = new HashMap<>();
     private String currentTurnPlayerId;
     private int turnNumber;
     private boolean active;

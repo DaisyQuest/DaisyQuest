@@ -413,7 +413,27 @@
                 opacity: 0;
             }
         }
+        .talent-tree {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
 
+        .talent {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-radius: 3px;
+        }
+
+        .talent button {
+            padding: 2px 5px;
+            font-size: 0.8em;
+        }
 
     </style>
 </head>
@@ -473,6 +493,9 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="talent-trees-tab" data-bs-toggle="tab" data-bs-target="#talent-trees" type="button" role="tab" aria-controls="talent-trees" aria-selected="false">Talent Trees</button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="activities-tab" data-bs-toggle="tab" data-bs-target="#activities"
                             type="button" role="tab" aria-controls="activities" aria-selected="false">Activities
                     </button>
@@ -518,6 +541,17 @@
                             <ul class="nav nav-tabs attribute-tabs" id="questAttributeTabs" role="tablist">
                             </ul>
                             <div class="tab-content" id="questAttributeTabContent">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="talent-trees" role="tabpanel" aria-labelledby="talent-trees-tab">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Talent Trees</h5>
+                            <div id="talentTreesContainer"></div>
+                            <div class="mt-3">
+                                <p>Available Talent Points: <span id="availableTalentPoints"></span></p>
                             </div>
                         </div>
                     </div>
@@ -865,6 +899,7 @@
 </div>
 </div>
 <script th:src="@{/js/game.js}"></script>
+<script th:src="@{/js/talentTrees.js}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script th:src="@{/js/chat.js}"></script>
