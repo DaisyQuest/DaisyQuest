@@ -1,12 +1,10 @@
 package net.daisyquest.daisyquestgame.Service;
 
-import net.daisyquest.daisyquestgame.Controller.PlayerController;
 import net.daisyquest.daisyquestgame.Controller.SpriteUpdateRequest;
 import net.daisyquest.daisyquestgame.Model.Attribute;
 import net.daisyquest.daisyquestgame.Model.Currency;
 import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
-import net.daisyquest.daisyquestgame.Repository.CurrencyRepository;
 import net.daisyquest.daisyquestgame.Repository.PlayerRepository;
 import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import net.daisyquest.daisyquestgame.Service.Initializer.PlayerInitializer;
@@ -202,41 +200,57 @@ public class PlayerService {
         playerRepository.save(player);
     }
 
-    public boolean hasSufficientCurrency(Player buyer, String currencyId, int price) {
-        Currency currency = currencyService.getCurrency(currencyId);
+    public boolean hasSufficientCurrencyByCurrencyName(Player buyer, String currencyName, int price) {
+        Currency currency = currencyService.getCurrencyByName(currencyName);
         if (currency == null) {
-            throw new IllegalArgumentException("Invalid currency ID: " + currencyId);
+            throw new IllegalArgumentException("Invalid currency ID: " + currencyName);
         }
-        Integer amount = buyer.getCurrencies().get(currencyId);
+        Integer amount = buyer.getCurrencies().get(currency.getId());
         return amount != null && amount >= price;
     }
 
     @Transactional
-    public void deductCurrency(Player buyer, String currencyId, int price) {
-        if (hasSufficientCurrency(buyer, currencyId, price)) {
+    public void deductCurrencyByName(Player buyer, String currencyName, int price) {
+        Currency currency = currencyService.getCurrencyByName(currencyName);
+        if (hasSufficientCurrencyByCurrencyName(buyer, currencyName, price)) {
             Map<String, Integer> currencies = buyer.getCurrencies();
-            int newAmount = currencies.get(currencyId) - price;
-            currencies.put(currencyId, newAmount);
+            int newAmount = currencies.get(currency.getId()) - price;
+            currencies.put(currencyName, newAmount);
             updatePlayer(buyer);
         } else {
-            Currency currency = currencyService.getCurrency(currencyId);
             throw new IllegalArgumentException("Insufficient " + currency.getName() + " to complete the transaction.");
         }
     }
 
     @Transactional
-    public void addCurrency(Player owner, String currencyId, int amount) {
+    public void addCurrency(Player owner, String currencyName, int amount) {
         if (amount < 0) {
             throw new IllegalArgumentException("Cannot add a negative amount of currency.");
         }
 
-        Currency currency = currencyService.getCurrency(currencyId);
+        Currency currency = currencyService.getCurrency(currencyName);
         if (currency == null) {
-            throw new IllegalArgumentException("Invalid currency ID: " + currencyId);
+            throw new IllegalArgumentException("Invalid currency ID: " + currencyName);
         }
 
         Map<String, Integer> currencies = owner.getCurrencies();
-        currencies.merge(currencyId, amount, Integer::sum);
+        currencies.merge(currency.getId(), amount, Integer::sum);
+        updatePlayer(owner);
+    }
+
+    @Transactional
+    public void addCurrencyByName(Player owner, String currencyName, int amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Cannot add a negative amount of currency.");
+        }
+
+        Currency currency = currencyService.getCurrency(currencyName);
+        if (currency == null) {
+            throw new IllegalArgumentException("Invalid currency name: " + currencyName);
+        }
+
+        Map<String, Integer> currencies = owner.getCurrencies();
+        currencies.merge(currency.getId(), amount, Integer::sum);
         updatePlayer(owner);
     }
     public boolean deductResources(String id, int cost) {

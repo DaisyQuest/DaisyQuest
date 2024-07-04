@@ -10,6 +10,7 @@ let craftingIngredients = [];
 let currentPlayer;
 let unclaimedRewardCount = 0;
 let combatLogs = [];
+let currencyDetails;
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
 document.getElementById('startCombatBtn').addEventListener('click', startCombat);
@@ -111,6 +112,7 @@ document.querySelectorAll('.sprite-selector').forEach(selector => {
 let selectedLand = null;
 
 function initializeWorldMap() {
+    updateAvailableCurrencies();
     fetch('/api/land/init')
         .then(response => response.json())
         .then(worldMap => {
@@ -147,7 +149,6 @@ function initializeWorldMap() {
 
 function updateMapTile(land) {
     const tile = document.querySelector(`.land-tile[data-x="${land.xcoordinate}"][data-y="${land.ycoordinate}"]`);
-
     if (!tile) {
         console.error(`No tile found for coordinates: ${land.xcoordinate}, ${land.ycoordinate}`);
         return;
@@ -156,26 +157,27 @@ function updateMapTile(land) {
     // Remove all existing status classes
     tile.classList.remove('owned', 'player-owned', 'for-sale', 'player-for-sale', 'unclaimed');
 
-    // Add appropriate class based on land status
+    // Determine the appropriate class based on land status
+    let newClass = 'unclaimed';
     if (land.owner) {
         if (land.owner.id === playerId) {
-            if (land.forSale) {
-                tile.classList.add('player-for-sale');
-            } else {
-                tile.classList.add('player-owned');
-            }
+            newClass = land.forSale ? 'player-for-sale' : 'player-owned';
         } else {
-            tile.classList.add('owned');
+            newClass = land.forSale ? 'for-sale' : 'owned';
         }
     }
-    if (land.forSale && land.owner && land.owner.id !== playerId) {
-        tile.classList.add('for-sale');
-    }
-    if (!land.owner && !land.forSale) {
-        tile.classList.add('unclaimed');
-    }
-}
 
+    // Add the new class
+    tile.classList.add(newClass);
+
+    // Log for debugging
+    console.log(`Updating tile (${land.xcoordinate}, ${land.ycoordinate}):`, {
+        owner: land.owner ? land.owner.id : 'None',
+        playerId: playerId,
+        forSale: land.forSale,
+        appliedClass: newClass
+    });
+}
 function selectLand(x, y) {
     fetch(`/api/land?x=${x}&y=${y}`)
         .then(response => {
@@ -201,23 +203,22 @@ function updateLandDetails(land = selectedLand) {
         let saleInfo = '';
         if (land.forSale && land.salePrice) {
             saleInfo = '<p>For Sale: Yes</p><p>Prices:</p><ul>';
-            Object.entries(land.salePrice).forEach(([currency, price]) => {
+            Object.entries(land.salePrice).forEach(([currencyId, price]) => {
                 if (price > 0) {  // Only display currencies with a price > 0
-                    saleInfo += `<li>${currency}: ${price}</li>`;
+                    const currencyDetails = availableCurrencies[currencyId] || { name: currencyId, symbol: '' };
+                    saleInfo += `<li>${currencyDetails.name}: ${currencyDetails.symbol}${price}</li>`;
                 }
             });
             saleInfo += '</ul>';
         } else {
             saleInfo = '<p>For Sale: No</p>';
         }
-
         landInfo.innerHTML = `
             <p>Coordinates: (${land.xcoordinate}, ${land.ycoordinate})</p>
             <p>Type: ${land.landType || 'Unknown'}</p>
             <p>Owner: ${land.owner ? land.owner.username : 'Unclaimed'}</p>
             ${saleInfo}
         `;
-
         const isCurrentPlayerOwner = land.owner && land.owner.id === currentPlayer.id;
         document.getElementById('buyButton').style.display = land.forSale && !isCurrentPlayerOwner ? 'inline-block' : 'none';
         document.getElementById('sellButton').style.display = isCurrentPlayerOwner && !land.forSale ? 'inline-block' : 'none';
@@ -229,7 +230,6 @@ function updateLandDetails(land = selectedLand) {
         document.getElementById('partitionButton').style.display = 'none';
     }
 }
-
 function buyLand() {
     const buyerId = playerId; // Replace with actual logged-in player ID
     const currencyType = 'Mana Crystals'; // Replace with selected currency
@@ -252,40 +252,46 @@ let availableCurrencies = [];
 // This function should be called whenever the player data is updated
 function updateAvailableCurrencies() {
     if (currentPlayer && currentPlayer.currencies) {
-        // Extract the keys (currency names) from the currencies object
-        availableCurrencies = Object.keys(currentPlayer.currencies)
-            // Filter out any keys with a value of 0 or null/undefined
-            .filter(key => currentPlayer.currencies[key] > 0);
+        // Create an object to store available currencies with their details
+        availableCurrencies = Object.entries(currentPlayer.currencies)
+            .filter(([currencyId, amount]) => amount > 0)
+            .reduce((acc, [currencyId, amount]) => {
+                const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
+                acc[currencyId] = {
+                    ...details,
+                    amount: amount
+                };
+                return acc;
+            }, {});
     } else {
         console.error('Current player or currencies not available');
-        availableCurrencies = [];
+        availableCurrencies = {};
     }
-
     console.log('Available currencies:', availableCurrencies);
 }
 
+
 // Call this function when the game initializes and after any updates to player data
-updateAvailableCurrencies();
+
 
 function addCurrencyInput() {
     const container = document.getElementById('currencyInputs');
     const index = container.children.length;
-
-    if (availableCurrencies.length === 0) {
+    if (Object.keys(availableCurrencies).length === 0) {
         console.error('No available currencies');
         return;
     }
-
     const inputGroup = document.createElement('div');
     inputGroup.className = 'input-group mb-3';
     inputGroup.innerHTML = `
         <select class="form-select" id="currency${index}">
-            ${availableCurrencies.map(curr => `<option value="${curr}">${curr}</option>`).join('')}
+            ${Object.entries(availableCurrencies).map(([currencyId, details]) =>
+        `<option value="${currencyId}">${details.name} (${details.symbol})</option>`
+    ).join('')}
         </select>
         <input type="number" class="form-control" id="price${index}" placeholder="Price" required>
         <button class="btn btn-outline-secondary" type="button" onclick="removeCurrencyInput(this)">Remove</button>
     `;
-
     container.appendChild(inputGroup);
 }
 
@@ -1006,7 +1012,7 @@ function updatePlayerInfo() {
         })
         .then(data => {
             currentPlayer = data.player;
-            const currencyDetails = data.currencyDetails;
+            currencyDetails = data.currencyDetails;
             updatePlayerInfoUI(currentPlayer, currencyDetails);
         })
         .catch(error => {

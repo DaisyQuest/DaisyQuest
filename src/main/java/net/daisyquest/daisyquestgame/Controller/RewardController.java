@@ -61,6 +61,22 @@ public class RewardController {
         }
     }
 
+    /**
+     * Checks if a player can claim their daily reward.
+     *
+     * @param playerId The ID of the player to check
+     * @return ResponseEntity containing a boolean indicating if the player can claim the daily reward
+     */
+    @GetMapping("/can-claim-daily-reward/{playerId}")
+    public ResponseEntity<Boolean> canClaimDailyReward(@PathVariable String playerId) {
+        try {
+            boolean canClaim = rewardService.canClaimDailyReward(playerId);
+            return ResponseEntity.ok(canClaim);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(false);
+        }
+    }
+
 
 
     /**
