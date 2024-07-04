@@ -87,7 +87,7 @@ import javax.json.JsonObject;
             // Notify both players through WebSocket
             webSocketService.sendDuelAccepted(challenger.getId(), target.getId(), combat.getId());
 
-            return ResponseEntity.ok(new SuccessResponse(true, "Duel accepted and combat started"));
+            return ResponseEntity.ok(new CombatStartedResponse(true, combat.getId()));
 
     }
 
