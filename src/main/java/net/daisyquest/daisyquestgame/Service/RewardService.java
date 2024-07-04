@@ -76,7 +76,7 @@ public class RewardService {
                 .orElseThrow(() -> new RuntimeException("Chest not found"));
 
         // Check if the player owns the chest
-        if (player.getInventory().stream().noneMatch(o-> o.getId().equals(chest.getItemId()))) {
+        if (player.getInventory().stream().noneMatch(o -> o.getId().equals(chest.getItemId()))) {
             throw new IllegalArgumentException("Player does not own this chest");
         }
 
@@ -93,7 +93,7 @@ public class RewardService {
         // Remove the chest from the player's inventory
 
 
-        Item chestToDelete = player.getInventory().stream().filter(o-> o.getId().equals(chest.getItemId())).findFirst().orElseThrow();
+        Item chestToDelete = player.getInventory().stream().filter(o -> o.getId().equals(chest.getItemId())).findFirst().orElseThrow();
         player.getInventory().remove(chestToDelete);
 
         playerRepository.save(player);
@@ -115,7 +115,7 @@ public class RewardService {
                 .orElse(new Chest());
 
         // Check if the player owns the chest
-        if (player.getInventory().stream().noneMatch(o-> o.getId().equals(chest.getItemId()))) {
+        if (player.getInventory().stream().noneMatch(o -> o.getId().equals(chest.getItemId()))) {
             throw new IllegalArgumentException("Player does not own this chest");
         }
 
@@ -132,7 +132,7 @@ public class RewardService {
         // Remove the chest from the player's inventory
 
 
-        Item chestToDelete = player.getInventory().stream().filter(o-> o.getId().equals(chest.getItemId())).findFirst().orElseThrow();
+        Item chestToDelete = player.getInventory().stream().filter(o -> o.getId().equals(chest.getItemId())).findFirst().orElseThrow();
         player.getInventory().remove(chestToDelete);
 
         playerRepository.save(player);
@@ -204,7 +204,7 @@ public class RewardService {
             case CURRENCY:
                 //player.addCurrency(reward.getRewardId(), reward.getQuantity());
                 Optional<Currency> c = currencyRepository.findById(reward.getRewardId());
-                c.ifPresent(currency -> player.getCurrencies().put(currency.getName(), reward.getQuantity()));
+                c.ifPresent(currency -> player.getCurrencies().put(currency.getId(), reward.getQuantity()));
                 break;
             case RESOURCE:
                 player.setResources(player.getResources() + reward.getQuantity());
@@ -218,17 +218,16 @@ public class RewardService {
                 break;
             case ATTRIBUTE_EXPERIENCE:
                 Attribute a = player.getAttributes().get(reward.getRewardId());
-                if(a != null){
+                if (a != null) {
                     a.setExperience(a.getExperience() + reward.getQuantity());
                 }
                 break;
         }
     }
+
     public List<RewardContainer> getUnclaimedRewards(String playerId) {
         return rewardContainerRepository.findByPlayerId(playerId);
     }
-
-
 
 
     /**
@@ -249,6 +248,7 @@ public class RewardService {
 
         return randomReward;
     }
+
 
     private Reward generateRandomReward() {
         RewardType[] types = RewardType.values();
@@ -282,7 +282,6 @@ public class RewardService {
 
         return new Reward(randomType, rewardId, quantity);
     }
-
 
 
     /**
@@ -327,4 +326,19 @@ public class RewardService {
 
         return chestRepository.save(chest);
     }
+
+
+
+    public boolean canClaimDailyReward(String playerId) {
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new RuntimeException("Player not found"));
+
+        LocalDate lastClaimDate = player.getLastDailyRewardClaim();
+        LocalDate today = LocalDate.now();
+
+        return lastClaimDate == null || !lastClaimDate.equals(today);
+    }
 }
+
+
+

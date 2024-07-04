@@ -10,6 +10,7 @@ let craftingIngredients = [];
 let currentPlayer;
 let unclaimedRewardCount = 0;
 let combatLogs = [];
+let currencyDetails;
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
 document.getElementById('startCombatBtn').addEventListener('click', startCombat);
@@ -111,6 +112,7 @@ document.querySelectorAll('.sprite-selector').forEach(selector => {
 let selectedLand = null;
 
 function initializeWorldMap() {
+    updateAvailableCurrencies();
     fetch('/api/land/init')
         .then(response => response.json())
         .then(worldMap => {
@@ -147,7 +149,6 @@ function initializeWorldMap() {
 
 function updateMapTile(land) {
     const tile = document.querySelector(`.land-tile[data-x="${land.xcoordinate}"][data-y="${land.ycoordinate}"]`);
-
     if (!tile) {
         console.error(`No tile found for coordinates: ${land.xcoordinate}, ${land.ycoordinate}`);
         return;
@@ -156,26 +157,27 @@ function updateMapTile(land) {
     // Remove all existing status classes
     tile.classList.remove('owned', 'player-owned', 'for-sale', 'player-for-sale', 'unclaimed');
 
-    // Add appropriate class based on land status
+    // Determine the appropriate class based on land status
+    let newClass = 'unclaimed';
     if (land.owner) {
         if (land.owner.id === playerId) {
-            if (land.forSale) {
-                tile.classList.add('player-for-sale');
-            } else {
-                tile.classList.add('player-owned');
-            }
+            newClass = land.forSale ? 'player-for-sale' : 'player-owned';
         } else {
-            tile.classList.add('owned');
+            newClass = land.forSale ? 'for-sale' : 'owned';
         }
     }
-    if (land.forSale && land.owner && land.owner.id !== playerId) {
-        tile.classList.add('for-sale');
-    }
-    if (!land.owner && !land.forSale) {
-        tile.classList.add('unclaimed');
-    }
-}
 
+    // Add the new class
+    tile.classList.add(newClass);
+
+    // Log for debugging
+    console.log(`Updating tile (${land.xcoordinate}, ${land.ycoordinate}):`, {
+        owner: land.owner ? land.owner.id : 'None',
+        playerId: playerId,
+        forSale: land.forSale,
+        appliedClass: newClass
+    });
+}
 function selectLand(x, y) {
     fetch(`/api/land?x=${x}&y=${y}`)
         .then(response => {
@@ -201,23 +203,22 @@ function updateLandDetails(land = selectedLand) {
         let saleInfo = '';
         if (land.forSale && land.salePrice) {
             saleInfo = '<p>For Sale: Yes</p><p>Prices:</p><ul>';
-            Object.entries(land.salePrice).forEach(([currency, price]) => {
+            Object.entries(land.salePrice).forEach(([currencyId, price]) => {
                 if (price > 0) {  // Only display currencies with a price > 0
-                    saleInfo += `<li>${currency}: ${price}</li>`;
+                    const currencyDetails = availableCurrencies[currencyId] || { name: currencyId, symbol: '' };
+                    saleInfo += `<li>${currencyDetails.name}: ${currencyDetails.symbol}${price}</li>`;
                 }
             });
             saleInfo += '</ul>';
         } else {
             saleInfo = '<p>For Sale: No</p>';
         }
-
         landInfo.innerHTML = `
             <p>Coordinates: (${land.xcoordinate}, ${land.ycoordinate})</p>
             <p>Type: ${land.landType || 'Unknown'}</p>
             <p>Owner: ${land.owner ? land.owner.username : 'Unclaimed'}</p>
             ${saleInfo}
         `;
-
         const isCurrentPlayerOwner = land.owner && land.owner.id === currentPlayer.id;
         document.getElementById('buyButton').style.display = land.forSale && !isCurrentPlayerOwner ? 'inline-block' : 'none';
         document.getElementById('sellButton').style.display = isCurrentPlayerOwner && !land.forSale ? 'inline-block' : 'none';
@@ -229,7 +230,6 @@ function updateLandDetails(land = selectedLand) {
         document.getElementById('partitionButton').style.display = 'none';
     }
 }
-
 function buyLand() {
     const buyerId = playerId; // Replace with actual logged-in player ID
     const currencyType = 'Mana Crystals'; // Replace with selected currency
@@ -252,40 +252,46 @@ let availableCurrencies = [];
 // This function should be called whenever the player data is updated
 function updateAvailableCurrencies() {
     if (currentPlayer && currentPlayer.currencies) {
-        // Extract the keys (currency names) from the currencies object
-        availableCurrencies = Object.keys(currentPlayer.currencies)
-            // Filter out any keys with a value of 0 or null/undefined
-            .filter(key => currentPlayer.currencies[key] > 0);
+        // Create an object to store available currencies with their details
+        availableCurrencies = Object.entries(currentPlayer.currencies)
+            .filter(([currencyId, amount]) => amount > 0)
+            .reduce((acc, [currencyId, amount]) => {
+                const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
+                acc[currencyId] = {
+                    ...details,
+                    amount: amount
+                };
+                return acc;
+            }, {});
     } else {
         console.error('Current player or currencies not available');
-        availableCurrencies = [];
+        availableCurrencies = {};
     }
-
     console.log('Available currencies:', availableCurrencies);
 }
 
+
 // Call this function when the game initializes and after any updates to player data
-updateAvailableCurrencies();
+
 
 function addCurrencyInput() {
     const container = document.getElementById('currencyInputs');
     const index = container.children.length;
-
-    if (availableCurrencies.length === 0) {
+    if (Object.keys(availableCurrencies).length === 0) {
         console.error('No available currencies');
         return;
     }
-
     const inputGroup = document.createElement('div');
     inputGroup.className = 'input-group mb-3';
     inputGroup.innerHTML = `
         <select class="form-select" id="currency${index}">
-            ${availableCurrencies.map(curr => `<option value="${curr}">${curr}</option>`).join('')}
+            ${Object.entries(availableCurrencies).map(([currencyId, details]) =>
+        `<option value="${currencyId}">${details.name} (${details.symbol})</option>`
+    ).join('')}
         </select>
         <input type="number" class="form-control" id="price${index}" placeholder="Price" required>
         <button class="btn btn-outline-secondary" type="button" onclick="removeCurrencyInput(this)">Remove</button>
     `;
-
     container.appendChild(inputGroup);
 }
 
@@ -998,46 +1004,58 @@ function showCombatResults(combat) {
 
 function updatePlayerInfo() {
     fetch(`/api/players/${playerId}`)
-        .then(response => response.json())
-        .then(player => {
-            currentPlayer = player; // Store the player data globally
-            const playerInfo = document.getElementById('playerInfo');
-            playerInfo.innerHTML = `
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="sprite-preview mb-3">
-                            <img src="/sprites/${player.subspriteBackground || 'background_0'}.png">
-                            <img src="/sprites/${player.subspriteFace || 'face_0'}.png">
-                            <img src="/sprites/${player.subspriteEyes || 'eyes_0'}.png">
-                            <img src="/sprites/${player.subspriteHairHat || 'hairhat_0'}.png">
-                        </div>
-                        <button class="btn btn-primary btn-sm mb-3" onclick="openSpriteSelectionModal()">Customize Sprite</button>
-                    </div>
-                    <div class="col-md-8">
-                        <h6>Player: ${player.username}</h6>
-                        <p>Level: ${player.level}</p>
-                        <p>Total Experience: ${player.totalExperience}</p>
-                        <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
-                        <h6>Attributes:</h6>
-                        <ul class="list-group">
-                            ${Object.entries(player.attributes || {}).map(([key, value]) =>
-                `<li class="list-group-item">${key}: Level ${value.level} (XP: ${value.experience})</li>`
-            ).join('')}
-                        </ul>
-                        <h6 class="mt-3">Currencies:</h6>
-                        <ul class="list-group">
-                            ${Object.entries(player.currencies || {}).map(([key, value]) =>
-                `<li class="list-group-item">${key}: ${value}</li>`
-            ).join('')}
-                        </ul>
-                    </div>
-                </div>
-            `;
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            currentPlayer = data.player;
+            currencyDetails = data.currencyDetails;
+            updatePlayerInfoUI(currentPlayer, currencyDetails);
         })
         .catch(error => {
             console.error('Error updating player info:', error);
-            alert('Failed to update player info. Please refresh the page.');
+            document.getElementById('playerInfo').innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    Failed to update player info. Please try again later.
+                </div>
+            `;
         });
+}
+
+function updatePlayerInfoUI(player, currencyDetails) {
+    const playerInfo = document.getElementById('playerInfo');
+    playerInfo.innerHTML = `
+        <div class="row">
+            <div class="col-md-4">
+                <div class="sprite-preview mb-3">
+                    <img src="/sprites/${player.subspriteBackground || 'background_0'}.png">
+                    <img src="/sprites/${player.subspriteFace || 'face_0'}.png">
+                    <img src="/sprites/${player.subspriteEyes || 'eyes_0'}.png">
+                    <img src="/sprites/${player.subspriteHairHat || 'hairhat_0'}.png">
+                </div>
+                <button class="btn btn-primary btn-sm mb-3" onclick="openSpriteSelectionModal()">Customize Sprite</button>
+            </div>
+            <div class="col-md-8">
+                <h6>Player: ${player.username}</h6>
+                <p>Level: ${player.level}</p>
+                <p>Total Experience: ${player.totalExperience}</p>
+                <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
+                <h6 class="mt-4 mb-3">Attributes:</h6>
+                <ul class="list-group attribute-list">
+                    ${Object.entries(player.attributes || {}).map(([key, value]) => `
+                        <li class="list-group-item d-flex align-items-center">
+                            <img src="/sprites/${value.sprite}.png" alt="${key}" class="attribute-icon mr-2">
+                            <span class="attribute-name">  ${value.name}:</span>
+                            <span class="attribute-value ml-auto">Level ${value.level} (XP: ${value.experience})</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        </div>
+    `;
 }
 
 function openSpriteSelectionModal() {
@@ -1068,24 +1086,50 @@ function openSpriteSelectionModal() {
 }
 
 function updateInventory() {
-    fetch(`/api/players/${playerId}/inventory`)
-        .then(response => response.json())
-        .then(inventory => {
+    Promise.all([
+        fetch(`/api/players/${playerId}/inventory`).then(response => response.json()),
+        fetch(`/api/players/${playerId}`).then(response => response.json())
+    ])
+        .then(([inventory, playerData]) => {
             const inventoryList = document.getElementById('inventoryList');
-            inventoryList.innerHTML = inventory.map(item => `
-                <div class="inventory-item">
-                    <h6>${item.name}</h6>
-                    <p>${item.description}</p>
-                    <p>Sell Price: ${item.sellPrice} gold</p>
-                    ${item.isChest ?
+            const currencyDetails = playerData.currencyDetails;
+            const player = playerData.player;
+
+            let inventoryHTML = '<h5>Inventory</h5>';
+            inventoryHTML += inventory.map(item => `
+            <div class="inventory-item">
+                <h6>${item.name}</h6>
+                <p>${item.description}</p>
+                <p>Sell Price: ${item.sellPrice} gold</p>
+                ${item.isChest ?
                 `<button class="btn btn-sm btn-primary" onclick="openChest('${item.id}')">Open Chest</button>` :
                 `<button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>`
             }
-                    <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
-                    <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
-                    <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
-                </div>
-            `).join('');
+                <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
+                <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
+                <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
+            </div>
+        `).join('');
+
+            inventoryHTML += '<h5 class="mt-4">Currencies</h5>';
+            inventoryHTML += '<ul class="list-group">';
+            inventoryHTML += Object.entries(player.currencies || {}).map(([currencyId, amount]) => {
+                const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
+                return `<li class="list-group-item">
+                ${details.name}: ${details.symbol}${amount}
+            </li>`;
+            }).join('');
+            inventoryHTML += '</ul>';
+
+            inventoryList.innerHTML = inventoryHTML;
+        })
+        .catch(error => {
+            console.error('Error updating inventory:', error);
+            document.getElementById('inventoryList').innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                Failed to update inventory. Please try again later.
+            </div>
+        `;
         });
 }
 

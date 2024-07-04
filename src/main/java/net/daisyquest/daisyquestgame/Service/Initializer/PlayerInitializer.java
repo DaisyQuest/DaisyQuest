@@ -51,8 +51,8 @@ public class PlayerInitializer {
             Map<String, Integer> newMap = new HashMap<>();
             List<Currency> currencyList = p_cur;
             currencyList.forEach(o-> {
-                if(!newMap.containsKey(o.getName())) {
-                    newMap.put(o.getName(), 100);
+                if(!newMap.containsKey(o.getId())) {
+                    newMap.put(o.getId(), 100);
                 }
             });
             p1.setCurrencies(newMap);
@@ -75,8 +75,11 @@ public class PlayerInitializer {
         if(p1.getAttributes() == null){
             p1.setAttributes(new HashMap<>());
         }
+
+
         Attribute hp = getHitpointsAttribute(10, 1000);
         Attribute combat = getCombatAttribute(1, 1000);
+
 
         if(!p1.getAttributes().containsKey("hitpoints")) {
             p1.getAttributes().put("hitpoints", hp);
@@ -84,6 +87,10 @@ public class PlayerInitializer {
         if(!p1.getAttributes().containsKey("combat")) {
             p1.getAttributes().put("combat", combat);
         }
+
+        //todo, make this nicer
+        p1.getAttributes().forEach((k, v) -> v.setSprite(v.getSpriteFileNameWithoutExtension(v)));
+
     }
 
     public static Attribute getHitpointsAttribute(int level, int xp){

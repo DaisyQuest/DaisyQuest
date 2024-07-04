@@ -20,6 +20,8 @@ public class NPCSpawningService {
     @Autowired
     private WorldMapService worldMapService;
 
+    @Autowired ItemService itemService;
+
     @Scheduled(fixedRate = 300000) // Run every 5 minutes
     public void spawnNPCs() {
         WorldMap worldMap = worldMapService.getWorldMap();
@@ -51,6 +53,7 @@ public class NPCSpawningService {
         npc.setCurrentMana(100);
         npc.setMaxMana(100);
         npc.setKnownSpells(new ArrayList<>());
+        npc.setInventory(itemService.generateDropsFromNPC(npc.getId()));
         // Set other NPC attributes (level, health, etc.)
         return npc;
     }

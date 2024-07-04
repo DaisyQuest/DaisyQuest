@@ -113,13 +113,13 @@ public class LandService {
             throw new IllegalArgumentException("Land is not available for purchase with this currency");
         }
 
-        if (!playerService.hasSufficientCurrency(buyer, currencyType, price)) {
+        if (!playerService.hasSufficientCurrencyByCurrencyName(buyer, currencyType, price)) {
             throw new IllegalStateException("Insufficient funds to purchase the land");
         }
 
-        playerService.deductCurrency(buyer, currencyType, price);
+        playerService.deductCurrencyByName(buyer, currencyType, price);
         if (land.getOwner() != null) {
-            playerService.addCurrency(land.getOwner(), currencyType, price);
+            playerService.addCurrencyByName(land.getOwner(), currencyType, price);
         }
 
         land.setOwner(buyer);

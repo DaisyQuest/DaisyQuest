@@ -289,7 +289,7 @@
                 }
                 console.log('Player position:', currentPlayer.worldPositionX, currentPlayer.worldPositionY);
                 updatePlayerInfo();
-                updatePlayerPosition(currentPlayer.worldPositionX, currentPlayer.worldPositionY);
+                updatePlayerPosition(currentPlayer.player.playerId, currentPlayer.worldPositionX, currentPlayer.worldPositionY);
                 setupWebSocket();
                 drawWorldMap();
             })
@@ -321,7 +321,7 @@
         }
 
         for (const player of players) {
-            if (player.id !== currentPlayer.id) {
+            if (player.id !== currentPlayer.player.id) {
                 const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
                 const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
 
@@ -332,7 +332,7 @@
             }
         }
 
-        await drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
+        await drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer.player, true);
 
         coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
     }
@@ -388,13 +388,13 @@
     }
 
     function updatePlayerInfo() {
-        if (currentPlayer && currentPlayer.username)
-            document.getElementById('player-name').textContent = currentPlayer.username;
-        if (currentPlayer && currentPlayer.level) {
-            document.getElementById('player-level').textContent = currentPlayer.level;
+        if (currentPlayer && currentPlayer.player.username)
+            document.getElementById('player-name').textContent = currentPlayer.player.username;
+        if (currentPlayer && currentPlayer.player.level) {
+            document.getElementById('player-level').textContent = currentPlayer.player.level;
         }
-        if (currentPlayer && currentPlayer.experience) {
-            document.getElementById('player-exp').textContent = currentPlayer.experience;
+        if (currentPlayer && currentPlayer.player.experience) {
+            document.getElementById('player-exp').textContent = currentPlayer.player.experience;
         }
     }
 
@@ -418,12 +418,12 @@
                 return;
             }
 
-            if (!currentPlayer || !currentPlayer.id) {
+            if (!currentPlayer || !currentPlayer.player.id) {
                 console.error('Current player data is missing or incomplete.');
                 return;
             }
 
-            if (player.id !== currentPlayer.id) {
+            if (player.id !== currentPlayer.player.id) {
                 if (!player.username || typeof player.level === 'undefined') {
                     console.error('Player data is incomplete. Missing username or level.', player);
                     return;
@@ -455,7 +455,7 @@
         x = Math.round(x);
         y = Math.round(y);
 
-        if (playerIdOfPlayerToUpdate === currentPlayer.id) {
+        if (playerIdOfPlayerToUpdate === currentPlayer.player.id) {
             // Update current player's position
             if (x === currentPlayer.worldPositionX && y === currentPlayer.worldPositionY) {
                 console.log('Current player position unchanged, skipping update');
@@ -468,7 +468,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    playerId: currentPlayer.id,
+                    playerId: currentPlayer.player.id,
                     newX: x,
                     newY: y
                 })
@@ -541,7 +541,7 @@
         const worldX = currentPlayer.worldPositionX + Math.round(lastClickX - VIEWPORT_WIDTH / 2);
         const worldY = currentPlayer.worldPositionY + Math.round(lastClickY - VIEWPORT_HEIGHT / 2);
 
-        updatePlayerPosition(currentPlayer.id, worldX, worldY);
+        updatePlayerPosition(currentPlayer.player.id, worldX, worldY);
     });
 
     document.addEventListener('keydown', (event) => {
@@ -1053,8 +1053,8 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                challengerId: currentPlayer.id,
-                targetId: selectedPlayer.id
+                challengerId: currentPlayer.player.id,
+                targetId: selectedPlayer.player.id
             })
         })
             .then(response => response.json())
@@ -1097,7 +1097,7 @@
 
         socket.onopen = function(event) {
             console.log('WebSocket connection established');
-            socket.send(JSON.stringify({ type: 'register', playerId: currentPlayer.id }));
+            socket.send(JSON.stringify({ type: 'register', playerId: currentPlayer.player.id }));
         };
 
         socket.onmessage = function(event) {
@@ -1151,7 +1151,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 challengerId: challengerId,
-                targetId: currentPlayer.id
+                targetId: currentPlayer.player.id
             })
         })
             .then(response => response.json())
@@ -1172,7 +1172,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 challengerId: challengerId,
-                targetId: currentPlayer.id
+                targetId: currentPlayer.player.id
             })
         })
             .then(response => response.json())
@@ -1253,7 +1253,7 @@
             const message = this.value;
             if (message.trim() !== '') {
                 // In a real implementation, you would send this message to your server
-                addChatMessage(currentPlayer.username, message);
+                addChatMessage(currentPlayer.player.username, message);
                 this.value = '';
             }
         }
