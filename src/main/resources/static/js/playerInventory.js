@@ -90,7 +90,7 @@ function renderEquipment() {
             } else {
                 slotElement.innerHTML = `
                     <div class="empty-slot">
-                        <img src="/images/slots/${slotType.toLowerCase()}.svg" alt="${slotType}">
+                        <img src="/sprites/slots/${slotType.toLowerCase()}.svg" alt="${slotType}">
                     </div>
                 `;
             }
