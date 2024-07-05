@@ -32,8 +32,11 @@ function renderTalentTrees() {
             talentElement.className = 'talent';
             const level = playerTalents[talent] || 0;
             talentElement.innerHTML = `
-                <span>${talent.replace(/_/g, ' ')}</span>
-                <span>Level: ${level}</span>
+                <img src="/sprites/talents/${talent.toLowerCase()}.svg" alt="${talent}" class="talent-sprite">
+                <div class="talent-info">
+                    <span class="talent-name">${talent.replace(/_/g, ' ')}</span>
+                    <span class="talent-level">Level: ${level}</span>
+                </div>
                 <button onclick="upgradeTalent('${talent}')" ${availableTalentPoints > 0 ? '' : 'disabled'}>Upgrade</button>
             `;
             treeElement.appendChild(talentElement);

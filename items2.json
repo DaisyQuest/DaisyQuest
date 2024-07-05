@@ -1,0 +1,113 @@
+{
+  "items": [
+    {
+      "id": "helm_of_wisdom",
+      "name": "Helm of Wisdom",
+      "description": "A shining helmet that enhances mental acuity.",
+      "equipmentSlotTypeString": "HEAD",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "intelligence": 5
+      }
+    },
+    {
+      "id": "pauldrons_of_might",
+      "name": "Pauldrons of Might",
+      "description": "Massive shoulder armor that grants incredible strength.",
+      "equipmentSlotTypeString": "LEFT_SHOULDER",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "strength": 5
+      }
+    },
+    {
+      "id": "amulet_of_vitality",
+      "name": "Amulet of Vitality",
+      "description": "A glowing pendant that enhances life force.",
+      "equipmentSlotTypeString": "NECK",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "vitality": 5
+      }
+    },
+    {
+      "id": "gauntlets_of_dexterity",
+      "name": "Gauntlets of Dexterity",
+      "description": "Finely crafted gloves that improve hand-eye coordination.",
+      "equipmentSlotTypeString": "LEFT_GLOVE",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "dexterity": 5
+      }
+    },
+    {
+      "id": "chestplate_of_resilience",
+      "name": "Chestplate of Resilience",
+      "description": "A sturdy breastplate that greatly increases defense.",
+      "equipmentSlotTypeString": "CHEST",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "defense": 10
+      }
+    },
+    {
+      "id": "belt_of_giant_strength",
+      "name": "Belt of Giant Strength",
+      "description": "A wide belt that grants the wearer tremendous strength.",
+      "equipmentSlotTypeString": "WAIST",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "strength": 8
+      }
+    },
+    {
+      "id": "greaves_of_swiftness",
+      "name": "Greaves of Swiftness",
+      "description": "Leg armor that increases movement speed.",
+      "equipmentSlotTypeString": "LEGS",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "agility": 7
+      }
+    },
+    {
+      "id": "boots_of_levitation",
+      "name": "Boots of Levitation",
+      "description": "Magical boots that allow the wearer to float slightly above the ground.",
+      "equipmentSlotTypeString": "FEET",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "agility": 5
+      }
+    },
+    {
+      "id": "sword_of_flames",
+      "name": "Sword of Flames",
+      "description": "A blazing sword that deals fire damage.",
+      "equipmentSlotTypeString": "RIGHT_WEAPON",
+      "equippable": true,
+      "equippableInStacks": false,
+      "attributeModifiers": {
+        "attack": 15
+      }
+    },
+    {
+      "id": "quiver_of_infinite_arrows",
+      "name": "Quiver of Infinite Arrows",
+      "description": "A magical quiver that never runs out of arrows.",
+      "equipmentSlotTypeString": "AMMO",
+      "equippable": true,
+      "equippableInStacks": true,
+      "stackable": true,
+      "maxStackSize": 999
+    }
+  ]
+}

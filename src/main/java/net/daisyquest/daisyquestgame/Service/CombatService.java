@@ -483,33 +483,70 @@ public class CombatService {
     }
 
     private void distributeNPCDrops(Combat combat, List<String> winners, List<String> losers) {
-        List<Item> npcDrops = new ArrayList<>();
+        Map<Item, Integer> npcDrops = new HashMap<>();
         for (String loserId : losers) {
-            if(!loserId.startsWith("AI")) {
+            if (!loserId.startsWith("AI")) {
                 Player loser = playerService.getPlayer(loserId);
-                npcDrops.addAll(loser.getInventory());
+                for (InventorySlot slot : loser.getInventory().getInventorySlots()) {
+                    if (slot.hasItem()) {
+                        npcDrops.merge(slot.getItem(), slot.getQuantity(), Integer::sum);
+                    }
+                }
+                // Clear the loser's inventory
+                loser.getInventory().getInventorySlots().clear();
+                playerService.updatePlayer(loser);
             }
-
         }
 
         if (!npcDrops.isEmpty() && !winners.isEmpty()) {
-            // Distribute drops evenly among winners
-            int dropsPerWinner = npcDrops.size() / winners.size();
-            int remainingDrops = npcDrops.size() % winners.size();
+            List<Player> humanWinners = winners.stream()
+                    .filter(id -> !id.startsWith("AI"))
+                    .map(playerService::getPlayer)
+                    .collect(Collectors.toList());
 
-            for (int i = 0; i < winners.size(); i++) {
-                String winnerId = winners.get(i);
-                if (winnerId.startsWith("AI")) continue; // Skip AI winners
-
-                Player winner = playerService.getPlayer(winnerId);
-                int dropCount = dropsPerWinner + (i < remainingDrops ? 1 : 0);
-                List<Item> winnerDrops = npcDrops.subList(0, dropCount);
-                npcDrops = npcDrops.subList(dropCount, npcDrops.size());
-
-                winner.getInventory().addAll(winnerDrops);
-                playerService.updatePlayer(winner);
+            if (!humanWinners.isEmpty()) {
+                distributeDrops(npcDrops, humanWinners);
             }
         }
+    }
+
+    private void distributeDrops(Map<Item, Integer> drops, List<Player> winners) {
+        int winnerCount = winners.size();
+        for (Map.Entry<Item, Integer> drop : drops.entrySet()) {
+            Item item = drop.getKey();
+            int totalQuantity = drop.getValue();
+            int baseQuantityPerWinner = totalQuantity / winnerCount;
+            int remainingQuantity = totalQuantity % winnerCount;
+
+            for (int i = 0; i < winnerCount; i++) {
+                Player winner = winners.get(i);
+                int quantityForThisWinner = baseQuantityPerWinner + (i < remainingQuantity ? 1 : 0);
+
+                if (quantityForThisWinner > 0) {
+                    try {
+                        winner.getInventory().addItem(item, quantityForThisWinner);
+                    } catch (InventoryFullException e) {
+                        // If inventory is full, try to add as many as possible
+                        int addedQuantity = addAsManyAsPossible(winner.getInventory(), item, quantityForThisWinner);
+                        logger.warn("Could not add all items to winner's inventory. Added {} out of {}", addedQuantity, quantityForThisWinner);
+                    }
+                    playerService.updatePlayer(winner);
+                }
+            }
+        }
+    }
+
+    private int addAsManyAsPossible(PlayerInventory inventory, Item item, int desiredQuantity) {
+        int addedQuantity = 0;
+        while (addedQuantity < desiredQuantity) {
+            try {
+                inventory.addItem(item, 1);
+                addedQuantity++;
+            } catch (InventoryFullException e) {
+                break;
+            }
+        }
+        return addedQuantity;
     }
 
     @Scheduled(fixedRate = 60000) // Run every minute

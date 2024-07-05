@@ -1,0 +1,5 @@
+<!-- Extra Loot -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    <path d="M6 10 L16 4 L26 10 L26 22 L16 28 L6 22 Z" fill="#ffd700"/>
+    <text x="16" y="21" font-family="Arial" font-size="12" fill="#000000" text-anchor="middle">$</text>
+</svg>

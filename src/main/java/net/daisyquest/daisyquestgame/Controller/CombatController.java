@@ -72,8 +72,6 @@ public class CombatController {
         }
     }
 
-
-
     @GetMapping("/{combatId}/logs")
     public ResponseEntity<List<CombatLog>> getCombatLogs(@PathVariable String combatId) {
         List<CombatLog> logs = combatService.getCombatLogs(combatId);

@@ -26,7 +26,7 @@ public class DailyRewardJob {
     public void generateDailyRewards() {
         List<Player> allPlayers = playerRepository.findAll();
         for (Player player : allPlayers) {
-            if (rewardService.canClaimDailyReward(player)) {
+            if (rewardService.canClaimDailyReward(player.getId())) {
                 RewardContainer dailyReward = rewardService.createDailyReward(player);
                 rewardContainerRepository.save(dailyReward);
             }
