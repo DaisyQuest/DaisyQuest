@@ -104,8 +104,7 @@
 }
 
 .empty-slot img {
-    max-width: 70%;
-    max-height: 70%;
-    opacity: 0.5;
+    max-width: 100%;
+    max-height: 100%;
 }
 

@@ -60,6 +60,7 @@ public class PlayerService {
     public Player getPlayer(String id) {
         Player p =  playerRepository.findById(id).orElse(null);
         PlayerInitializer.initPlayer(p, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("iceball"), spellService.getSpell("thunder")));
+        p.setInventory(playerInventoryRepository.findByPlayerId(p.getId()));
         return p;
     }
 
