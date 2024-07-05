@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface RewardGeneratorService {
     public List<Reward> generateRewardsForChest(Chest chest);
+
+    public List<Reward> generateDailyRewards();
 }

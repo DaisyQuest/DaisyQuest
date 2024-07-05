@@ -45,4 +45,13 @@ public class RewardGeneratorServiceImpl implements RewardGeneratorService {
 
         return rewards;
     }
+
+    @Override
+    public List<Reward> generateDailyRewards() {
+        List<Item> allItems = itemRepository.findAll();
+        int numberOfItemRewards = random.nextInt(3) + 1; // 1 to 3 item rewards
+        Item randomItem = allItems.get(random.nextInt(allItems.size()));
+
+       return List.of(new Reward(RewardType.ITEM, randomItem.getId(), 1));
+    }
 }

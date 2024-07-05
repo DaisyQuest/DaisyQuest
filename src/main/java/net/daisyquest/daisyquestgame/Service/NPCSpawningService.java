@@ -1,10 +1,13 @@
 package net.daisyquest.daisyquestgame.Service;
 
 import net.daisyquest.daisyquestgame.Model.Player;
+import net.daisyquest.daisyquestgame.Model.PlayerInventory;
 import net.daisyquest.daisyquestgame.Model.WorldMap;
+import net.daisyquest.daisyquestgame.Repository.PlayerInventoryRepository;
 import net.daisyquest.daisyquestgame.Repository.PlayerRepository;
 import net.daisyquest.daisyquestgame.Service.Initializer.PlayerInitializer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +25,9 @@ public class NPCSpawningService {
 
     @Autowired ItemService itemService;
 
+    @Autowired
+    private PlayerInventoryRepository playerInventoryRepository;
+
     @Scheduled(fixedRate = 300000) // Run every 5 minutes
     public void spawnNPCs() {
         WorldMap worldMap = worldMapService.getWorldMap();
@@ -32,7 +38,11 @@ public class NPCSpawningService {
         int npcCount = new Random().nextInt(3) + 1;
 
         for (int i = 0; i < npcCount; i++) {
+            //todo: clean this up.
             Player npc = createNPC(worldWidth, worldHeight);
+            npc = playerRepository.save(npc);
+            npc.setInventory(new PlayerInventory(npc.getId(), 10));
+            playerInventoryRepository.save(npc.getInventory());
             playerRepository.save(npc);
         }
     }
@@ -53,7 +63,6 @@ public class NPCSpawningService {
         npc.setCurrentMana(100);
         npc.setMaxMana(100);
         npc.setKnownSpells(new ArrayList<>());
-        npc.setInventory(itemService.generateDropsFromNPC(npc.getId()));
         // Set other NPC attributes (level, health, etc.)
         return npc;
     }

@@ -92,7 +92,7 @@ public class PlayerController {
         return ResponseEntity.ok().build();
     }
     @GetMapping("/{id}/inventory")
-    public ResponseEntity<List<Item>> getInventory(@PathVariable String id) {
+    public ResponseEntity<PlayerInventory> getInventory(@PathVariable String id) {
         Player player = playerService.getPlayer(id);
         if (player != null) {
             return ResponseEntity.ok(player.getInventory());
@@ -122,19 +122,19 @@ public class PlayerController {
     }
 
     @PostMapping("/{id}/use-item/{itemId}")
-    public ResponseEntity<Map<String, String>> useItem(@PathVariable String id, @PathVariable String itemId) {
+    public ResponseEntity<Map<String, String>> useItem(@PathVariable String id, @PathVariable String itemId) throws ItemNotFoundException {
         String result = playerService.useItem(id, itemId);
         return ResponseEntity.ok(Map.of("message", result));
     }
 
     @PostMapping("/{id}/drop-item/{itemId}")
-    public ResponseEntity<Map<String, String>> dropItem(@PathVariable String id, @PathVariable String itemId) {
-        String result = playerService.dropItem(id, itemId);
+    public ResponseEntity<Map<String, String>> dropItem(@PathVariable String id, @PathVariable String itemId) throws ItemNotFoundException {
+        String result = playerService.removeItemFromInventory(id, itemId, -1);
         return ResponseEntity.ok(Map.of("message", result));
     }
 
     @PostMapping("/{id}/send-item")
-    public ResponseEntity<Map<String, String>> sendItem(@PathVariable String id, @RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, String>> sendItem(@PathVariable String id, @RequestBody Map<String, String> request) throws ItemNotFoundException {
         String itemId = request.get("itemId");
         String recipientUsername = request.get("recipientUsername");
         String result = playerService.sendItem(id, itemId, recipientUsername);
@@ -209,5 +209,19 @@ public class PlayerController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+
+    @PostMapping("/{playerId}/add-test-items")
+    public ResponseEntity<String> addTestItems(@PathVariable String playerId) {
+        try {
+            playerService.addTestItemsToPlayer(playerId);
+            return ResponseEntity.ok("Test items added and equipped successfully");
+        } catch (PlayerNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error adding test items: " + e.getMessage());
+        }
+    }
+
 
 }

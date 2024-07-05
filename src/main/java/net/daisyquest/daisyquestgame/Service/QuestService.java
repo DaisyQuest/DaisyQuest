@@ -87,7 +87,7 @@ public class QuestService {
 
                     Item item = itemService.getItemByName(itemName.replaceAll("\"", ""));
                     if (item != null) {
-                        playerService.addItemToInventory(player, item, quantity);
+                        playerService.addItemToInventory(player.getId(), item.getId(), 1);
 
                         QuestCompletionResult.Reward reward = new QuestCompletionResult.Reward();
                         reward.setName(itemName);

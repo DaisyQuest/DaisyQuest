@@ -1,10 +1,8 @@
 package net.daisyquest.daisyquestgame.Controller;
 
+import lombok.Data;
 import net.daisyquest.daisyquestgame.Model.*;
-import net.daisyquest.daisyquestgame.Service.CombatService;
-import net.daisyquest.daisyquestgame.Service.ItemService;
-import net.daisyquest.daisyquestgame.Service.PlayerService;
-import net.daisyquest.daisyquestgame.Service.WebSocketService;
+import net.daisyquest.daisyquestgame.Service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -109,29 +107,57 @@ import javax.json.JsonObject;
     @PostMapping("/transfer")
     @Transactional
     public ResponseEntity<?> transferItem(@RequestBody ItemTransferRequest request) {
-        Player fromPlayer = playerService.getPlayer(request.getFromPlayerId());
-        Player toPlayer = playerService.getPlayer(request.getToPlayerId());
-        Item item = itemService.getItem(request.getItemId());
+        try {
+            Player fromPlayer = playerService.getPlayer(request.getFromPlayerId());
+            Player toPlayer = playerService.getPlayer(request.getToPlayerId());
+            Item item = itemService.getItem(request.getItemId());
 
-        if (fromPlayer == null || toPlayer == null || item == null) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player or item IDs"));
+            if (fromPlayer == null || toPlayer == null || item == null) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player or item IDs"));
+            }
+
+            PlayerInventory fromInventory = fromPlayer.getInventory();
+            PlayerInventory toInventory = toPlayer.getInventory();
+
+            // Find the item in the from player's inventory
+            InventorySlot fromSlot = fromInventory.getInventorySlots().stream()
+                    .filter(slot -> slot.hasItem() && slot.getItem().getId().equals(item.getId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (fromSlot == null) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Item not found in player's inventory"));
+            }
+
+            int quantityToTransfer = Math.min(request.getQuantity(), fromSlot.getQuantity());
+
+            // Remove item from the sender's inventory
+            fromSlot.removeItem(quantityToTransfer);
+            if (fromSlot.getQuantity() == 0) {
+                fromSlot.setItem(null);
+            }
+
+            // Add item to the recipient's inventory
+            try {
+                toInventory.addItem(item, quantityToTransfer);
+            } catch (InventoryFullException e) {
+                // If recipient's inventory is full, return the item to the sender
+                fromSlot.addItem(item, quantityToTransfer);
+                return ResponseEntity.badRequest().body(new ErrorResponse("Recipient's inventory is full. Item cannot be transferred."));
+            }
+
+            // Save changes
+            playerService.updatePlayer(fromPlayer);
+            playerService.updatePlayer(toPlayer);
+
+            return ResponseEntity.ok(new SuccessResponse(true, "Item transferred successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Error transferring item: " + e.getMessage()));
         }
-
-        if (!fromPlayer.getInventory().contains(item)) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Item not found in player's inventory"));
-        }
-
-        fromPlayer.getInventory().remove(item);
-        toPlayer.getInventory().add(item);
-
-        playerService.updatePlayer(fromPlayer);
-        playerService.updatePlayer(toPlayer);
-
-        return ResponseEntity.ok(new SuccessResponse(true, "Item transferred successfully"));
     }
 
-
-
+    @Data
+    static
     class DuelRequestSentResponse {
         public boolean success;
         public boolean combatStarted;
@@ -140,6 +166,15 @@ import javax.json.JsonObject;
             this.success = success;
             this.combatStarted = false;
         }
+    }
+    @Data
+    public static class ItemTransferRequest {
+        private String fromPlayerId;
+        private String toPlayerId;
+        private String itemId;
+        private int quantity;
+
+        // Getters and setters...
     }
 
 }
