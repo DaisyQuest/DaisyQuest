@@ -57,6 +57,15 @@ public class PlayerService {
 
     }
 
+
+    @Transactional
+    public Player createPlayer(String username) throws UsernameAlreadyExistsException {
+        Player p = new Player();
+        p.setUsername(username);
+        return createPlayer(p);
+    }
+
+
     public Player getPlayer(String id) {
         Player p =  playerRepository.findById(id).orElse(null);
         PlayerInitializer.initPlayer(p, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("iceball"), spellService.getSpell("thunder")));

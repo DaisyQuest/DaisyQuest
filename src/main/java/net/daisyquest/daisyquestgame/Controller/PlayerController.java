@@ -33,10 +33,10 @@ public class PlayerController {
 
     @Autowired CurrencyService currencyService;
 
-    @PostMapping("/register")
-    public ResponseEntity<?> registerPlayer(@RequestBody Player player) {
+    @PostMapping("/register/{username}")
+    public ResponseEntity<?> registerPlayer(@PathVariable String username) {
         try {
-            Player newPlayer = playerService.createPlayer(player);
+            Player newPlayer = playerService.createPlayer(username);
             return ResponseEntity.ok(newPlayer);
         } catch (UsernameAlreadyExistsException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

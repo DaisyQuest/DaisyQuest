@@ -268,6 +268,7 @@
     const DUEL_RANGE = 100;
     let lastClickX, lastClickY;
     let socket;
+    let statusEffects = {};
 
     function initWorldMap() {
         fetch('/api/world-map')
@@ -601,16 +602,8 @@
             });
     }
 
-    function fetchCombatState(combatId) {
-        fetch(`/api/combat/${combatId}`)
-            .then(response => response.json())
-            .then(combat => {
-                updateCombatUI(combat);
-                fetchPlayerSpells();
-                pollCombatStatus();
-            })
-            .catch(error => console.error('Error fetching combat state:', error));
-    }
+
+
 
     function startCombat(combatId) {
         currentCombatId = combatId;
@@ -618,6 +611,165 @@
         document.getElementById('combatArea').style.display = 'block';
         fetchCombatState(combatId);
     }
+
+    function fetchCombatState(combatId) {
+        fetch(`/api/combat/${combatId}`)
+            .then(response => response.json())
+            .then(combat => {
+                updateCombatUI(combat);
+                fetchPlayerSpells();
+                fetchStatusEffects(combatId);
+                pollCombatStatus();
+            })
+            .catch(error => console.error('Error fetching combat state:', error));
+    }
+
+    function fetchStatusEffects(combatId) {
+        fetch(`/api/combat/${combatId}/status-effects`)
+            .then(response => response.json())
+            .then(effects => {
+                statusEffects = effects || {}; // Ensure statusEffects is always an object
+                updateStatusEffectsDisplay();
+            })
+            .catch(error => {
+                console.error('Error fetching status effects:', error);
+                statusEffects = {}; // Reset to empty object on error
+            });
+    }
+
+
+    function updateCombatUI(combat) {
+        updatePlayerCards(combat);
+        updateTurnIndicator(combat);
+        updateCombatInfo(combat);
+        updateSpellCooldowns(combat);
+        updateActionButtons(combat);
+        updateSelectionVisibility(combat);
+        fetchAndUpdateCombatLog(combat.id);
+        updateStatusEffectsDisplay();
+    }
+
+
+    function updatePlayerCards(combat) {
+        const playerCardsContainer = document.getElementById('playerCards');
+        playerCardsContainer.innerHTML = '';
+
+        const playerCount = combat.playerIds.length;
+        const spriteSize = playerCount < 5 ? 128 : 64;
+
+        combat.playerIds.forEach(id => {
+            const health = combat.playerHealth[id];
+            const maxHealth = combat.playerHealthStarting[id];
+            const healthPercentage = (health / maxHealth) * 100;
+
+            const playerCard = document.createElement('div');
+            playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
+            playerCard.innerHTML = `
+            <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
+                ${getPlayerSprite(id, spriteSize)}
+            </div>
+            <h3 class="text-center mt-2">${id}</h3>
+            <div class="health-bar">
+                <div class="health-bar-fill" style="width: ${healthPercentage}%"></div>
+            </div>
+            <p class="text-center mt-2">HP: ${health} / ${maxHealth}</p>
+            <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
+            <div class="status-effects" id="status-effects-${id}"></div>
+        `;
+            playerCardsContainer.appendChild(playerCard);
+        });
+    }
+
+    function updateStatusEffectsDisplay() {
+        if (!statusEffects || Object.keys(statusEffects).length === 0) {
+            console.log('No status effects to display');
+            return; // Exit the function if there are no status effects
+        }
+
+        Object.keys(statusEffects).forEach(playerId => {
+            const statusEffectsContainer = document.getElementById(`status-effects-${playerId}`);
+            if (statusEffectsContainer) {
+                statusEffectsContainer.innerHTML = '';
+                const playerEffects = statusEffects[playerId] || [];
+                playerEffects.forEach(effect => {
+                    if (effect && effect.statusEffect) {
+                        const effectElement = document.createElement('div');
+                        effectElement.className = 'status-effect';
+                        effectElement.style.backgroundColor = effect.statusEffect.color || '#cccccc';
+                        effectElement.style.border = `2px solid ${effect.statusEffect.borderColor || '#999999'}`;
+                        effectElement.title = `${effect.statusEffect.displayName || 'Unknown Effect'} (${effect.duration} turns)`;
+                        effectElement.textContent = effect.statusEffect.shortDisplayName || '?';
+                        statusEffectsContainer.appendChild(effectElement);
+                    }
+                });
+            }
+        });
+    }
+
+    function performAction(actionType) {
+        selectedAction = actionType;
+        const spellSelection = document.getElementById('spellSelection');
+        const targetSelection = document.getElementById('targetSelection');
+
+        spellSelection.style.display = 'none';
+        targetSelection.style.display = 'none';
+
+        if (actionType === 'SPELL') {
+            spellSelection.style.display = 'block';
+            updateSpellSelection();
+            updateSpellInfo();
+        } else {
+            updateTargetSelection();
+            targetSelection.style.display = 'block';
+        }
+    }
+
+
+    function confirmAction() {
+        const targetPlayerId = document.getElementById('targetSelect').value;
+        if (!targetPlayerId) {
+            alert('Please select a target.');
+            return;
+        }
+
+        let actionData = {
+            playerId: playerId,
+            type: selectedAction,
+            targetPlayerId: targetPlayerId,
+            actionPoints: 1
+        };
+
+        if (selectedAction === 'SPELL') {
+            if (!selectedSpell) {
+                alert('Please select a spell.');
+                return;
+            }
+            actionData.spellId = selectedSpell.id;
+        }
+
+        fetch(`/api/combat/${currentCombatId}/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(actionData)
+        })
+            .then(response => response.json())
+            .then(updatedCombat => {
+                updateCombatUI(updatedCombat);
+                document.getElementById('spellSelection').style.display = 'none';
+                document.getElementById('targetSelection').style.display = 'none';
+                fetchStatusEffects(currentCombatId); // This will now handle cases with no status effects
+                if (!updatedCombat.active) {
+                    showCombatResults(updatedCombat);
+                }
+            })
+            .catch(error => {
+                console.error('Error performing action:', error);
+                alert('An error occurred while performing the action. Please try again.');
+            });
+
+        selectedSpell = null;
+    }
+
     function fetchPlayerSpells() {
         fetch(`/api/players/${playerId}/spells`)
             .then(response => response.json())
@@ -653,45 +805,8 @@
             });
     }
 
-    function updateCombatUI(combat) {
-        console.log('Updating combat UI:', combat);
-        updatePlayerCards(combat);
-        updateTurnIndicator(combat);
-        updateCombatInfo(combat);
-        updateSpellCooldowns(combat);
-        updateActionButtons(combat);
-        updateSelectionVisibility(combat);
-        fetchAndUpdateCombatLog(combat.id);
-    }
 
-    function updatePlayerCards(combat) {
-        const playerCardsContainer = document.getElementById('playerCards');
-        playerCardsContainer.innerHTML = '';
 
-        const playerCount = combat.playerIds.length;
-        const spriteSize = playerCount < 5 ? 128 : 64;
-
-        combat.playerIds.forEach(id => {
-            const health = combat.playerHealth[id];
-            const maxHealth = combat.playerHealthStarting[id];
-            const healthPercentage = (health / maxHealth) * 100;
-
-            const playerCard = document.createElement('div');
-            playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
-            playerCard.innerHTML = `
-            <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
-                ${getPlayerSprite(id, spriteSize)}
-            </div>
-            <h3 class="text-center mt-2">${id}</h3>
-            <div class="health-bar">
-                <div class="health-bar-fill" style="width: ${healthPercentage}%"></div>
-            </div>
-            <p class="text-center mt-2">HP: ${health} / ${maxHealth}</p>
-            <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
-        `;
-            playerCardsContainer.appendChild(playerCard);
-        });
-    }
 
     function getPlayerSprite(playerId, size) {
         if (playerId && playerId.startsWith('AI')) {
@@ -778,23 +893,6 @@
     `;
     }
 
-    function performAction(actionType) {
-        selectedAction = actionType;
-        const spellSelection = document.getElementById('spellSelection');
-        const targetSelection = document.getElementById('targetSelection');
-
-        spellSelection.style.display = 'none';
-        targetSelection.style.display = 'none';
-
-        if (actionType === 'SPELL') {
-            spellSelection.style.display = 'block';
-            updateSpellSelection();
-            updateSpellInfo();
-        } else {
-            updateTargetSelection();
-            targetSelection.style.display = 'block';
-        }
-    }
 
 
     function handleSpellSelection() {
@@ -887,46 +985,7 @@
             .catch(error => console.error('Error updating target selection:', error));
     }
 
-    function confirmAction() {
-        const targetPlayerId = document.getElementById('targetSelect').value;
-        if (!targetPlayerId) {
-            alert('Please select a target.');
-            return;
-        }
 
-        let actionData = {
-            playerId: playerId,
-            type: selectedAction,
-            targetPlayerId: targetPlayerId,
-            actionPoints: 1
-        };
-
-        if (selectedAction === 'SPELL') {
-            if (!selectedSpell) {
-                alert('Please select a spell.');
-                return;
-            }
-            actionData.spellId = selectedSpell.id;
-        }
-
-        fetch(`/api/combat/${currentCombatId}/action`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(actionData)
-        })
-            .then(response => response.json())
-            .then(updatedCombat => {
-                updateCombatUI(updatedCombat);
-                document.getElementById('spellSelection').style.display = 'none';
-                document.getElementById('targetSelection').style.display = 'none';
-                if (!updatedCombat.active) {
-                    showCombatResults(updatedCombat);
-                }
-            })
-            .catch(error => console.error('Error performing action:', error));
-
-        selectedSpell = null;
-    }
 
     function showCombatResults(combat) {
         document.getElementById('combatArea').style.display = 'none';
