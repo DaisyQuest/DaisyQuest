@@ -80,7 +80,7 @@ function renderEquipment() {
                 const imgElement = slotElement.querySelector('.item-sprite');
                 imgElement.addEventListener('dragstart', dragEquipped);
             } else {
-                slotElement.innerHTML = `<div class="empty-slot"><img src="/sprites/slots/${slotType.toLowerCase()}.svg" alt="${slotType}"></div>`;
+                slotElement.innerHTML = `<div class="empty-slot"><img src="/sprites/slots/${slotType.toLowerCase()}.png" alt="${slotType}"></div>`;
             }
 
             slotElement.addEventListener('dragover', allowDrop);
@@ -136,15 +136,11 @@ function handleEquipmentMove(itemId, fromEquipment, fromSlotType, toSlotType) {
                 alert('Failed to move equipment. Please try again.');
             });
     } else {
-        fetch(`/api/inventory/${playerId}/equip/?itemId=${selectedItem.id}&slotType=${toSlotType}`, {
+        fetch(`/api/inventory/${playerId}/equip?itemId=${itemId}&slotType=${toSlotType}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                itemId: itemId,
-                slotType: toSlotType
-            })
+            }
         })
             .then(response => {
                 if (!response.ok) {
