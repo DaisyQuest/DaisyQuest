@@ -6,6 +6,7 @@ import net.daisyquest.daisyquestgame.Model.LandType;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.WorldMap;
 import net.daisyquest.daisyquestgame.Repository.LandRepository;
+import net.daisyquest.daisyquestgame.Repository.PlayerInventoryRepository;
 import net.daisyquest.daisyquestgame.Repository.PlayerRepository;
 import net.daisyquest.daisyquestgame.Repository.WorldMapRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,8 @@ public class WorldMapService {
     @Autowired
     private LandRepository landRepository;
 
+    @Autowired
+    PlayerInventoryRepository playerInventoryRepository;
     private final Random random = new Random();
 
     @Transactional
@@ -120,10 +123,14 @@ public class WorldMapService {
         int rightX = Math.min(worldPixelWidth - 1, centerX + viewportWidth / 2);
         int topY = Math.max(0, centerY - viewportHeight / 2);
         int bottomY = Math.min(worldPixelHeight - 1, centerY + viewportHeight / 2);
-
+        //todo:cleanup
         // Query for players within these boundaries
-        return playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(leftX, rightX, topY, bottomY);
-    }
+        var x = playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(leftX, rightX, topY, bottomY);
+        for(Player p : x){
+            p.setInventory(playerInventoryRepository.findByPlayerId(p.getId()));
+        }
+        return x;
+        }
 
     public Land getLandAtPosition(int x, int y) {
         WorldMap worldMap = getWorldMap();

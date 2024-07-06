@@ -83,14 +83,14 @@ public class CombatController {
         return ResponseEntity.ok(logs);
     }
 
-//    @GetMapping("/{combatId}/status-effects")
-//    public ResponseEntity<Map<String, List<StatusEffectInfo>>> getActiveStatusEffects(@PathVariable String combatId) {
-//        Combat combat = combatService.getCombat(combatId);
-//        if (combat == null) {
-//            return ResponseEntity.notFound().build();
-//        }
-//        Map<String, List<StatusEffectInfo>> activeEffects = statusEffectService.getActiveStatusEffects(combat);
-//        return ResponseEntity.ok(activeEffects);
-//    }
+    @GetMapping("/{combatId}/status-effects")
+    public ResponseEntity<Map<String, List<StatusEffectInfo>>> getActiveStatusEffects(@PathVariable String combatId) {
+        Combat combat = combatService.getCombat(combatId);
+        if (combat == null) {
+            return ResponseEntity.notFound().build();
+        }
+        Map<String, List<StatusEffectInfo>> activeEffects = statusEffectService.getActiveStatusEffects(combat);
+        return ResponseEntity.ok(activeEffects);
+    }
 
 }
