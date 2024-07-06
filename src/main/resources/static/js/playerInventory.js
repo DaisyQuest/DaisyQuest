@@ -30,6 +30,26 @@ function renderInventory() {
     const container = document.getElementById('inventoryContainer');
     container.innerHTML = '';
 
+    // Add currencies section
+    const currenciesSection = document.createElement('div');
+    currenciesSection.className = 'currencies-section';
+    currenciesSection.innerHTML = `
+        <h5 class="mt-4">Currencies</h5>
+        <ul class="list-group">
+            ${Object.entries(playerInventory.currencies || {}).map(([currencyId, amount]) => {
+        const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
+        return `<li class="list-group-item">
+                    ${details.name}: ${details.symbol}${amount}
+                </li>`;
+    }).join('')}
+        </ul>
+    `;
+    container.appendChild(currenciesSection);
+
+    // Render inventory slots
+    const slotsContainer = document.createElement('div');
+    slotsContainer.className = 'inventory-slots-container';
+
     for (let i = 0; i < playerInventory.maxInventorySize; i++) {
         const slot = playerInventory.inventorySlots[i] || { slotIndex: i };
         const slotElement = document.createElement('div');
@@ -52,9 +72,15 @@ function renderInventory() {
 
         slotElement.addEventListener('dragover', allowDrop);
         slotElement.addEventListener('drop', drop);
-        container.appendChild(slotElement);
+        slotsContainer.appendChild(slotElement);
     }
+
+    container.appendChild(slotsContainer);
 }
+
+
+
+
 
 function renderEquipment() {
     const container = document.getElementById('equipmentContainer');
@@ -80,7 +106,7 @@ function renderEquipment() {
                 const imgElement = slotElement.querySelector('.item-sprite');
                 imgElement.addEventListener('dragstart', dragEquipped);
             } else {
-                slotElement.innerHTML = `<div class="empty-slot"><img src="/sprites/slots/${slotType.toLowerCase()}.svg" alt="${slotType}"></div>`;
+                slotElement.innerHTML = `<div class="empty-slot"><img src="/sprites/slots/${slotType.toLowerCase()}.png" alt="${slotType}"></div>`;
             }
 
             slotElement.addEventListener('dragover', allowDrop);
@@ -136,15 +162,11 @@ function handleEquipmentMove(itemId, fromEquipment, fromSlotType, toSlotType) {
                 alert('Failed to move equipment. Please try again.');
             });
     } else {
-        fetch(`/api/inventory/${playerId}/equip/?itemId=${selectedItem.id}&slotType=${toSlotType}`, {
+        fetch(`/api/inventory/${playerId}/equip?itemId=${itemId}&slotType=${toSlotType}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                itemId: itemId,
-                slotType: toSlotType
-            })
+            }
         })
             .then(response => {
                 if (!response.ok) {
@@ -171,10 +193,14 @@ function selectItem(item) {
 function renderSelectedItemInfo() {
     const container = document.getElementById('selectedItemDetails');
     if (selectedItem) {
+        const isEquipped = playerInventory.equipmentSlots.some(slot => slot.item && slot.item.id === selectedItem.id);
+        const equipSlotIcon = selectedItem.equippable ?
+            `<img src="/sprites/slots/${selectedItem.equipmentSlotTypeString.toLowerCase()}.png" alt="${selectedItem.equipmentSlotTypeString}" class="equipment-slot-icon">` : '';
+
         container.innerHTML = `
-            <h3>${selectedItem.name}</h3>
-             <img src="/sprites/items/${selectedItem.id}.svg" style="width: 64px; height: 64px;" alt="${selectedItem.name}" 
-                             class="item-sprite-small" data-item-id="${selectedItem.id}">
+            <h3>${selectedItem.name} ${equipSlotIcon}</h3>
+            <img src="/sprites/items/${selectedItem.id}.svg" style="width: 64px; height: 64px;" alt="${selectedItem.name}" 
+                 class="item-sprite-small" data-item-id="${selectedItem.id}">
             <p>${selectedItem.description}</p>
             <p>Sell Price: ${selectedItem.sellPrice}</p>
             <h4>Attribute Modifiers:</h4>
@@ -190,7 +216,10 @@ function renderSelectedItemInfo() {
         ).join('')}
             </ul>
             <div class="button-container">
-                <button class="inventory-button equip-button" onclick="equipSelectedItem()">Equip</button>
+                ${isEquipped ?
+            `<button class="inventory-button unequip-button" onclick="unequipSelectedItem()">Unequip</button>` :
+            (selectedItem.equippable ? `<button class="inventory-button equip-button" onclick="equipSelectedItem()">Equip</button>` : '')
+        }
                 <button class="inventory-button use-button" onclick="useSelectedItem()">Use</button>
                 <button class="inventory-button drop-button" onclick="dropSelectedItem()">Drop</button>
                 <button class="inventory-button send-button" onclick="sendSelectedItem()">Send</button>
@@ -201,6 +230,39 @@ function renderSelectedItemInfo() {
     }
 }
 
+function unequipSelectedItem() {
+    if (selectedItem && selectedItem.equippable) {
+        const slotType = getSlotTypeForItem(selectedItem);
+        if (slotType) {
+            fetch(`/api/inventory/${playerId}/unequip?slotType=${slotType}`, {
+                method: 'POST'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to unequip item');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alert(data.message || 'Item unequipped successfully');
+                    fetchPlayerInventory();
+                    // Hide the unequip button
+                    const unequipButton = document.querySelector('.unequip-button');
+                    if (unequipButton) {
+                        unequipButton.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error unequipping item:', error);
+                    alert('Failed to unequip item. Please try again.');
+                });
+        } else {
+            alert('This item cannot be unequipped.');
+        }
+    } else {
+        alert('This item is not equipped.');
+    }
+}
 function sendSelectedItem() {
     if (selectedItem) {
         const recipientUsername = prompt("Enter the username of the player you want to send the item to:");
