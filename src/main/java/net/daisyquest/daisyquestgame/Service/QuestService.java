@@ -102,9 +102,8 @@ public class QuestService {
                 }
             }
             result.setRewards(rewards);
-
+            player.setInventory(playerInventoryRepository.findByPlayerId(playerId));
             // Save the updated player
-            playerInventoryRepository.save(player.getInventory());
             playerService.updatePlayer(player);
 
             return result;
