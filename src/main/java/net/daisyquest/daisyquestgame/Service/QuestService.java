@@ -5,8 +5,10 @@ import net.daisyquest.daisyquestgame.Model.Item;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Quest;
 import net.daisyquest.daisyquestgame.Model.QuestCompletionResult;
+import net.daisyquest.daisyquestgame.Repository.PlayerInventoryRepository;
 import net.daisyquest.daisyquestgame.Repository.QuestRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -22,6 +24,9 @@ public class QuestService {
     private PlayerService playerService;
     @Autowired
     private ItemService itemService;
+    @Autowired
+    private PlayerInventoryRepository playerInventoryRepository;
+
     public Quest createQuest(Quest quest) {
         return questRepository.save(quest);
     }
@@ -99,6 +104,7 @@ public class QuestService {
             result.setRewards(rewards);
 
             // Save the updated player
+            playerInventoryRepository.save(player.getInventory());
             playerService.updatePlayer(player);
 
             return result;
