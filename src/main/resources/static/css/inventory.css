@@ -112,3 +112,71 @@
     max-height: 100%;
 }
 
+.equipment-slot-icon {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+.unequip-button {
+    background-color: #ff9800;
+    color: white;
+}
+
+.unequip-button:hover {
+    background-color: #e68a00;
+}
+
+.inventory-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+}
+
+.inventory-button:hover {
+    transform: translateY(-2px);
+}
+
+.inventory-button:active {
+    transform: translateY(0);
+}
+
+.equip-button {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.equip-button:hover {
+    background-color: #45a049;
+}
+
+.use-button {
+    background-color: #008CBA;
+    color: white;
+}
+
+.use-button:hover {
+    background-color: #007aa3;
+}
+
+.drop-button {
+    background-color: #f44336;
+    color: white;
+}
+
+.drop-button:hover {
+    background-color: #da190b;
+}
+
+.send-button {
+    background-color: #ff9800;
+    color: white;
+}
+
+.send-button:hover {
+    background-color: #e68a00;
+}
