@@ -4,6 +4,7 @@ import lombok.extern.java.Log;
 import net.daisyquest.daisyquestgame.Model.*;
 import net.daisyquest.daisyquestgame.Repository.CombatLogRepository;
 import net.daisyquest.daisyquestgame.Repository.CombatRepository;
+import net.daisyquest.daisyquestgame.Service.Temp.StatusEffectTestData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,12 @@ public class CombatService {
     @Autowired
     private SpellService spellService;
 
+    @Autowired
+    private StatusEffectService statusEffectService;
+
+    @Autowired
+    StatusEffectTestData testData;
+
     private static final int TURN_DURATION_SECONDS = 5;
     private static final int COMBAT_EXPIRATION_MINUTES = 2;
     private static final int INITIAL_HEALTH = 100;
@@ -51,6 +58,15 @@ public class CombatService {
             playerHealth.put(playerId, INITIAL_HEALTH);
             playerActionPoints.put(playerId, INITIAL_ACTION_POINTS);
         }
+
+        List<StatusEffect> testEffects = testData.createTestStatusEffects();
+        for (int i = 0; i < playerIds.size(); i++) {
+            String playerId = playerIds.get(i);
+            StatusEffect effect = testEffects.get(i % testEffects.size()); // Cycle through effects
+            statusEffectService.applyStatusEffect(combat, playerId, effect, 3); // Apply for 3 turns
+        }
+
+
         combat.setPlayerHealth(playerHealth);
         combat.setPlayerHealthStarting(Map.copyOf(playerHealth));
         combat.setPlayerActionPoints(playerActionPoints);
@@ -64,6 +80,95 @@ public class CombatService {
     }
     @Autowired
     private CombatLogRepository combatLogRepository;
+
+    //STATUS EFFECT MIGRATION TEST START:
+
+    public void applyPlayerStatusEffects(Combat combat, TurnPhase phase) {
+        for (String playerId : combat.getPlayerIds()) {
+            Map<String, CombatStatusContainer> playerEffects = combat.getPlayerStatusEffects().get(playerId);
+            if (playerEffects == null) continue;
+
+            for (Map.Entry<String, CombatStatusContainer> entry : playerEffects.entrySet()) {
+                StatusEffect effect = statusEffectService.getStatusEffect(entry.getKey());
+                CombatStatusContainer container = entry.getValue();
+
+                for (StatusEffectPropertyContainer property : effect.getProperties()) {
+                    switch (property.getType()) {
+                        case DAMAGE_PRE_TURN:
+                            if (phase == TurnPhase.START_PHASE) {
+                                applyDamage(combat, playerId, property.getAmount());
+                                createCombatLog(combat, "System", "STATUS_EFFECT", playerId,
+                                        String.format("%s takes %d damage from %s", playerId, property.getAmount(), effect.getDisplayName()));
+                            }
+                            break;
+                        case DAMAGE_POST_TURN:
+                            if (phase == TurnPhase.END_PHASE) {
+                                applyDamage(combat, playerId, property.getAmount());
+                                createCombatLog(combat, "System", "STATUS_EFFECT", playerId,
+                                        String.format("%s takes %d damage from %s", playerId, property.getAmount(), effect.getDisplayName()));
+                            }
+                            break;
+                        case HEALING_PRE_TURN:
+                            if (phase == TurnPhase.START_PHASE) {
+                                applyHealing(combat, playerId, property.getAmount());
+                                createCombatLog(combat, "System", "STATUS_EFFECT", playerId,
+                                        String.format("%s heals %d HP from %s", playerId, property.getAmount(), effect.getDisplayName()));
+                            }
+                            break;
+                        case HEALING_POST_TURN:
+                            if (phase == TurnPhase.END_PHASE) {
+                                applyHealing(combat, playerId, property.getAmount());
+                                createCombatLog(combat, "System", "STATUS_EFFECT", playerId,
+                                        String.format("%s heals %d HP from %s", playerId, property.getAmount(), effect.getDisplayName()));
+                            }
+                            break;
+                        // Add other cases as needed
+                    }
+                }
+
+                if (phase == TurnPhase.END_PHASE) {
+                    container.decrementDurations();
+                    createCombatLog(combat, "System", "STATUS_EFFECT", playerId,
+                            String.format("%s duration decreased for %s", effect.getDisplayName(), playerId));
+                }
+            }
+
+            if (phase == TurnPhase.END_PHASE) {
+                playerEffects.entrySet().removeIf(entry -> {
+                    boolean removed = entry.getValue().getRemainingDuration(statusEffectService.getStatusEffect(entry.getKey())) <= 0;
+                    if (removed) {
+                        createCombatLog(combat, "System", "STATUS_EFFECT", playerId,
+                                String.format("%s expired for %s", statusEffectService.getStatusEffect(entry.getKey()).getDisplayName(), playerId));
+                    }
+                    return removed;
+                });
+            }
+        }
+    }
+    private void createCombatLog(Combat combat, String actorId, String actionType, String targetId, String description) {
+        CombatLog log = new CombatLog();
+        log.setCombatId(combat.getId());
+        log.setTurnNumber(combat.getTurnNumber());
+        log.setActorId(actorId);
+        log.setActionType(actionType);
+        log.setTargetId(targetId);
+        log.setDescription(description);
+        log.setTimestamp(Instant.now());
+        log.setNeutral(false);
+        combatLogRepository.save(log);
+        combat.getCombatLogIds().add(log.getId());
+    }
+
+
+
+
+
+
+    ///
+
+
+
+
 
 
     private String generateActionDescription(String actionType, String actorId, String targetId, String spellId) {
@@ -93,8 +198,12 @@ public class CombatService {
             throw new IllegalStateException("It's not this player's turn");
         }
 
+        // Log the action
+        createCombatLog(combat, action.getPlayerId(), action.getType().toString(), action.getTargetPlayerId(),
+                generateActionDescription(action.getType().toString(), action.getPlayerId(), action.getTargetPlayerId(), action.getSpellId()));
+
         // Pre-action phase
-        combat.applyPlayerStatusEffects(TurnPhase.PLAYER_PHASE);
+        applyPlayerStatusEffects(combat, TurnPhase.PLAYER_PHASE);
         preActionPhase(combat, action);
 
         // Action phase
@@ -115,7 +224,6 @@ public class CombatService {
 
         return combatRepository.save(combat);
     }
-
     private void preActionPhase(Combat combat, Action action) {
         // Apply pre-action effects, e.g., interrupts, counter-attacks
         // You can add more logic here as needed
@@ -151,10 +259,10 @@ public class CombatService {
     }
 
     private void applyDamageOnActionEffects(Combat combat, String playerId) {
-        Map<StatusEffect, CombatStatusContainer> playerEffects = combat.getPlayerStatusEffects().get(playerId);
+        Map<String, CombatStatusContainer> playerEffects = combat.getPlayerStatusEffects().get(playerId);
         if (playerEffects != null) {
-            for (Map.Entry<StatusEffect, CombatStatusContainer> entry : playerEffects.entrySet()) {
-                StatusEffect effect = entry.getKey();
+            for (Map.Entry<String, CombatStatusContainer> entry : playerEffects.entrySet()) {
+                StatusEffect effect = statusEffectService.getStatusEffect(entry.getKey());
                 for (StatusEffectPropertyContainer property : effect.getProperties()) {
                     if (property.getType() == StatusEffectPropertyType.DAMAGE_ON_ACTION) {
                         combat.applyDamage(playerId, property.getAmount());
@@ -220,7 +328,10 @@ public class CombatService {
     private void performAttack(Combat combat, Action action) {
         int damage = calculateDamage(action.getPlayerId(), 10, 20);
         applyDamage(combat, action.getTargetPlayerId(), damage);
+        createCombatLog(combat, action.getPlayerId(), "ATTACK", action.getTargetPlayerId(),
+                String.format("%s deals %d damage to %s", action.getPlayerId(), damage, action.getTargetPlayerId()));
     }
+
 
     private void performSpecialAttack(Combat combat, Action action) {
         int damage = calculateDamage(action.getPlayerId(), 15, 30);
@@ -343,7 +454,7 @@ public class CombatService {
 
     private void endTurn(Combat combat) {
         // Apply end phase effects
-        combat.applyPlayerStatusEffects(TurnPhase.END_PHASE);
+        applyPlayerStatusEffects(combat ,TurnPhase.END_PHASE);
 
         List<String> activePlayers = combat.getPlayerIds().stream()
                 .filter(id -> combat.getPlayerHealth().get(id) > 0)
@@ -373,7 +484,7 @@ public class CombatService {
         combat.progressPhase();
 
         // Apply start phase effects for the new turn
-        combat.applyPlayerStatusEffects(TurnPhase.START_PHASE);
+       applyPlayerStatusEffects(combat, TurnPhase.START_PHASE);
 
         // End combat if max turns reached
         if (combat.getTurnNumber() > MAX_TURNS) {

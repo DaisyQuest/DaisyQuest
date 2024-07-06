@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,9 @@ public class CombatController {
             if (playerIds == null || playerIds.isEmpty()) {
                 return ResponseEntity.badRequest().body("Player IDs are required");
             }
+
+
+
 
             Combat combat = combatService.startCombat(playerIds, playerTeams);
             return ResponseEntity.ok(combat);
@@ -92,5 +96,23 @@ public class CombatController {
         Map<String, List<StatusEffectInfo>> activeEffects = statusEffectService.getActiveStatusEffects(combat);
         return ResponseEntity.ok(activeEffects);
     }
+
+
+    @GetMapping("/{combatId}/turn-phase")
+    public ResponseEntity<Map<String, String>> getTurnPhase(@PathVariable String combatId) {
+        try {
+            Combat combat = combatService.getCombat(combatId);
+            if (combat == null) {
+                return ResponseEntity.notFound().build();
+            }
+            Map<String, String> response = new HashMap<>();
+            response.put("phase", combat.getCurrentPhase().toString());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error retrieving turn phase: " + e.getMessage()));
+        }
+    }
+
 
 }

@@ -1,5 +1,6 @@
 package net.daisyquest.daisyquestgame.Model;
 
+import net.daisyquest.daisyquestgame.Service.StatusEffectService;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.Data;
@@ -29,7 +30,7 @@ public class Combat {
     private List<String> combatLogIds = new ArrayList<>(); // New field to store references to combat logs
     private Map<String, Map<String, Integer>> spellCooldowns = new HashMap<>(); // New field for tracking spell cooldowns
     private TurnPhase currentPhase = TurnPhase.START_PHASE;
-    private Map<String, Map<StatusEffect, CombatStatusContainer>> playerStatusEffects = new HashMap<>();
+    private Map<String, Map<String, CombatStatusContainer>> playerStatusEffects = new HashMap<>();
 
     public void progressPhase() {
         switch (currentPhase) {
@@ -50,55 +51,17 @@ public class Combat {
     public void addStatusEffect(String playerId, StatusEffect effect, int duration) {
         playerStatusEffects
                 .computeIfAbsent(playerId, k -> new HashMap<>())
-                .put(effect, new CombatStatusContainer(playerId, effect, duration));
+                .put(effect.getId(), new CombatStatusContainer(playerId, effect, duration));
     }
 
     public void removeStatusEffect(String playerId, StatusEffect effect) {
-        Map<StatusEffect, CombatStatusContainer> playerEffects = playerStatusEffects.get(playerId);
+        Map<String, CombatStatusContainer> playerEffects = playerStatusEffects.get(playerId);
         if (playerEffects != null) {
-            playerEffects.remove(effect);
+            playerEffects.remove(effect.getId());
         }
     }
 
-    public void applyPlayerStatusEffects(TurnPhase phase) {
-        for (String playerId : playerIds) {
-            Map<StatusEffect, CombatStatusContainer> playerEffects = playerStatusEffects.get(playerId);
-            if (playerEffects == null) continue;
 
-            for (Map.Entry<StatusEffect, CombatStatusContainer> entry : playerEffects.entrySet()) {
-                StatusEffect effect = entry.getKey();
-                CombatStatusContainer container = entry.getValue();
-
-                for (StatusEffectPropertyContainer property : effect.getProperties()) {
-                    switch (property.getType()) {
-                        case DAMAGE_PRE_TURN:
-                            if (phase == TurnPhase.START_PHASE) applyDamage(playerId, property.getAmount());
-                            break;
-                        case DAMAGE_POST_TURN:
-                            if (phase == TurnPhase.END_PHASE) applyDamage(playerId, property.getAmount());
-                            break;
-                        case HEALING_PRE_TURN:
-                            if (phase == TurnPhase.START_PHASE) applyHealing(playerId, property.getAmount());
-                            break;
-                        case HEALING_POST_TURN:
-                            if (phase == TurnPhase.END_PHASE) applyHealing(playerId, property.getAmount());
-                            break;
-                        // Add other cases as needed
-                    }
-                }
-
-                // Decrement duration at the end of the turn
-                if (phase == TurnPhase.END_PHASE) {
-                    container.decrementDurations();
-                }
-            }
-
-            // Remove expired effects at the end of the turn
-            if (phase == TurnPhase.END_PHASE) {
-                playerEffects.entrySet().removeIf(entry -> entry.getValue().getRemainingDuration(entry.getKey()) <= 0);
-            }
-        }
-    }
 
     public void applyDamage(String playerId, int amount) {
         int currentHealth = playerHealth.get(playerId);

@@ -52,16 +52,22 @@ public class StatusEffectService {
         }
     }
 
+    public void applyStatusEffect(Combat combat, String playerId, StatusEffect statusEffect, int duration) {
+            combat.addStatusEffect(playerId, statusEffect, duration);
+    }
+
+
+
     public Map<String, List<StatusEffectInfo>> getActiveStatusEffects(Combat combat) {
         Map<String, List<StatusEffectInfo>> activeEffects = new HashMap<>();
 
         for (String playerId : combat.getPlayerIds()) {
-            Map<StatusEffect, CombatStatusContainer> playerEffects = combat.getPlayerStatusEffects().get(playerId);
+            Map<String, CombatStatusContainer> playerEffects = combat.getPlayerStatusEffects().get(playerId);
             if (playerEffects != null) {
                 List<StatusEffectInfo> effectInfoList = new ArrayList<>();
 
-                for (Map.Entry<StatusEffect, CombatStatusContainer> entry : playerEffects.entrySet()) {
-                    StatusEffect effect = entry.getKey();
+                for (Map.Entry<String, CombatStatusContainer> entry : playerEffects.entrySet()) {
+                    StatusEffect effect = getStatusEffect(entry.getKey());
                     int duration = entry.getValue().getRemainingDuration(effect);
 
                     StatusEffectInfo info = new StatusEffectInfo(effect, duration);

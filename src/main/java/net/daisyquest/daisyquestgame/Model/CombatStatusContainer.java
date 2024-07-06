@@ -8,7 +8,7 @@ import java.util.Map;
 @Data
 public class CombatStatusContainer {
     private String playerId;
-    private Map<StatusEffect, Integer> statusEffectDurations;
+    private Map<String, Integer> statusEffectDurations;
 
     public CombatStatusContainer(String playerId) {
         this.playerId = playerId;
@@ -21,16 +21,16 @@ public class CombatStatusContainer {
     }
 
     public void addStatusEffect(StatusEffect statusEffect, int duration) {
-        statusEffectDurations.put(statusEffect, duration);
+        statusEffectDurations.put(statusEffect.getId(), duration);
     }
 
     public void removeStatusEffect(StatusEffect statusEffect) {
-        statusEffectDurations.remove(statusEffect);
+        statusEffectDurations.remove(statusEffect.getId());
     }
 
     public void updateStatusEffectDuration(StatusEffect statusEffect, int newDuration) {
-        if (statusEffectDurations.containsKey(statusEffect)) {
-            statusEffectDurations.put(statusEffect, newDuration);
+        if (statusEffectDurations.containsKey(statusEffect.getId())) {
+            statusEffectDurations.put(statusEffect.getId(), newDuration);
         }
     }
 
@@ -42,10 +42,17 @@ public class CombatStatusContainer {
     }
 
     public boolean hasStatusEffect(StatusEffect statusEffect) {
-        return statusEffectDurations.containsKey(statusEffect);
+        return statusEffectDurations.containsKey(statusEffect.getId());
     }
 
     public int getRemainingDuration(StatusEffect statusEffect) {
-        return statusEffectDurations.getOrDefault(statusEffect, 0);
+        if(statusEffect == null){
+            return 0;
+        }
+        return statusEffectDurations.getOrDefault(statusEffect.getId(), 0);
+    }
+
+    public CombatStatusContainer(){
+
     }
 }
