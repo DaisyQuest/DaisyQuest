@@ -1,14 +1,8 @@
 package net.daisyquest.daisyquestgame.Service;
 
 
-import net.daisyquest.daisyquestgame.Model.Land;
-import net.daisyquest.daisyquestgame.Model.LandType;
-import net.daisyquest.daisyquestgame.Model.Player;
-import net.daisyquest.daisyquestgame.Model.WorldMap;
-import net.daisyquest.daisyquestgame.Repository.LandRepository;
-import net.daisyquest.daisyquestgame.Repository.PlayerInventoryRepository;
-import net.daisyquest.daisyquestgame.Repository.PlayerRepository;
-import net.daisyquest.daisyquestgame.Repository.WorldMapRepository;
+import net.daisyquest.daisyquestgame.Model.*;
+import net.daisyquest.daisyquestgame.Repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +23,9 @@ public class WorldMapService {
 
     @Autowired
     PlayerInventoryRepository playerInventoryRepository;
+
+    @Autowired
+    SubmapRepository submapRepository;
     private final Random random = new Random();
 
     @Transactional
@@ -138,4 +135,29 @@ public class WorldMapService {
         int landY = (y / LAND_SIZE) % worldMap.getHeight();
         return landRepository.findByXCoordinateAndYCoordinate(landX, landY);
     }
+
+
+    public boolean isPlayerNearSubmapEntrance(Player player, String submapId) {
+        Submap submap = submapRepository.findById(submapId)
+                .orElseThrow(() -> new IllegalArgumentException("Submap not found with id: " + submapId));
+
+
+        //TODO: FIX
+        // Calculate the distance between the player and the submap entrance
+    //    double distance = calculateDistance(player.getWorldPositionX(), player.getWorldPositionY(),
+        //        submap.getEntranceX(), submap.getEntranceY());
+
+        // Define a threshold distance for submap entrance (e.g., 5 units)
+
+        double distance = 1;
+        double threshold = 5.0;
+
+
+        return distance <= threshold;
+    }
+
+    private double calculateDistance(int x1, int y1, int x2, int y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    }
+
     }

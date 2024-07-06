@@ -65,4 +65,11 @@ public class Player {
 
     private Map<Talent, Integer> talents = new EnumMap<>(Talent.class);
 
+    private String currentSubmapId;
+    private int submapCoordinateX;
+    private int submapCoordinateY;
+    private int submapCoordinateZ;
+
+
+
 }
