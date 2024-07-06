@@ -6,6 +6,7 @@ import net.daisyquest.daisyquestgame.Service.*;
 import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,7 +43,7 @@ public class PlayerController {
         }
     }
 
-    @PostMapping("/login")
+    @PostMapping(value = "/login", consumes = {"*/*"})
     public ResponseEntity<?> loginPlayer(@RequestBody Player player) {
         Player existingPlayer = playerService.getPlayerByUsername(player.getUsername());
         if (existingPlayer != null) {

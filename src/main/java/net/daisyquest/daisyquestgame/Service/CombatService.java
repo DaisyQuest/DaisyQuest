@@ -83,59 +83,45 @@ public class CombatService {
     }
 
     public Combat performAction(String combatId, Action action) {
-        logger.info("Performing action for combat {}: {}", combatId, action);
         Combat combat = getCombat(combatId);
         if (combat == null || !combat.isActive()) {
-            logger.warn("Combat not found or not active: {}", combatId);
             throw new IllegalStateException("Combat not found or not active");
         }
 
-        Action fakeAction = null;
-        Action.ActionType actionType = action == null ? Action.ActionType.NONE : action.getType();
-
-        if(action == null){
-            fakeAction = new Action();
-            fakeAction.setType(actionType);
-            fakeAction.setPlayerId(combat.getCurrentTurnPlayerId());
-            fakeAction.setTargetPlayerId(null);
-            fakeAction.setSpellId(null);
-            fakeAction.setActionPoints(0);
-        }
-
-        String playerId = action == null ? fakeAction.getPlayerId() : action.getPlayerId();
-        String targetId = action == null ? null : action.getTargetPlayerId();
-        String spellId = action == null ? null : action.getSpellId();
-        CombatLog log = new CombatLog();
-        log.setCombatId(combatId);
-        log.setTurnNumber(combat.getTurnNumber());
-        log.setActorId(playerId);
-        log.setActionType(actionType.name());
-        log.setTargetId(targetId);
-        log.setDescription(generateActionDescription(actionType.name(), playerId, targetId, spellId));
-        log.setNeutral(false);
-        log.setTimestamp(Instant.now());
-        CombatLog savedLog = combatLogRepository.save(log);
-
-        // Add log reference to combat
-        if (combat.getCombatLogIds() == null) {
-            combat.setCombatLogIds(new ArrayList<>());
-        }
-        combat.getCombatLogIds().add(savedLog.getId());
-
         String currentPlayerId = combat.getCurrentTurnPlayerId();
-        logger.info("Current turn: {}", currentPlayerId);
-
-        if (isAIPlayer(currentPlayerId)) {
-            action = generateAIAction(combat, currentPlayerId);
-            logger.info("Generated AI action: {}", action);
-        } else if (action == null) {
-            logger.warn("Null action provided for human player");
-            throw new IllegalArgumentException("Action cannot be null for human players");
-        } else if (!currentPlayerId.equals(action.getPlayerId())) {
-            logger.warn("Action attempted by wrong player. Expected: {}, Actual: {}", currentPlayerId, action.getPlayerId());
+        if (!currentPlayerId.equals(action.getPlayerId())) {
             throw new IllegalStateException("It's not this player's turn");
         }
-        // Perform the action
+
+        // Pre-action phase
+        combat.applyPlayerStatusEffects(TurnPhase.PLAYER_PHASE);
+        preActionPhase(combat, action);
+
+        // Action phase
+        actionPhase(combat, action);
+
+        // Post-action phase
+        postActionPhase(combat, action);
+
+        // Check if the turn should end
+        if (shouldEndTurn(combat)) {
+            endTurn(combat);
+        }
+
+        // Check if combat should end
+        if (shouldCombatEnd(combat)) {
+            endCombat(combat);
+        }
+
+        return combatRepository.save(combat);
+    }
+
+    private void preActionPhase(Combat combat, Action action) {
+        // Apply pre-action effects, e.g., interrupts, counter-attacks
+        // You can add more logic here as needed
+    }
+
+    private void actionPhase(Combat combat, Action action) {
         switch (action.getType()) {
             case ATTACK:
                 performAttack(combat, action);
@@ -151,29 +137,31 @@ public class CombatService {
                 break;
             case NONE:
                 // Do nothing for NONE action
-                logger.info("AI player {} performed no action", action.getPlayerId());
                 break;
         }
+    }
+
+    private void postActionPhase(Combat combat, Action action) {
+        // Apply post-action effects, e.g., damage-on-action status effects
+        applyDamageOnActionEffects(combat, action.getPlayerId());
 
         // Deduct action points
-        int remainingActionPoints = combat.getPlayerActionPoints().get(currentPlayerId) - action.getActionPoints();
-        combat.getPlayerActionPoints().put(currentPlayerId, remainingActionPoints);
+        int remainingActionPoints = combat.getPlayerActionPoints().get(action.getPlayerId()) - action.getActionPoints();
+        combat.getPlayerActionPoints().put(action.getPlayerId(), remainingActionPoints);
+    }
 
-        // Check if the turn should end
-        if (remainingActionPoints == 0 || isTimeLimitExceeded(combat)) {
-            logger.info("Ending turn for player {}", currentPlayerId);
-            endTurn(combat);
+    private void applyDamageOnActionEffects(Combat combat, String playerId) {
+        Map<StatusEffect, CombatStatusContainer> playerEffects = combat.getPlayerStatusEffects().get(playerId);
+        if (playerEffects != null) {
+            for (Map.Entry<StatusEffect, CombatStatusContainer> entry : playerEffects.entrySet()) {
+                StatusEffect effect = entry.getKey();
+                for (StatusEffectPropertyContainer property : effect.getProperties()) {
+                    if (property.getType() == StatusEffectPropertyType.DAMAGE_ON_ACTION) {
+                        combat.applyDamage(playerId, property.getAmount());
+                    }
+                }
+            }
         }
-
-        // Check if combat should end
-        if (shouldCombatEnd(combat)) {
-            logger.info("Combat {} should end", combatId);
-            endCombat(combat);
-        }
-
-        Combat updatedCombat = combatRepository.save(combat);
-        logger.info("Updated combat state: {}", updatedCombat);
-        return updatedCombat;
     }
 
     public Combat getCombat(String combatId) {
@@ -348,7 +336,15 @@ public class CombatService {
         return (currentTime - combat.getTurnStartTime()) / 1000 > combat.getTurnDurationSeconds();
     }
 
+    private boolean shouldEndTurn(Combat combat) {
+        String currentPlayerId = combat.getCurrentTurnPlayerId();
+        return combat.getPlayerActionPoints().get(currentPlayerId) <= 0 || isTimeLimitExceeded(combat);
+    }
+
     private void endTurn(Combat combat) {
+        // Apply end phase effects
+        combat.applyPlayerStatusEffects(TurnPhase.END_PHASE);
+
         List<String> activePlayers = combat.getPlayerIds().stream()
                 .filter(id -> combat.getPlayerHealth().get(id) > 0)
                 .collect(Collectors.toList());
@@ -370,17 +366,23 @@ public class CombatService {
         // Reset action points for the new player
         combat.getPlayerActionPoints().put(nextPlayerId, INITIAL_ACTION_POINTS);
 
+        // Update cooldowns
         updateCooldowns(combat);
+
+        // Progress to the next phase (which will be START_PHASE for the new turn)
+        combat.progressPhase();
+
+        // Apply start phase effects for the new turn
+        combat.applyPlayerStatusEffects(TurnPhase.START_PHASE);
 
         // End combat if max turns reached
         if (combat.getTurnNumber() > MAX_TURNS) {
             logger.info("Max turns reached for combat {}", combat.getId());
             endCombat(combat);
+        } else {
+            logger.info("Turn ended. New turn: {} for player: {}", combat.getTurnNumber(), nextPlayerId);
         }
-
-        logger.info("Turn ended. New turn: {} for player: {}", combat.getTurnNumber(), nextPlayerId);
     }
-
     private void updateCooldowns(Combat combat) {
         combat.getSpellCooldowns().forEach((playerId, cooldowns) ->
                 cooldowns.replaceAll((spellId, cooldown) -> Math.max(0, cooldown - 1)));
@@ -549,6 +551,16 @@ public class CombatService {
         return addedQuantity;
     }
 
+
+    //STATUS CHANGES:
+
+
+
+
+
+
+
+
     @Scheduled(fixedRate = 60000) // Run every minute
     public void cleanupExpiredCombats() {
         Instant expirationThreshold = Instant.now().minusSeconds(COMBAT_EXPIRATION_MINUTES * 60);
@@ -575,4 +587,5 @@ public class CombatService {
             }
         }
     }
+
 }

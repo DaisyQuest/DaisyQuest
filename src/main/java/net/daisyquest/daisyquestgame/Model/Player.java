@@ -1,7 +1,9 @@
 package net.daisyquest.daisyquestgame.Model;
 
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
@@ -12,6 +14,8 @@ import java.util.*;
 
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Document(collection = "players")
 public class Player {
     @Id
@@ -60,9 +64,5 @@ public class Player {
     private int talentPointsAvailable = 0;
 
     private Map<Talent, Integer> talents = new EnumMap<>(Talent.class);
-
-    public Player() {
-        // Initialize talents map with all talents set to 0
-    }
 
 }
