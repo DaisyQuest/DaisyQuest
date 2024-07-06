@@ -1,5 +1,9 @@
 package net.daisyquest.daisyquestgame.Model;
 
+import lombok.Data;
+import lombok.Getter;
+
+@Getter
 public enum Talent {
     FIREBALL_MASTERY("fireball_mastery.svg"),
     ICEBALL_MASTERY("iceball_mastery.svg"),

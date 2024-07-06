@@ -1,11 +1,7 @@
 function login() {
     const username = document.getElementById('username').value;
-    fetch('/api/players/login', {
+    fetch(`/api/players/login/${username}`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username: username }),
     })
         .then(response => {
             if (!response.ok) {

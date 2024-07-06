@@ -43,9 +43,9 @@ public class PlayerController {
         }
     }
 
-    @PostMapping(value = "/login", consumes = {"*/*"})
-    public ResponseEntity<?> loginPlayer(@RequestBody Player player) {
-        Player existingPlayer = playerService.getPlayerByUsername(player.getUsername());
+    @PostMapping(value = "/login/{username}")
+    public ResponseEntity<?> loginPlayer(@PathVariable String username) {
+        Player existingPlayer = playerService.getPlayerByUsername(username);
         if (existingPlayer != null) {
             return ResponseEntity.ok(existingPlayer);
         } else {

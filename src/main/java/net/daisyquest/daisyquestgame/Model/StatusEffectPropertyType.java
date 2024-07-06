@@ -1,5 +1,9 @@
 package net.daisyquest.daisyquestgame.Model;
 
+import lombok.Data;
+import lombok.Getter;
+
+@Getter
 public enum StatusEffectPropertyType {
     DAMAGE_PRE_TURN,
     DAMAGE_POST_TURN,
