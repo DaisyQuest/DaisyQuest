@@ -775,11 +775,6 @@ function pollCombatStatus() {
 // Add new functions for the updated UI
 function updatePlayerCards(combat) {
     const playerCardsContainer = document.getElementById('playerCards');
-    if (!playerCardsContainer) {
-        console.error('Player cards container not found');
-        return;
-    }
-
     playerCardsContainer.innerHTML = '';
 
     const playerCount = combat.playerIds.length;
@@ -792,6 +787,7 @@ function updatePlayerCards(combat) {
 
         const playerCard = document.createElement('div');
         playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
+        playerCard.dataset.playerId = id;
         playerCard.innerHTML = `
             <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
                 ${getPlayerSprite(id, spriteSize)}
@@ -802,9 +798,12 @@ function updatePlayerCards(combat) {
             </div>
             <p class="text-center mt-2">HP: ${health} / ${maxHealth}</p>
             <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
+            <div class="status-effects"></div>
         `;
         playerCardsContainer.appendChild(playerCard);
     });
+
+    updateStatusEffectsDisplay();
 }
 
 
@@ -857,26 +856,13 @@ function createCombatLogEntry(log) {
     `;
 }
 
+// Add these global variables
+let currentTurnPhase = '';
+let playerStatusEffects = {};
+
+// Modify the updateCombatUI function
 function updateCombatUI(combat) {
     console.log('Updating combat UI:', combat);
-
-    const combatArea = document.getElementById('combatArea');
-
-    if (!combatArea) {
-        console.error('Combat area not found in the DOM');
-        return;
-    }
-
-    // Ensure the player cards container exists
-    let playerCardsContainer = document.getElementById('playerCards');
-    if (!playerCardsContainer) {
-        console.log('Creating playerCards container');
-        playerCardsContainer = document.createElement('div');
-        playerCardsContainer.id = 'playerCards';
-        playerCardsContainer.className = 'row';
-        combatArea.appendChild(playerCardsContainer);
-    }
-
     updatePlayerCards(combat);
     updateTurnIndicator(combat);
     updateCombatInfo(combat);
@@ -884,7 +870,57 @@ function updateCombatUI(combat) {
     updateActionButtons(combat);
     updateSelectionVisibility(combat);
     fetchAndUpdateCombatLog(combat.id);
+    fetchAndUpdateStatusEffects(combat.id);
+    fetchAndUpdateTurnPhase(combat.id);
 }
+
+// Add these new functions
+function fetchAndUpdateStatusEffects(combatId) {
+    fetch(`/api/combat/${combatId}/status-effects`)
+        .then(response => response.json())
+        .then(data => {
+            playerStatusEffects = data;
+            updateStatusEffectsDisplay();
+        })
+        .catch(error => console.error('Error fetching status effects:', error));
+}
+
+function updateStatusEffectsDisplay() {
+    const playerCards = document.querySelectorAll('.player-card');
+    playerCards.forEach(card => {
+        const playerId = card.dataset.playerId;
+        const statusEffectsContainer = card.querySelector('.status-effects');
+        statusEffectsContainer.innerHTML = '';
+
+        if (playerStatusEffects[playerId]) {
+            playerStatusEffects[playerId].forEach(effect => {
+                const effectElement = document.createElement('div');
+                effectElement.className = 'status-effect';
+                effectElement.style.backgroundColor = effect.statusEffect.color;
+                effectElement.style.borderColor = effect.statusEffect.borderColor;
+                effectElement.title = `${effect.statusEffect.displayName} (${effect.duration} turns remaining)`;
+                effectElement.textContent = effect.statusEffect.shortDisplayName;
+                statusEffectsContainer.appendChild(effectElement);
+            });
+        }
+    });
+}
+
+function fetchAndUpdateTurnPhase(combatId) {
+    fetch(`/api/combat/${combatId}/turn-phase`)
+        .then(response => response.json())
+        .then(data => {
+            currentTurnPhase = data;
+            updateTurnPhaseDisplay();
+        })
+        .catch(error => console.error('Error fetching turn phase:', error));
+}
+
+function updateTurnPhaseDisplay() {
+    const turnPhaseElement = document.getElementById('turnPhase');
+    turnPhaseElement.textContent = `Current Phase: ${currentTurnPhase}`;
+}
+
 
 // Modify the existing updateCombatInfo function to include the combat log
 
