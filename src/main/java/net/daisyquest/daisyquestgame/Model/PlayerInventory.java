@@ -215,7 +215,7 @@ public class PlayerInventory {
     public static final String[] EQUIPMENT_SLOT_TYPES = {
             "HEAD", "NECK", "LEFT_SHOULDER", "RIGHT_SHOULDER", "CHEST", "WAIST",
             "LEGS", "FEET", "LEFT_WRIST", "RIGHT_WRIST", "LEFT_HAND", "RIGHT_HAND",
-            "LEFT_FINGER", "RIGHT_FINGER", "AMMO"
+            "LEFT_FINGER_1","LEFT_FINGER_2", "RIGHT_FINGER_1","RIGHT_FINGER_2", "AMMO"
     };
 
 

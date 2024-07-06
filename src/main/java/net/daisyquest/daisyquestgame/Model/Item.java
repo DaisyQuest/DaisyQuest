@@ -19,7 +19,7 @@ public class Item {
     private boolean isChest;
     private boolean retainOnDeath;
     private boolean stackable;
-    private int maxStackSize;
+    private int maxStackSize = 1;
     public int getMaxStackSize() {
         return maxStackSize > 0 ? maxStackSize : 1;  // Ensure we never return 0 or negative
     }

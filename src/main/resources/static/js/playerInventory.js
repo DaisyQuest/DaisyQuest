@@ -30,6 +30,26 @@ function renderInventory() {
     const container = document.getElementById('inventoryContainer');
     container.innerHTML = '';
 
+    // Add currencies section
+    const currenciesSection = document.createElement('div');
+    currenciesSection.className = 'currencies-section';
+    currenciesSection.innerHTML = `
+        <h5 class="mt-4">Currencies</h5>
+        <ul class="list-group">
+            ${Object.entries(playerInventory.currencies || {}).map(([currencyId, amount]) => {
+        const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
+        return `<li class="list-group-item">
+                    ${details.name}: ${details.symbol}${amount}
+                </li>`;
+    }).join('')}
+        </ul>
+    `;
+    container.appendChild(currenciesSection);
+
+    // Render inventory slots
+    const slotsContainer = document.createElement('div');
+    slotsContainer.className = 'inventory-slots-container';
+
     for (let i = 0; i < playerInventory.maxInventorySize; i++) {
         const slot = playerInventory.inventorySlots[i] || { slotIndex: i };
         const slotElement = document.createElement('div');
@@ -52,9 +72,15 @@ function renderInventory() {
 
         slotElement.addEventListener('dragover', allowDrop);
         slotElement.addEventListener('drop', drop);
-        container.appendChild(slotElement);
+        slotsContainer.appendChild(slotElement);
     }
+
+    container.appendChild(slotsContainer);
 }
+
+
+
+
 
 function renderEquipment() {
     const container = document.getElementById('equipmentContainer');
@@ -220,6 +246,11 @@ function unequipSelectedItem() {
                 .then(data => {
                     alert(data.message || 'Item unequipped successfully');
                     fetchPlayerInventory();
+                    // Hide the unequip button
+                    const unequipButton = document.querySelector('.unequip-button');
+                    if (unequipButton) {
+                        unequipButton.style.display = 'none';
+                    }
                 })
                 .catch(error => {
                     console.error('Error unequipping item:', error);
@@ -232,7 +263,6 @@ function unequipSelectedItem() {
         alert('This item is not equipped.');
     }
 }
-
 function sendSelectedItem() {
     if (selectedItem) {
         const recipientUsername = prompt("Enter the username of the player you want to send the item to:");
