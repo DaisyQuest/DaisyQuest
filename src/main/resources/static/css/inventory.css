@@ -25,7 +25,11 @@
     height: 100%;
     object-fit: contain;
 }
-
+.item-sprite-equipped {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
 .item-quantity {
     position: absolute;
     bottom: 0;

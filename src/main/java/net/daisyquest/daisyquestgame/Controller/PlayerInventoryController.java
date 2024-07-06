@@ -27,13 +27,16 @@ public class PlayerInventoryController {
     }
 
     @PostMapping("/{playerId}/equip")
-    public ResponseEntity<Void> equipItem(@PathVariable String playerId,
-                                          @RequestParam String itemId,
-                                          @RequestParam String slotType) throws EquipmentRequirementNotMetException, ItemNotFoundException {
-        playerService.equipItem(playerId,
-                itemId,
-                slotType);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Map<String, String>> equipItem(
+            @PathVariable String playerId,
+            @RequestParam String itemId,
+            @RequestParam String slotType) {
+        try {
+            String result = playerService.equipItem(playerId, itemId, slotType);
+            return ResponseEntity.ok(Map.of("message", result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/{playerId}/send-item")
@@ -58,6 +61,33 @@ public class PlayerInventoryController {
             playerService.unequipItem(playerId, slotType);
             return ResponseEntity.ok(Map.of("message", "Item successfully unequipped"));
         } catch (PlayerNotFoundException | ItemNotFoundException | InventoryFullException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{playerId}/move-equipment")
+    public ResponseEntity<Map<String, String>> moveEquipment(
+            @PathVariable String playerId,
+            @RequestBody Map<String, String> request) {
+        try {
+            String itemId = request.get("itemId");
+            String fromSlotType = request.get("fromSlotType");
+            String toSlotType = request.get("toSlotType");
+            String result = playerService.moveEquipment(playerId, itemId, fromSlotType, toSlotType);
+            return ResponseEntity.ok(Map.of("message", result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    @PostMapping("/{playerId}/unequiptoslot")
+    public ResponseEntity<Map<String, String>> unequipToSlot(
+            @PathVariable String playerId,
+            @RequestParam String slotType,
+            @RequestParam int toSlot) {
+        try {
+            String result = playerService.unequipItemToSlot(playerId, slotType, toSlot);
+            return ResponseEntity.ok(Map.of("message", result));
+        } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }

@@ -1,4 +1,3 @@
-
 let playerInventory = null;
 let selectedItem = null;
 
@@ -39,18 +38,14 @@ function renderInventory() {
 
         if (slot.item) {
             slotElement.innerHTML = `
-                <div class="item-container${slot.item.equippable ? ' equippable' : ''}">
-                    <img src="/sprites/items/${slot.item.id}.svg" alt="${slot.item.name}" 
-                         class="item-sprite" data-item-id="${slot.item.id}">
-                    <span class="item-quantity">${slot.quantity}</span>
-                    ${slot.item.equippable ? '<span class="equippable-indicator">E</span>' : ''}
-                </div>
+                <img src="/sprites/items/${slot.item.id}.svg" alt="${slot.item.name}" 
+                     class="item-sprite" data-item-id="${slot.item.id}" draggable="true">
+                <span class="item-quantity">${slot.quantity}</span>
             `;
             slotElement.addEventListener('click', () => selectItem(slot.item));
-            if (slot.item.equippable) {
-                slotElement.setAttribute('draggable', 'true');
-                slotElement.addEventListener('dragstart', drag);
-            }
+
+            const imgElement = slotElement.querySelector('.item-sprite');
+            imgElement.addEventListener('dragstart', drag);
         } else {
             slotElement.innerHTML = '<div class="empty-slot"></div>';
         }
@@ -60,7 +55,6 @@ function renderInventory() {
         container.appendChild(slotElement);
     }
 }
-
 
 function renderEquipment() {
     const container = document.getElementById('equipmentContainer');
@@ -78,25 +72,19 @@ function renderEquipment() {
             const equippedItem = playerInventory.equipmentSlots.find(slot => slot.type === slotType);
             if (equippedItem && equippedItem.item) {
                 slotElement.innerHTML = `
-                    <div class="item-container">
-                        <img src="/sprites/items/${equippedItem.item.id}.svg" alt="${equippedItem.item.name}" 
-                             class="item-sprite" data-item-id="${equippedItem.item.id}">
-                        ${equippedItem.item.equippableInStacks ? `<span class="item-quantity">${equippedItem.quantity}</span>` : ''}
-                    </div>
+                    <img src="/sprites/items/${equippedItem.item.id}.svg" alt="${equippedItem.item.name}" 
+                         class="item-sprite" data-item-id="${equippedItem.item.id}" draggable="true">
+                    ${equippedItem.item.equippableInStacks ? `<span class="item-quantity">${equippedItem.quantity}</span>` : ''}
                 `;
                 slotElement.addEventListener('click', () => selectItem(equippedItem.item));
-                slotElement.setAttribute('draggable', 'true');
-                slotElement.addEventListener('dragstart', drag);
+                const imgElement = slotElement.querySelector('.item-sprite');
+                imgElement.addEventListener('dragstart', dragEquipped);
             } else {
-                slotElement.innerHTML = `
-                    <div class="empty-slot">
-                        <img src="/sprites/slots/${slotType.toLowerCase()}.svg" alt="${slotType}">
-                    </div>
-                `;
+                slotElement.innerHTML = `<div class="empty-slot"><img src="/sprites/slots/${slotType.toLowerCase()}.svg" alt="${slotType}"></div>`;
             }
 
             slotElement.addEventListener('dragover', allowDrop);
-            slotElement.addEventListener('drop', dropEquip);
+            slotElement.addEventListener('drop', (ev) => dropEquip(ev, slotType));
             tierElement.appendChild(slotElement);
         });
 
@@ -104,19 +92,88 @@ function renderEquipment() {
     });
 }
 
+function dragEquipped(ev) {
+    ev.dataTransfer.setData("text", JSON.stringify({
+        itemId: ev.target.getAttribute('data-item-id'),
+        fromEquipment: true,
+        slotType: ev.target.closest('.equipment-slot').getAttribute('data-slot-type')
+    }));
+}
+
+function dropEquip(ev, toSlotType) {
+    ev.preventDefault();
+    const data = ev.dataTransfer ? JSON.parse(ev.dataTransfer.getData("text")) : null;
+
+    if (data) {
+        handleEquipmentMove(data.itemId, data.fromEquipment, data.slotType, toSlotType);
+    }
+}
+
+function handleEquipmentMove(itemId, fromEquipment, fromSlotType, toSlotType) {
+    if (fromEquipment) {
+        fetch(`/api/inventory/${playerId}/move-equipment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                itemId: itemId,
+                fromSlotType: fromSlotType,
+                toSlotType: toSlotType
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(() => {
+                fetchPlayerInventory();
+            })
+            .catch(error => {
+                console.error('Error moving equipment:', error);
+                alert('Failed to move equipment. Please try again.');
+            });
+    } else {
+        fetch(`/api/inventory/${playerId}/equip/?itemId=${selectedItem.id}&slotType=${toSlotType}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                itemId: itemId,
+                slotType: toSlotType
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(() => {
+                fetchPlayerInventory();
+                selectedItem = null;
+            })
+            .catch(error => {
+                console.error('Error equipping item:', error);
+                alert('Failed to equip item. Please try again.');
+            });
+    }
+}
 
 function selectItem(item) {
     selectedItem = item;
     renderSelectedItemInfo();
 }
 
-
 function renderSelectedItemInfo() {
     const container = document.getElementById('selectedItemDetails');
     if (selectedItem) {
         container.innerHTML = `
             <h3>${selectedItem.name}</h3>
-             <img src="/sprites/items/${selectedItem.id}.svg" style = "width = 64px; height = 64px;" alt="${selectedItem.name}" 
+             <img src="/sprites/items/${selectedItem.id}.svg" style="width: 64px; height: 64px;" alt="${selectedItem.name}" 
                              class="item-sprite-small" data-item-id="${selectedItem.id}">
             <p>${selectedItem.description}</p>
             <p>Sell Price: ${selectedItem.sellPrice}</p>
@@ -132,11 +189,12 @@ function renderSelectedItemInfo() {
             `<li>${attr}: ${value}</li>`
         ).join('')}
             </ul>
-            <button onclick="equipSelectedItem()">Equip</button>
-            <button onclick="unequipSelectedItem()">Unequip</button>
-            <button onclick="useSelectedItem()">Use</button>
-            <button onclick="dropSelectedItem()">Drop</button>
-            <button onclick="sendSelectedItem()">Send</button>
+            <div class="button-container">
+                <button class="inventory-button equip-button" onclick="equipSelectedItem()">Equip</button>
+                <button class="inventory-button use-button" onclick="useSelectedItem()">Use</button>
+                <button class="inventory-button drop-button" onclick="dropSelectedItem()">Drop</button>
+                <button class="inventory-button send-button" onclick="sendSelectedItem()">Send</button>
+            </div>
         `;
     } else {
         container.innerHTML = '<p>No item selected</p>';
@@ -171,31 +229,12 @@ function sendSelectedItem() {
     }
 }
 
-function unequipSelectedItem() {
-    if (selectedItem) {
-        const slotType = getSlotTypeForItem(selectedItem); // Implement this function based on your game logic
-        fetch(`/api/inventory/${playerId}/unequip?slotType=${slotType}`, {
-            method: 'POST'
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                } else {
-                    alert(data.message);
-                    fetchPlayerInventory();
-                }
-            })
-            .catch(error => console.error('Error unequipping item:', error));
-    }
-}
-
 function equipSelectedItem() {
     if (selectedItem && selectedItem.equippable) {
         const slotType = getSlotTypeForItem(selectedItem);
         if (slotType) {
             fetch(`/api/inventory/${playerId}/equip?itemId=${selectedItem.id}&slotType=${slotType}`, {
-                method: 'POST'
+                method: 'POST',
             })
                 .then(response => {
                     if (!response.ok) {
@@ -219,8 +258,6 @@ function equipSelectedItem() {
     }
 }
 
-
-
 function getSlotTypeForItem(item) {
     if (item.equippable && item.equipmentSlotTypeString) {
         return item.equipmentSlotTypeString;
@@ -228,42 +265,67 @@ function getSlotTypeForItem(item) {
     return null;
 }
 
-
 function allowDrop(ev) {
     ev.preventDefault();
 }
 
 function drag(ev) {
-    ev.dataTransfer.setData("text", ev.target.getAttribute('data-item-id'));
+    ev.dataTransfer.setData("text", JSON.stringify({
+        itemId: ev.target.getAttribute('data-item-id'),
+        fromEquipment: false
+    }));
 }
 
 function drop(ev) {
     ev.preventDefault();
-    const itemId = ev.dataTransfer.getData("text");
+    const data = JSON.parse(ev.dataTransfer.getData("text"));
+    const itemId = data.itemId;
+    const fromEquipment = data.fromEquipment;
+    const slotType = data.slotType;
+
     const toSlot = ev.target.closest('.inventory-slot').getAttribute('data-slot-index');
-    const fromSlot = document.querySelector(`[data-item-id="${itemId}"]`).closest('.inventory-slot').getAttribute('data-slot-index');
 
-    fetch(`/api/inventory/${playerId}/move?itemId=${itemId}&fromSlot=${fromSlot}&toSlot=${toSlot}`, {
-        method: 'POST'
-    })
-        .then(() => fetchPlayerInventory())
-        .catch(error => console.error('Error moving item:', error));
+    if (fromEquipment) {
+        fetch(`/api/inventory/${playerId}/unequiptoslot?slotType=${slotType}&toSlot=${toSlot}`, {
+            method: 'POST'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(() => {
+                fetchPlayerInventory();
+            })
+            .catch(error => {
+                console.error('Error unequipping item:', error);
+                alert('Failed to unequip item. Please try again.');
+            });
+    } else {
+        const fromSlot = document.querySelector(`[data-item-id="${itemId}"]`).closest('.inventory-slot').getAttribute('data-slot-index');
+
+        fetch(`/api/inventory/${playerId}/move?itemId=${itemId}&fromSlot=${fromSlot}&toSlot=${toSlot}`, {
+            method: 'POST'
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(() => {
+                fetchPlayerInventory();
+            })
+            .catch(error => {
+                console.error('Error moving item:', error);
+                alert('Failed to move item. Please try again.');
+            });
+    }
 }
 
-function dropEquip(ev) {
-    ev.preventDefault();
-    const itemId = ev.dataTransfer.getData("text");
-    const slotType = ev.target.closest('.equipment-slot').getAttribute('data-slot-type');
-
-    fetch(`/api/inventory/${playerId}/equip?itemId=${itemId}&slotType=${slotType}`, {
-        method: 'POST'
-    })
-        .then(() => fetchPlayerInventory())
-        .catch(error => console.error('Error equipping item:', error));
-}
-
-// Initialize inventory when the tab is shown
 document.getElementById('inventory-management-tab').addEventListener('shown.bs.tab', initializeInventory);
+
 function useSelectedItem() {
     if (selectedItem) {
         fetch(`/api/inventory/${playerId}/use-item/${selectedItem.id}`, {

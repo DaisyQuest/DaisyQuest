@@ -426,6 +426,71 @@ public class PlayerService {
     }
 
     @Transactional
+    public String moveEquipment(String playerId, String itemId, String fromSlotType, String toSlotType) {
+        Player player = getPlayer(playerId);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with id: " + playerId);
+        }
+
+        PlayerInventory inventory = player.getInventory();
+
+        // Find the source and destination equipment slots
+        EquipmentSlot fromSlot = inventory.getEquipmentSlots().stream()
+                .filter(slot -> slot.getType().equals(fromSlotType))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid source equipment slot: " + fromSlotType));
+
+        EquipmentSlot toSlot = inventory.getEquipmentSlots().stream()
+                .filter(slot -> slot.getType().equals(toSlotType))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid destination equipment slot: " + toSlotType));
+
+        // Check if the source slot has the item we're trying to move
+        if (fromSlot.getItem() == null || !fromSlot.getItem().getId().equals(itemId)) {
+            throw new IllegalArgumentException("Item not found in the specified equipment slot");
+        }
+
+        // Check if the item can be equipped in the destination slot
+        if (!canEquipItemInSlot(fromSlot.getItem(), toSlotType)) {
+            throw new IllegalArgumentException("Item cannot be equipped in the destination slot");
+        }
+
+        // Perform the move/swap
+        Item itemToMove = fromSlot.getItem();
+        int quantityToMove = fromSlot.getQuantity();
+
+        Item destinationItem = toSlot.getItem();
+        int destinationQuantity = toSlot.getQuantity();
+
+        // Move item to destination slot
+        toSlot.setItem(itemToMove);
+        toSlot.setQuantity(quantityToMove);
+
+        // If destination had an item, move it to the source slot
+        if (destinationItem != null) {
+            fromSlot.setItem(destinationItem);
+            fromSlot.setQuantity(destinationQuantity);
+        } else {
+            // Clear the source slot if destination was empty
+            fromSlot.setItem(null);
+            fromSlot.setQuantity(0);
+        }
+
+        playerInventoryRepository.save(inventory);
+
+        return "Equipment moved successfully from " + fromSlotType + " to " + toSlotType;
+    }
+
+    private boolean canEquipItemInSlot(Item item, String slotType) {
+        // Implement logic to check if the item can be equipped in the given slot type
+        // This might involve checking item properties, player level, etc.
+        // For now, we'll just check if the item's equipment slot matches the destination slot
+        return item.getEquipmentSlotTypeString().equals(slotType);
+    }
+
+
+
+    @Transactional
     public String sendItem(String senderId, String itemId, String recipientUsername)
             throws PlayerNotFoundException, ItemNotFoundException, InsufficientItemQuantityException {
         Player sender = playerRepository.findById(senderId)
@@ -466,7 +531,7 @@ public class PlayerService {
     }
 
     @Transactional
-    public void equipItem(String playerId, String itemId, String slotType) {
+    public String equipItem(String playerId, String itemId, String slotType) {
         Player player = getPlayer(playerId);
         if (player == null) {
             throw new PlayerNotFoundException("Player not found with id: " + playerId);
@@ -496,7 +561,51 @@ public class PlayerService {
         equipmentSlot.setQuantity(itemToEquip.isEquippableInStacks() ? 1 : inventory.removeItem(itemId, 1));
 
         playerInventoryRepository.save(inventory);
+
+        return "Success equipping: " + itemToEquip + " in " + slotType;
     }
+
+    @Transactional
+    public String unequipItemToSlot(String playerId, String slotType, int toSlot) {
+        Player player = getPlayer(playerId);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with id: " + playerId);
+        }
+
+        PlayerInventory inventory = player.getInventory();
+        EquipmentSlot equipmentSlot = inventory.getEquipmentSlots().stream()
+                .filter(slot -> slot.getType().equals(slotType))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid equipment slot type: " + slotType));
+
+        if (equipmentSlot.getItem() == null) {
+            throw new ItemNotFoundException("No item equipped in the specified slot: " + slotType);
+        }
+
+        Item unequippedItem = equipmentSlot.getItem();
+        int quantity = equipmentSlot.getQuantity();
+
+        // Remove item from equipment slot
+        equipmentSlot.setItem(null);
+        equipmentSlot.setQuantity(0);
+
+        // Add item to specific inventory slot
+        InventorySlot inventorySlot = inventory.getInventorySlots().get(toSlot);
+        if (inventorySlot.getItem() != null) {
+            throw new InventoryFullException("Target inventory slot is not empty");
+        }
+
+        inventorySlot.setItem(unequippedItem);
+        inventorySlot.setQuantity(quantity);
+
+        playerInventoryRepository.save(inventory);
+
+        return "Item unequipped and moved to inventory slot " + toSlot;
+    }
+
+
+
+
 
     @Transactional
     public void unequipItem(String playerId, String slotType) {
