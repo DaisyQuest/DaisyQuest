@@ -184,14 +184,15 @@
     }
     function handleMapClick(event) {
         const rect = canvas.getBoundingClientRect();
-        lastClickX = event.clientX - rect.left;
-        lastClickY = event.clientY - rect.top;
-
-        if (currentSubmap) {
-            handleSubmapClick(lastClickX, lastClickY);
-        } else if (currentPlayer) {
-            const worldX = getCurrentPlayerX() + Math.round(lastClickX - VIEWPORT_WIDTH / 2);
-            const worldY = getCurrentPlayerY() + Math.round(lastClickY - VIEWPORT_HEIGHT / 2);
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+        lastClickX = clickX;
+        lastClickY = clickY;
+        if (isInSubmap) {
+            handleSubmapClick(clickX, clickY);
+        } else {
+            const worldX = getCurrentPlayerX() + Math.round(clickX - VIEWPORT_WIDTH / 2);
+            const worldY = getCurrentPlayerY() + Math.round(clickY - VIEWPORT_HEIGHT / 2);
 
             // Check if click is on a submap entrance
             fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
@@ -200,15 +201,77 @@
                     if (data.nearEntrance) {
                         enterSubmap(data.submapId);
                     } else {
-                        // Regular movement
-                        updatePlayerPosition(getCurrentPlayerId(), worldX, worldY);
+                        setupMovementPath(worldX, worldY);
                     }
                 })
                 .catch(error => console.error('Error checking submap entrance:', error));
-        } else {
-            console.error('Current player is not initialized');
         }
     }
+
+    function handleSubmapClick(clickX, clickY) {
+        // Check if the click is on an exit point
+
+        if(currentSubmap.elements) {
+            const exit = currentSubmap.elements.find(element =>
+                element.type === 'exit' &&
+                clickX >= element.x && clickX <= element.x + element.width &&
+                clickY >= element.y && clickY <= element.y + element.height
+            );
+        }
+
+        if (false && exit) {
+            returnToOverworld();
+        } else {
+            // Convert click coordinates to submap coordinates
+            const submapX = currentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
+            const submapY = currentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
+
+            // Ensure the target is within submap boundaries
+            const targetX = Math.max(0, Math.min(currentSubmap.width - 1, submapX));
+            const targetY = Math.max(0, Math.min(currentSubmap.height - 1, submapY));
+
+            setupMovementPath(targetX, targetY);
+        }
+    }
+    // New function to set up the movement path
+    let movementQueue = [];
+    const MOVE_SPEED = 5; // pixels per frame
+    let moveInterval = null;
+    let movementVector = { x: 0, y: 0 };
+    let isKeyboardMovement = false;
+    let lastReportedPosition = { x: 0, y: 0 };
+    const REPORT_THRESHOLD = 10; // Minimum distance to move before reporting to server
+
+    function setupMovementPath(targetX, targetY) {
+        const startX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
+        const startY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+
+        const dx = targetX - startX;
+        const dy = targetY - startY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 1) return;
+
+        const normalizedDx = dx / distance;
+        const normalizedDy = dy / distance;
+
+        movementQueue = [];
+
+        for (let i = 0; i < distance; i += MOVE_SPEED) {
+            movementQueue.push({
+                x: Math.round(startX + normalizedDx * i),
+                y: Math.round(startY + normalizedDy * i)
+            });
+        }
+
+        movementQueue.push({ x: targetX, y: targetY });
+
+        isKeyboardMovement = false;
+        startMovementInterval();
+    }
+
+    // New function to process the movement queue
+
     function fetchPlayersInViewport() {
         if (currentSubmap) {
             // Fetch players in the current submap
@@ -389,13 +452,10 @@
             }
         });
     }
-    const MOVE_SPEED = 32; // pixels per second
     const MOVE_INTERVAL = 1000 / 60; // 60 FPS
     const SEND_INTERVAL = 200; // Send position to server every 200ms
 
-    let moveInterval;
     let sendInterval;
-    let movementVector = { x: 0, y: 0 };
     let accumulatedMovement = { x: 0, y: 0 };
 
     function updatePlayerPosition(playerIdOfPlayerToUpdate, x, y) {
@@ -414,36 +474,15 @@
 
         if (playerIdOfPlayerToUpdate === getCurrentPlayerId()) {
             if (x === getCurrentPlayerX() && y === getCurrentPlayerY()) {
-                console.log('Current player position unchanged, skipping update');
                 return;
             }
 
-            console.log('Updating current player position to:', x, y);
-
-            fetch('/api/world-map/move', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    playerId: getCurrentPlayerId(),
-                    newX: x,
-                    newY: y
-                })
-            })
-                .then(response => response.json())
-                .then(updatedPlayer => {
-                    if (updatedPlayer.worldPositionX !== getCurrentPlayerX() ||
-                        updatedPlayer.worldPositionY !== getCurrentPlayerY()) {
-                        setCurrentPlayerPosition(updatedPlayer.worldPositionX, updatedPlayer.worldPositionY);
-                        updatePlayerInfo();
-                        fetchPlayersInViewport();
-                    }
-                    drawWorldMap();
-                })
-                .catch(error => console.error('Error updating player position:', error));
-        } else  {
+            setCurrentPlayerPosition(x, y);
+            updatePlayerInfo();
+            drawWorldMap();
+        } else {
             const player = players.find(p => p.id === playerIdOfPlayerToUpdate);
             if (player) {
-                console.log('Updating other player position:', playerIdOfPlayerToUpdate, x, y);
                 player.worldPositionX = x;
                 player.worldPositionY = y;
                 drawWorldMap();
@@ -454,20 +493,31 @@
         }
     }
 
+
     const sendPositionToServer = debounce(() => {
         if (isInSubmap) {
-            movePlayerInSubmap(
-                Math.round(currentPlayer.submapCoordinateX),
-                Math.round(currentPlayer.submapCoordinateY)
-            );
+            fetch(`/api/submaps/${currentSubmap.id}/move-player`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerId: getCurrentPlayerId(),
+                    x: Math.round(currentPlayer.submapCoordinateX),
+                    y: Math.round(currentPlayer.submapCoordinateY)
+                })
+            }).catch(error => console.error('Error updating player position in submap:', error));
         } else {
-            updatePlayerPosition(
-                getCurrentPlayerId(),
-                Math.round(currentPlayer.worldPositionX),
-                Math.round(currentPlayer.worldPositionY)
-            );
+            fetch('/api/world-map/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerId: getCurrentPlayerId(),
+                    newX: Math.round(currentPlayer.worldPositionX),
+                    newY: Math.round(currentPlayer.worldPositionY)
+                })
+            }).catch(error => console.error('Error updating player position in overworld:', error));
         }
-    }, SEND_INTERVAL);
+    }, 100); // Debounce for 100msebounce for 100ms
+
 
     function updateLocalPosition() {
         if (movementVector.x !== 0 || movementVector.y !== 0) {
@@ -492,22 +542,6 @@
     }
 
 
-
-
-
-    document.addEventListener('keyup', (event) => {
-        switch (event.key.toLowerCase()) {
-            case 'w': case 's': movementVector.y = 0; break;
-            case 'a': case 'd': movementVector.x = 0; break;
-        }
-        if (movementVector.x === 0 && movementVector.y === 0) {
-            clearInterval(moveInterval);
-            clearInterval(sendInterval);
-            moveInterval = null;
-            sendInterval = null;
-            sendPositionToServer(); // Send final position
-        }
-    });
 
     // Debounce function
     function debounce(func, wait) {
@@ -1100,43 +1134,81 @@
     }
 
     function movePlayerInSubmap(x, y) {
-        fetch(`/api/submaps/${currentSubmap.id}/move-player`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                playerId: getCurrentPlayerId(),
-                x: Math.round(x),
-                y: Math.round(y)
-            })
-        })
-            .then(response => response.json())
-            .then(updatedPlayer => {
-                currentPlayer = {
-                    ...currentPlayer,
-                    submapCoordinateX: updatedPlayer.submapCoordinateX,
-                    submapCoordinateY: updatedPlayer.submapCoordinateY,
-                    submapCoordinateZ: updatedPlayer.submapCoordinateZ
-                };
-                drawSubmap();
-            })
-            .catch(error => console.error('Error moving player in submap:', error));
-    }
-    function handleSubmapClick(clickX, clickY) {
-        // Check if the click is on an exit point
-        // const exit = currentSubmap.elements.find(element =>
-        //     element.type === 'exit' &&
-        //     clickX >= element.x && clickX <= element.x + element.width &&
-        //     clickY >= element.y && clickY <= element.y + element.height
-        // );
+        x = Math.round(x);
+        y = Math.round(y);
 
-        if (false) {
-            returnToOverworld();
+        // Ensure the movement is within submap boundaries
+        x = Math.max(0, Math.min(currentSubmap.width - 1, x));
+        y = Math.max(0, Math.min(currentSubmap.height - 1, y));
+
+        if (x === currentPlayer.submapCoordinateX && y === currentPlayer.submapCoordinateY) {
+            return;
+        }
+
+        currentPlayer.submapCoordinateX = x;
+        currentPlayer.submapCoordinateY = y;
+        drawSubmap();
+    }
+
+
+    function processMovement() {
+        if (isKeyboardMovement) {
+            processKeyboardMovement();
+        } else if (movementQueue.length > 0) {
+            const nextPosition = movementQueue.shift();
+            movePlayer(nextPosition.x, nextPosition.y);
         } else {
-            // Handle movement within the submap
-            movePlayerInSubmap(clickX, clickY);
+            stopMovementInterval();
+        }
+    }
+    function startMovementInterval() {
+        if (!moveInterval) {
+            moveInterval = setInterval(processMovement, 1000 / 60); // 60 FPS
         }
     }
 
+    function stopMovementInterval() {
+        if (moveInterval) {
+            clearInterval(moveInterval);
+            moveInterval = null;
+            sendPositionToServer(); // Send final position
+        }
+    }
+
+
+
+    function movePlayer(x, y) {
+        if (isInSubmap) {
+            movePlayerInSubmap(x, y);
+        } else {
+            updatePlayerPosition(getCurrentPlayerId(), x, y);
+        }
+
+        checkAndReportPosition();
+    }
+
+    function checkAndReportPosition() {
+        const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
+        const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+
+        const dx = currentX - lastReportedPosition.x;
+        const dy = currentY - lastReportedPosition.y;
+        const distanceMoved = Math.sqrt(dx * dx + dy * dy);
+
+        if (distanceMoved >= REPORT_THRESHOLD) {
+            sendPositionToServer();
+            lastReportedPosition = { x: currentX, y: currentY };
+        }
+    }
+
+    function processKeyboardMovement() {
+        if (movementVector.x !== 0 || movementVector.y !== 0) {
+            const normalizedVector = normalizeVector(movementVector);
+            const newX = (isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX()) + normalizedVector.x * MOVE_SPEED;
+            const newY = (isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY()) + normalizedVector.y * MOVE_SPEED;
+            movePlayer(Math.round(newX), Math.round(newY));
+        }
+    }
 
     function drawSubmapElement(element) {
         ctx.fillStyle = element.color || '#CCCCCC';
@@ -1315,16 +1387,16 @@
     // WebSocket setup and handling
 
     // Event listeners
-    canvas.addEventListener('click', (event) => {
-        const rect = canvas.getBoundingClientRect();
-        lastClickX = event.clientX - rect.left;
-        lastClickY = event.clientY - rect.top;
-
-        const worldX = currentPlayer.worldPositionX + Math.round(lastClickX - VIEWPORT_WIDTH / 2);
-        const worldY = currentPlayer.worldPositionY + Math.round(lastClickY - VIEWPORT_HEIGHT / 2);
-
-        updatePlayerPosition(currentPlayer, worldX, worldY);
-    });
+    // canvas.addEventListener('click', (event) => {
+    //     const rect = canvas.getBoundingClientRect();
+    //     lastClickX = event.clientX - rect.left;
+    //     lastClickY = event.clientY - rect.top;
+    //
+    //     const worldX = currentPlayer.worldPositionX + Math.round(lastClickX - VIEWPORT_WIDTH / 2);
+    //     const worldY = currentPlayer.worldPositionY + Math.round(lastClickY - VIEWPORT_HEIGHT / 2);
+    //
+    //     updatePlayerPosition(currentPlayer, worldX, worldY);
+    // });
 
     // Debounce function
 
@@ -1354,21 +1426,6 @@
                 break;
         }
 
-        document.addEventListener('keydown', (event) => {
-            switch (event.key.toLowerCase()) {
-                case 'w': movementVector.y = -1; break;
-                case 'a': movementVector.x = -1; break;
-                case 's': movementVector.y = 1; break;
-                case 'd': movementVector.x = 1; break;
-            }
-            if (!moveInterval) {
-                moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
-            }
-            if (!sendInterval) {
-                sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
-            }
-        });
-
         if (dx !== 0 || dy !== 0) {
             if (isInSubmap) {
                 const newX = Math.max(0, Math.min(currentSubmap.width - 1, currentPlayer.submapCoordinateX + dx));
@@ -1382,6 +1439,21 @@
         }
     });
 
+    document.addEventListener('keydown', (event) => {
+        switch (event.key.toLowerCase()) {
+            case 'w': movementVector.y = -1; break;
+            case 'a': movementVector.x = -1; break;
+            case 's': movementVector.y = 1; break;
+            case 'd': movementVector.x = 1; break;
+        }
+        if (!moveInterval) {
+            moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
+        }
+        if (!sendInterval) {
+            sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
+        }
+    });
+
     // Handle keyup events
     document.addEventListener('keyup', (event) => {
         switch (event.key.toLowerCase()) {
@@ -1389,11 +1461,10 @@
             case 'a': case 'd': movementVector.x = 0; break;
         }
         if (movementVector.x === 0 && movementVector.y === 0) {
-            clearInterval(moveInterval);
-            clearInterval(sendInterval);
-            moveInterval = null;
-            sendInterval = null;
-            sendPositionToServer(); // Send final position
+            isKeyboardMovement = false;
+            if (movementQueue.length === 0) {
+                stopMovementInterval();
+            }
         }
     });
 
