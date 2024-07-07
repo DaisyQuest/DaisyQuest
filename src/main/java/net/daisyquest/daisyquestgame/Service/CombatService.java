@@ -59,12 +59,16 @@ public class CombatService {
             playerActionPoints.put(playerId, INITIAL_ACTION_POINTS);
         }
 
-        List<StatusEffect> testEffects = testData.createTestStatusEffects();
-        for (int i = 0; i < playerIds.size(); i++) {
-            String playerId = playerIds.get(i);
-            StatusEffect effect = testEffects.get(i % testEffects.size()); // Cycle through effects
-            statusEffectService.applyStatusEffect(combat, playerId, effect, 3); // Apply for 3 turns
-        }
+        //Initialize Damage Modifier Map
+
+
+
+//        List<StatusEffect> testEffects = testData.createTestStatusEffects();
+//        for (int i = 0; i < playerIds.size(); i++) {
+//            String playerId = playerIds.get(i);
+//            StatusEffect effect = testEffects.get(i % testEffects.size()); // Cycle through effects
+//            statusEffectService.applyStatusEffect(combat, playerId, effect, 3); // Apply for 3 turns
+//        }
 
 
         combat.setPlayerHealth(playerHealth);
@@ -334,8 +338,9 @@ public class CombatService {
 
 
     private void performSpecialAttack(Combat combat, Action action) {
-        int damage = calculateDamage(action.getPlayerId(), 15, 30);
+        int damage = calculateDamage(action.getPlayerId(), 5, 10);
         applyDamage(combat, action.getTargetPlayerId(), damage);
+        statusEffectService.applyStatusEffect(combat, action.getPlayerId(), statusEffectService.getStatusEffectByDisplayNameNoCache("Poison"), 10);
     }
 
     private void performSpell(Combat combat, Action action) {

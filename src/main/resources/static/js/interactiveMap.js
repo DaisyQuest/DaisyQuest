@@ -9,12 +9,18 @@
     let currentPlayer;
     const playerId = localStorage.getItem('playerId');
     if (!playerId) {
-    window.location.href = '/login';
+    window.location.href = '/';
 }
     const LAND_SIZE = 10000;
     const VIEWPORT_WIDTH = 1000;
     const VIEWPORT_HEIGHT = 800;
     const SPRITE_SIZE = 32;
+    let mp3Player;
+    document.addEventListener('DOMContentLoaded', function() {
+        mp3Player = new MP3Player('audio-player-container');
+        mp3Player.loadTrack('/audio/battle.mp3');
+        mp3Player.togglePlayPause();
+    });
 
     const terrainColors = {
     PLAINS: '#90EE90',
@@ -421,14 +427,21 @@
     function updateNearbyPlayersList() {
     const nearbyPlayersList = document.getElementById('nearby-players');
     nearbyPlayersList.innerHTML = '';
-
+    let c = 0;
     players.forEach(player => {
     if (player.id !== currentPlayer.id) {
-    const li = document.createElement('li');
-    li.textContent = `${player.username} (Level ${player.level})${player.isNPC ? ' [NPC]' : ''}`;
-    nearbyPlayersList.appendChild(li);
+        if(c < 10) {
+            const li = document.createElement('li');
+            li.textContent = `${player.username} (Level ${player.level})${player.npc ? ' [NPC]' : ''}`;
+            nearbyPlayersList.appendChild(li);
+        }
+        c++;
+
 }
 });
+        const li2 = document.createElement('li');
+        li2.textContent = `+ ${c - 10} more`;
+        nearbyPlayersList.appendChild(li2);
 }
     const MOVE_INTERVAL = 1000 / 60; // 60 FPS
     const SEND_INTERVAL = 200; // Send position to server every 200ms
@@ -938,6 +951,8 @@
     `;
 
     if (winner === playerId) {
+        mp3Player.loadTrack('/audio/win.mp3');
+        mp3Player.audio.play();
     fetch(`/api/players/${loser}/inventory`)
     .then(response => response.json())
     .then(inventory => {
@@ -992,6 +1007,8 @@
 }
 
     function returnToWorldMap() {
+        mp3Player.loadTrack('/audio/battle.mp3');
+        mp3Player.audio.play();
     document.getElementById('combatResults').style.display = 'none';
     document.getElementById('worldMapContainer').style.display = 'block';
     currentCombatId = null;

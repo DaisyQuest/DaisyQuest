@@ -6,6 +6,7 @@ body {
     display: flex;
     height: 100vh;
 }
+
 #sidebar {
     width: 300px;
     background-color: #2c3e50;
