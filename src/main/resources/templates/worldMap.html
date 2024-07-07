@@ -269,7 +269,7 @@
     // Submap variables
     let currentSubmap = null;
 
-
+    let isInSubmap = false;
     // Duel variables
     let selectedPlayer = null;
     const DUEL_RANGE = 100;
@@ -311,7 +311,7 @@
                     submapCoordinateZ: playerData.player.submapCoordinateZ,
                     // Add other relevant player properties here
                 };
-
+                isInSubmap = currentPlayer.currentSubmapId != null;
                 canvas.width = VIEWPORT_WIDTH;
                 canvas.height = VIEWPORT_HEIGHT;
 
@@ -417,6 +417,7 @@
                     // Add any other relevant properties here
                 };
                 currentSubmap = submapId;
+                isInSubmap = true;
                 loadSubmapData(submapId);
             })
             .catch(error => console.error('Error entering submap:', error));
@@ -608,25 +609,35 @@
     }
 
     const sendPositionToServer = debounce(() => {
-        updatePlayerPosition(playerId, currentPlayer.worldPositionX, currentPlayer.worldPositionY);
+        if (isInSubmap) {
+            movePlayerInSubmap(
+                Math.round(currentPlayer.submapCoordinateX),
+                Math.round(currentPlayer.submapCoordinateY)
+            );
+        } else {
+            updatePlayerPosition(
+                getCurrentPlayerId(),
+                Math.round(currentPlayer.worldPositionX),
+                Math.round(currentPlayer.worldPositionY)
+            );
+        }
     }, SEND_INTERVAL);
 
     function updateLocalPosition() {
         if (movementVector.x !== 0 || movementVector.y !== 0) {
             const normalizedVector = normalizeVector(movementVector);
-            accumulatedMovement.x += normalizedVector.x * (MOVE_SPEED * MOVE_INTERVAL / 1000);
-            accumulatedMovement.y += normalizedVector.y * (MOVE_SPEED * MOVE_INTERVAL / 1000);
+            const dx = normalizedVector.x * (MOVE_SPEED * MOVE_INTERVAL / 1000);
+            const dy = normalizedVector.y * (MOVE_SPEED * MOVE_INTERVAL / 1000);
 
-            if (Math.abs(accumulatedMovement.x) >= 1) {
-                currentPlayer.worldPositionX += Math.trunc(accumulatedMovement.x);
-                accumulatedMovement.x = accumulatedMovement.x % 1;
+            if (isInSubmap) {
+                currentPlayer.submapCoordinateX = Math.max(0, Math.min(currentSubmap.width - 1, currentPlayer.submapCoordinateX + dx));
+                currentPlayer.submapCoordinateY = Math.max(0, Math.min(currentSubmap.height - 1, currentPlayer.submapCoordinateY + dy));
+                drawSubmap();
+            } else {
+                currentPlayer.worldPositionX += dx;
+                currentPlayer.worldPositionY += dy;
+                drawWorldMap();
             }
-            if (Math.abs(accumulatedMovement.y) >= 1) {
-                currentPlayer.worldPositionY += Math.trunc(accumulatedMovement.y);
-                accumulatedMovement.y = accumulatedMovement.y % 1;
-            }
-
-            drawWorldMap();
         }
     }
     function normalizeVector(vector) {
@@ -634,32 +645,9 @@
         return magnitude !== 0 ? { x: vector.x / magnitude, y: vector.y / magnitude } : { x: 0, y: 0 };
     }
 
-    // Event listeners for movement
-    // canvas.addEventListener('click', (event) => {
-    //     const rect = canvas.getBoundingClientRect();
-    //     lastClickX = event.clientX - rect.left;
-    //     lastClickY = event.clientY - rect.top;
-    //
-    //     const worldX = currentPlayer.worldPositionX + Math.round(lastClickX - VIEWPORT_WIDTH / 2);
-    //     const worldY = currentPlayer.worldPositionY + Math.round(lastClickY - VIEWPORT_HEIGHT / 2);
-    //
-    //     updatePlayerPosition(currentPlayer.id, worldX, worldY);
-    // });
 
-    document.addEventListener('keydown', (event) => {
-        switch (event.key.toLowerCase()) {
-            case 'w': movementVector.y = -1; break;
-            case 'a': movementVector.x = -1; break;
-            case 's': movementVector.y = 1; break;
-            case 'd': movementVector.x = 1; break;
-        }
-        if (!moveInterval) {
-            moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
-        }
-        if (!sendInterval) {
-            sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
-        }
-    });
+
+
 
     document.addEventListener('keyup', (event) => {
         switch (event.key.toLowerCase()) {
@@ -1258,6 +1246,7 @@
                     // Add any other relevant properties here
                 };
                 currentSubmap = null;
+                isInSubmap = false;
                 drawWorldMap();
                 fetchPlayersInViewport();
             })
@@ -1518,8 +1507,32 @@
                 dx = MOVE_SPEED;
                 break;
         }
+
+        document.addEventListener('keydown', (event) => {
+            switch (event.key.toLowerCase()) {
+                case 'w': movementVector.y = -1; break;
+                case 'a': movementVector.x = -1; break;
+                case 's': movementVector.y = 1; break;
+                case 'd': movementVector.x = 1; break;
+            }
+            if (!moveInterval) {
+                moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
+            }
+            if (!sendInterval) {
+                sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
+            }
+        });
+
         if (dx !== 0 || dy !== 0) {
-            updatePlayerPosition(currentPlayer.worldPositionX + dx, currentPlayer.worldPositionY + dy);
+            if (isInSubmap) {
+                const newX = Math.max(0, Math.min(currentSubmap.width - 1, currentPlayer.submapCoordinateX + dx));
+                const newY = Math.max(0, Math.min(currentSubmap.height - 1, currentPlayer.submapCoordinateY + dy));
+                movePlayerInSubmap(Math.round(newX), Math.round(newY));
+            } else {
+                const newX = currentPlayer.worldPositionX + dx;
+                const newY = currentPlayer.worldPositionY + dy;
+                updatePlayerPosition(getCurrentPlayerId(), Math.round(newX), Math.round(newY));
+            }
         }
     });
 
