@@ -562,6 +562,9 @@ public class CombatService {
                 if(loser.isNPC()){
                     loser.setWorldPositionX(-10000);
                     loser.setWorldPositionY(-10000);
+                    loser.setSubmapCoordinateX(-10000);
+                    loser.setSubmapCoordinateY(-10000);
+                    loser.setCurrentSubmapId(null);
                     handleNPCDefeat(combat, loserId);
                 }
                 else {
