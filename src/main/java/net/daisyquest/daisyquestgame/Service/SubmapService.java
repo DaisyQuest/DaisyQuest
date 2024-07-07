@@ -26,6 +26,31 @@ public class SubmapService {
         return submapRepository.findById(submapId)
                 .orElseThrow(() -> new IllegalArgumentException("Submap not found with id: " + submapId));
     }
+    @Transactional
+    public Player movePlayerInSubmap(String submapId, String playerId, int x, int y) {
+        Submap submap = submapRepository.findById(submapId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid submap ID"));
+
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid player ID"));
+
+        // Check if the player is in the correct submap
+        if (!submapId.equals(player.getCurrentSubmapId())) {
+            throw new IllegalArgumentException("Player is not in the specified submap");
+        }
+
+        // Check if the new position is within the submap boundaries
+        if (x < 0 || x >= submap.getWidth() || y < 0 || y >= submap.getHeight()) {
+            throw new IllegalArgumentException("New position is out of submap boundaries");
+        }
+
+        // Update player's position in the submap
+        player.setSubmapCoordinateX(x);
+        player.setSubmapCoordinateY(y);
+
+        // Save and return the updated player
+        return playerRepository.save(player);
+    }
 
     public List<Submap> getAllSubmaps() {
         return submapRepository.findAll();

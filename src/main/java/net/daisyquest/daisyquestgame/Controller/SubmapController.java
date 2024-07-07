@@ -1,5 +1,7 @@
 package net.daisyquest.daisyquestgame.Controller;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Submap;
 import net.daisyquest.daisyquestgame.Service.SubmapService;
@@ -94,4 +96,37 @@ public class SubmapController {
         List<Player> players = submapService.getPlayersInSubmap(submapId);
         return ResponseEntity.ok(players);
     }
+
+
+
+    @PostMapping("/{submapId}/move-player")
+    public ResponseEntity<Player> movePlayerInSubmap(
+            @PathVariable String submapId,
+            @RequestBody MovePlayerRequest request) {
+        try {
+            Player updatedPlayer = submapService.movePlayerInSubmap(
+                    submapId,
+                    request.getPlayerId(),
+                    request.getX(),
+                    request.getY()
+            );
+            return ResponseEntity.ok(updatedPlayer);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(null);
+        }
+    }
+
+    // Inner class to represent the request body
+    @Setter
+    @Getter
+    private static class MovePlayerRequest {
+        // Getters and setters
+        private String playerId;
+        private int x;
+        private int y;
+
+    }
+
 }
