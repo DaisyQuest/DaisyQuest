@@ -43,7 +43,7 @@ public class PlayerService {
         if (playerRepository.existsByUsername(player.getUsername())) {
             throw new UsernameAlreadyExistsException("Username already exists: " + player.getUsername());
         }
-        PlayerInitializer.initPlayer(player, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball")));
+        PlayerInitializer.initPlayer(player, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("blizzard"), spellService.getSpell("thunder")));
         Player playerWithId = playerRepository.save(player);
 
         PlayerInventory inventory = new PlayerInventory(playerWithId.getId(), 16); // or whatever initial size
@@ -71,7 +71,7 @@ public class PlayerService {
         if(p == null){
             p= new Player();
         }
-        PlayerInitializer.initPlayer(p, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("iceball"), spellService.getSpell("thunder")));
+        PlayerInitializer.initPlayer(p, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("blizzard"), spellService.getSpell("thunder")));
         p.setInventory(playerInventoryRepository.findByPlayerId(p.getId()));
         return p;
     }

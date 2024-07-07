@@ -367,6 +367,12 @@ public class CombatService {
     }
 
     private void applySpellEffect(Combat combat, Player caster, String targetPlayerId, Spell spell) {
+       for(Spell.StatusEffectApplication sEA : spell.getStatusEffects()){
+           statusEffectService.applyStatusEffect(combat, targetPlayerId, sEA.getStatusEffect(), sEA.getDuration());
+           System.err.println("Status Effect Applied");
+       }
+
+
         switch (spell.getEffect()) {
             case DAMAGE:
                 int damage = calculateSpellDamage(caster, spell);
@@ -395,7 +401,7 @@ public class CombatService {
     }
 
     private int calculateSpellDamage(Player caster, Spell spell) {
-        return 95;
+        return spell.getManaCost() * 2;
     }
 
     private void updateSpellCooldown(Combat combat, String playerId, Spell spell) {

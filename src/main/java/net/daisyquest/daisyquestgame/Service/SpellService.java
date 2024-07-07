@@ -1,6 +1,8 @@
 package net.daisyquest.daisyquestgame.Service;
 
+import jakarta.annotation.PostConstruct;
 import net.daisyquest.daisyquestgame.Model.Spell;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -8,10 +10,18 @@ import java.util.Map;
 
 @Service
 public class SpellService {
-    private Map<String, Spell> spells = new HashMap<>();
+    private final Map<String, Spell> spells = new HashMap<>();
 
+    @Autowired
+    private StatusEffectService statusEffectService;
     public SpellService() {
         // Initialize with some default spells
+
+        // Add more spells as needed
+    }
+
+    @PostConstruct
+    public void setup(){
         Spell fireball = new Spell();
         fireball.setId("fireball");
         fireball.setName("Fireball");
@@ -19,17 +29,19 @@ public class SpellService {
         fireball.setManaCost(20);
         fireball.setCooldown(10);
         fireball.setEffect(Spell.SpellEffect.DAMAGE);
+        fireball.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Burn"), 4);
         spells.put(fireball.getId(), fireball);
 
 
 
         Spell iceball = new Spell();
-        iceball.setId("iceball");
-        iceball.setName("Iceball");
-        iceball.setDescription("Launches a ball of ice at the target");
-        iceball.setManaCost(30);
+        iceball.setId("blizzard");
+        iceball.setName("Blizzard");
+        iceball.setDescription("Creates a furious blizzard!");
+        iceball.setManaCost(45);
         iceball.setCooldown(20);
         iceball.setEffect(Spell.SpellEffect.DAMAGE);
+        iceball.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Freeze"), 4);
         spells.put(iceball.getId(), iceball);
 
 
@@ -37,11 +49,12 @@ public class SpellService {
         thunder.setId("thunder");
         thunder.setName("Thunder");
         thunder.setDescription("Thunder!!!");
-        thunder.setManaCost(50);
-        thunder.setCooldown(45);
+        thunder.setManaCost(10);
+        thunder.setCooldown(5);
         thunder.setEffect(Spell.SpellEffect.DAMAGE);
+        thunder.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Stun"), 4);
+
         spells.put(thunder.getId(), thunder);
-        // Add more spells as needed
     }
 
     public Spell getSpell(String spellId) {
