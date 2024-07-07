@@ -1,11 +1,7 @@
 function register() {
     const username = document.getElementById('username').value;
-    fetch('/api/players/register', {
+    fetch(`/api/players/register/${username}`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username: username }),
     })
         .then(response => {
             if (!response.ok) {

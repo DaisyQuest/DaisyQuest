@@ -3,7 +3,9 @@ package net.daisyquest.daisyquestgame.Controller;
 import net.daisyquest.daisyquestgame.Model.Action;
 import net.daisyquest.daisyquestgame.Model.Combat;
 import net.daisyquest.daisyquestgame.Model.CombatLog;
+import net.daisyquest.daisyquestgame.Model.StatusEffectInfo;
 import net.daisyquest.daisyquestgame.Service.CombatService;
+import net.daisyquest.daisyquestgame.Service.StatusEffectService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +25,9 @@ public class CombatController {
     @Autowired
     private CombatService combatService;
 
+    @Autowired
+    private StatusEffectService statusEffectService;
+
     @PostMapping("/start")
     public ResponseEntity<?> startCombat(@RequestBody Map<String, Object> request) {
         try {
@@ -31,6 +37,9 @@ public class CombatController {
             if (playerIds == null || playerIds.isEmpty()) {
                 return ResponseEntity.badRequest().body("Player IDs are required");
             }
+
+
+
 
             Combat combat = combatService.startCombat(playerIds, playerTeams);
             return ResponseEntity.ok(combat);
@@ -72,11 +81,38 @@ public class CombatController {
         }
     }
 
-
-
     @GetMapping("/{combatId}/logs")
     public ResponseEntity<List<CombatLog>> getCombatLogs(@PathVariable String combatId) {
         List<CombatLog> logs = combatService.getCombatLogs(combatId);
         return ResponseEntity.ok(logs);
     }
+
+    @GetMapping("/{combatId}/status-effects")
+    public ResponseEntity<Map<String, List<StatusEffectInfo>>> getActiveStatusEffects(@PathVariable String combatId) {
+        Combat combat = combatService.getCombat(combatId);
+        if (combat == null) {
+            return ResponseEntity.notFound().build();
+        }
+        Map<String, List<StatusEffectInfo>> activeEffects = statusEffectService.getActiveStatusEffects(combat);
+        return ResponseEntity.ok(activeEffects);
+    }
+
+
+    @GetMapping("/{combatId}/turn-phase")
+    public ResponseEntity<Map<String, String>> getTurnPhase(@PathVariable String combatId) {
+        try {
+            Combat combat = combatService.getCombat(combatId);
+            if (combat == null) {
+                return ResponseEntity.notFound().build();
+            }
+            Map<String, String> response = new HashMap<>();
+            response.put("phase", combat.getCurrentPhase().toString());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error retrieving turn phase: " + e.getMessage()));
+        }
+    }
+
+
 }

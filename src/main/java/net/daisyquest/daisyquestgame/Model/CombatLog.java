@@ -19,4 +19,6 @@ public class CombatLog {
     private String description;
     private boolean isNeutral;
     private Instant timestamp;
+
+
 }

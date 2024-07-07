@@ -1,0 +1,6 @@
+<!-- Health Boost -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    <path d="M16 2 Q25 16 16 30 Q7 16 16 2 Z" fill="#ff69b4"/>
+    <path d="M16 10 L16 22 M10 16 L22 16" stroke="#ffffff" stroke-width="2"/>
+</svg>
+

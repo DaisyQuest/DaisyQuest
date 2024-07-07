@@ -14,6 +14,7 @@ public class WorldMap {
     private String id;
 
     private int width;
+    private int length;
     private int height;
 
     // Constructor, getters, and setters are handled by Lombok's @Data annotation

@@ -5,161 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DaisyQuest World Map</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f0f0f0;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-        }
-        #sidebar {
-            width: 300px;
-            background-color: #2c3e50;
-            color: #ecf0f1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        #main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        #worldMapContainer {
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #34495e;
-            position: relative;
-        }
-        #worldMapCanvas {
-            border: 2px solid #2c3e50;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        #coordinates {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: rgba(44, 62, 80, 0.7);
-            color: #ecf0f1;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-
-        .player-info {
-            background-color: #34495e;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
-        .player-info h3 {
-            margin-top: 0;
-            color: #3498db;
-        }
-        #chat-box {
-            height: 200px;
-            background-color: #34495e;
-            border-radius: 5px;
-            padding: 10px;
-            overflow-y: auto;
-            margin-top: 20px;
-        }
-        #chat-input {
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        /* New styles for combat interface */
-        #combatArea {
-            background-color: #2c3e50;
-            color: #ecf0f1;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        #turnIndicator {
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 10px;
-            text-align: center;
-            color: #f39c12;
-        }
-        #combatInfo {
-            background-color: #34495e;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-        .player-card {
-            background-color: #34495e;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .player-sprite {
-            position: relative;
-            width: 128px;
-            height: 128px;
-            margin: 0 auto;
-        }
-
-        .sprite-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        .health-bar {
-            height: 20px;
-            background-color: #e74c3c;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 5px;
-        }
-        .health-bar-fill {
-            height: 100%;
-            background-color: #2ecc71;
-            transition: width 0.3s ease-in-out;
-        }
-        #actionButtons button {
-            margin-bottom: 10px;
-        }
-        #spellSelection, #targetSelection {
-            background-color: #34495e;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 15px;
-        }
-        #spellInfo {
-            background-color: #2c3e50;
-            color: #ecf0f1;
-        }
-        .combat-log {
-            height: 300px;
-            background-color: #34495e;
-            border-radius: 5px;
-            padding: 10px;
-            overflow-y: auto;
-            font-size: 0.9em;
-        }
-        .combat-log-entry {
-            margin-bottom: 5px;
-            padding: 5px;
-            border-radius: 3px;
-        }
-        #combatResults {
-            background-color: #2c3e50;
-            color: #ecf0f1;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-    </style>
+    <link th:href="@{/css/interactive_map.css}" rel = "stylesheet">
 </head>
 <body>
 <div class="container-fluid">
@@ -170,7 +16,7 @@
                 <h3>Player Info</h3>
                 <p>Name: <span id="player-name"></span></p>
                 <p>Level: <span id="player-level"></span></p>
-                <p>Experience: <span id="player-exp"></span></p>
+                <p>Submap ID: <span id="player-exp"></span></p>
             </div>
             <div class="player-info">
                 <h3>Nearby Players</h3>
@@ -235,7 +81,7 @@
     const canvas = document.getElementById('worldMapCanvas');
     const ctx = canvas.getContext('2d');
     const coordsDisplay = document.getElementById('coordinates');
-
+    canvas.addEventListener('click', handleMapClick);
     let worldMap;
     let players = [];
     let currentPlayer;
@@ -263,42 +109,297 @@
     let playerSpells = [];
     let combatLogs = [];
 
+    let submapEntrances = [];
+
+
+    // Submap variables
+    let currentSubmap = null;
+
+    let isInSubmap = false;
     // Duel variables
     let selectedPlayer = null;
     const DUEL_RANGE = 100;
     let lastClickX, lastClickY;
     let socket;
+    let statusEffects = {};
 
-    function initWorldMap() {
-        fetch('/api/world-map')
-            .then(response => response.json())
-            .then(data => {
-                worldMap = data;
+
+
+    function initGameData() {
+        const playerId = localStorage.getItem('playerId');
+        if (!playerId) {
+            window.location.href = '/login';
+            return;
+        }
+
+        Promise.all([
+            fetch('/api/world-map'),
+            fetch(`/api/players/${playerId}`),
+            fetch('/api/world-map/submap-entrances')
+        ])
+            .then(([worldMapResponse, playerResponse, submapEntrancesResponse]) =>
+                Promise.all([worldMapResponse.json(), playerResponse.json(), submapEntrancesResponse.json()])
+            )
+            .then(([worldMapData, playerData, submapEntrancesData]) => {
+                worldMap = worldMapData;
+                submapEntrances = submapEntrancesData;
+
+                currentPlayer = {
+                    id: playerData.player.id,
+                    username: playerData.player.username,
+                    level: playerData.player.level,
+                    experience: playerData.player.experience,
+                    worldPositionX: playerData.player.worldPositionX || 10000,
+                    worldPositionY: playerData.player.worldPositionY || 10000,
+                    currentSubmapId: playerData.player.currentSubmapId,
+                    submapCoordinateX: playerData.player.submapCoordinateX,
+                    submapCoordinateY: playerData.player.submapCoordinateY,
+                    submapCoordinateZ: playerData.player.submapCoordinateZ,
+                    // Add other relevant player properties here
+                };
+                isInSubmap = currentPlayer.currentSubmapId != null;
                 canvas.width = VIEWPORT_WIDTH;
                 canvas.height = VIEWPORT_HEIGHT;
-                return fetch(`/api/players/${playerId}`);
-            })
-            .then(response => response.json())
-            .then(player => {
-                currentPlayer = player;
-                // Ensure the player has a valid position
-                if (!currentPlayer.worldPositionX || !currentPlayer.worldPositionY) {
-                    console.warn('Player position not set, using default position');
-                    currentPlayer.worldPositionX = 10000; // Default X position
-                    currentPlayer.worldPositionY = 10000; // Default Y position
-                }
-                console.log('Player position:', currentPlayer.worldPositionX, currentPlayer.worldPositionY);
+
                 updatePlayerInfo();
-                updatePlayerPosition(currentPlayer.player.playerId, currentPlayer.worldPositionX, currentPlayer.worldPositionY);
                 setupWebSocket();
-                drawWorldMap();
+
+                if (currentPlayer.currentSubmapId) {
+                    loadSubmapData(currentPlayer.currentSubmapId);
+                } else {
+                    drawWorldMap();
+                    fetchPlayersInViewport();
+                }
             })
             .catch(error => {
-                console.error('Error initializing world map:', error);
-                // Handle the error, maybe set a default position or show an error message to the user
+                console.error('Error initializing game data:', error);
             });
     }
-    async function drawWorldMap() {
+
+
+
+
+    function initWorldMap() {
+        initGameData();
+    }
+
+
+    function handleMapClick(event) {
+        const rect = canvas.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+
+        // Find if a player was clicked
+        const clickedPlayer = findClickedPlayer(clickX, clickY);
+
+        if (clickedPlayer) {
+            handlePlayerClick(clickedPlayer);
+        } else {
+            handleTerrainClick(clickX, clickY);
+        }
+    }
+
+    // Add a new function to handle map clicks
+    function handleTerrainClick(clickX, clickY) {
+        if (isInSubmap) {
+            handleSubmapTerrainClick(clickX, clickY);
+        } else {
+            handleOverworldTerrainClick(clickX, clickY);
+        }
+    }
+    function handleSubmapTerrainClick(clickX, clickY) {
+        // Convert click coordinates to submap coordinates
+        const submapX = currentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
+        const submapY = currentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
+
+        // Check if the click is on an exit point
+        if(currentSubmap.elements) {
+            const exit = currentSubmap.elements.find(element =>
+                element.type === 'exit' &&
+                submapX >= element.x && submapX <= element.x + element.width &&
+                submapY >= element.y && submapY <= element.y + element.height
+            );
+        }
+        //todo: clean
+        if (false && exit) {
+            returnToOverworld();
+        } else {
+            // Ensure the target is within submap boundaries
+            const targetX = Math.max(0, Math.min(currentSubmap.width - 1, submapX));
+            const targetY = Math.max(0, Math.min(currentSubmap.height - 1, submapY));
+
+            setupMovementPath(targetX, targetY);
+        }
+    }
+    function handleOverworldTerrainClick(clickX, clickY) {
+        const worldX = getCurrentPlayerX() + Math.round(clickX - VIEWPORT_WIDTH / 2);
+        const worldY = getCurrentPlayerY() + Math.round(clickY - VIEWPORT_HEIGHT / 2);
+
+        // Check if click is on a submap entrance
+        fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.nearEntrance) {
+                    enterSubmap(data.submapId);
+                } else {
+                    setupMovementPath(worldX, worldY);
+                }
+            })
+            .catch(error => console.error('Error checking submap entrance:', error));
+    }
+
+    // Add a function to find the clicked player
+    function findClickedPlayer(clickX, clickY) {
+        const playerList =  players;
+        for (const player of playerList) {
+            if (player.id === currentPlayer.id) continue; // Skip current player
+
+            let playerX, playerY;
+            if (isInSubmap) {
+                playerX = player.submapCoordinateX - currentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
+                playerY = player.submapCoordinateY - currentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
+            } else {
+                playerX = player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+                playerY = player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            }
+
+            const dx = clickX - playerX;
+            const dy = clickY - playerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= SPRITE_SIZE / 2) {
+                return player;
+            }
+        }
+        return null;
+    }
+
+    function handleSubmapClick(clickX, clickY) {
+        // Check if the click is on an exit point
+
+        if(currentSubmap.elements) {
+            const exit = currentSubmap.elements.find(element =>
+                element.type === 'exit' &&
+                clickX >= element.x && clickX <= element.x + element.width &&
+                clickY >= element.y && clickY <= element.y + element.height
+            );
+        }
+
+        if (false && exit) {
+            returnToOverworld();
+        } else {
+            // Convert click coordinates to submap coordinates
+            const submapX = currentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
+            const submapY = currentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
+
+            // Ensure the target is within submap boundaries
+            const targetX = Math.max(0, Math.min(currentSubmap.width - 1, submapX));
+            const targetY = Math.max(0, Math.min(currentSubmap.height - 1, submapY));
+
+            setupMovementPath(targetX, targetY);
+        }
+    }
+    // New function to set up the movement path
+    let movementQueue = [];
+    const MOVE_SPEED = 3; // pixels per frame
+    let moveInterval = null;
+    let movementVector = { x: 0, y: 0 };
+    let isKeyboardMovement = false;
+    let lastReportedPosition = { x: 0, y: 0 };
+    const REPORT_THRESHOLD = 10; // Minimum distance to move before reporting to server
+
+    function setupMovementPath(targetX, targetY) {
+        const startX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
+        const startY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+
+        const dx = targetX - startX;
+        const dy = targetY - startY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 1) return;
+
+        const normalizedDx = dx / distance;
+        const normalizedDy = dy / distance;
+
+        movementQueue = [];
+
+        for (let i = 0; i < distance; i += MOVE_SPEED) {
+            movementQueue.push({
+                x: Math.round(startX + normalizedDx * i),
+                y: Math.round(startY + normalizedDy * i)
+            });
+        }
+
+        movementQueue.push({ x: targetX, y: targetY });
+
+        isKeyboardMovement = false;
+        startMovementInterval();
+    }
+
+    // New function to process the movement queue
+
+    function fetchPlayersInViewport() {
+        if (currentSubmap) {
+            // Fetch players in the current submap
+            fetch(`/api/submaps/${currentSubmap.id}/players`)
+                .then(response => response.json())
+                .then(data => {
+                    players = Array.isArray(data) ? data : [];
+                    updateNearbyPlayersList();
+                    drawSubmap();
+                })
+                .catch(error => console.error('Error fetching players in submap:', error));
+        } else {
+            // Fetch players in the overworld viewport
+            const centerX = getCurrentPlayerX();
+            const centerY = getCurrentPlayerY();
+
+            fetch(`/api/world-map/players?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
+                .then(response => response.json())
+                .then(data => {
+                    players = Array.isArray(data) ? data : [];
+                    updateNearbyPlayersList();
+                    drawWorldMap();
+                })
+                .catch(error => console.error('Error fetching players in overworld:', error));
+        }
+    }
+    function checkSubmapEntrance(worldX, worldY) {
+        fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.nearEntrance) {
+                    enterSubmap(data.submapId);
+                }
+            });
+    }
+
+    function enterSubmap(submapId) {
+        fetch(`/api/submaps/${submapId}/move/${getCurrentPlayerId()}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(updatedPlayer => {
+                currentPlayer = {
+                    id: updatedPlayer.id,
+                    username: updatedPlayer.username,
+                    level: updatedPlayer.level,
+                    experience: updatedPlayer.experience,
+                    worldPositionX: updatedPlayer.worldPositionX,
+                    worldPositionY: updatedPlayer.worldPositionY,
+                    currentSubmapId: submapId,
+                    submapCoordinateX: parseInt(updatedPlayer.submapCoordinateX),
+                    submapCoordinateY: parseInt(updatedPlayer.submapCoordinateY),
+                    submapCoordinateZ: updatedPlayer.submapCoordinateZ
+                    // Add any other relevant properties here
+                };
+                currentSubmap = submapId;
+                isInSubmap = true;
+                loadSubmapData(submapId);
+            })
+            .catch(error => console.error('Error entering submap:', error));
+    }
+
+
+    function drawWorldMap() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const startX = Math.floor(currentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
@@ -321,18 +422,26 @@
         }
 
         for (const player of players) {
-            if (player.id !== currentPlayer.player.id) {
+            if (player.id !== currentPlayer.id) {
                 const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
                 const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
 
                 if (x >= -SPRITE_SIZE/2 && x < VIEWPORT_WIDTH + SPRITE_SIZE/2 &&
                     y >= -SPRITE_SIZE/2 && y < VIEWPORT_HEIGHT + SPRITE_SIZE/2) {
-                    await drawPlayer(x, y, player, false);
+                    drawPlayer(x, y, player, false);
                 }
             }
         }
 
-        await drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer.player, true);
+        submapEntrances.forEach(entrance => {
+            const x = entrance.x - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = entrance.y - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            ctx.fillStyle = '#FF00FF'; // Magenta color for visibility
+            ctx.fillRect(x - 5, y - 5, 10, 10);
+        });
+
+
+        drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
 
         coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
     }
@@ -343,6 +452,7 @@
         return terrainColors['PLAINS'];
     }
 
+
     async function drawPlayer(x, y, player, isCurrentPlayer) {
         const layers = [
             player.subspriteBackground || 'background_0',
@@ -350,25 +460,15 @@
             player.subspriteEyes || 'eyes_0',
             player.subspriteHairHat || 'hairhat_0'
         ];
-
         try {
             for (const layer of layers) {
                 const sprite = await loadSprite(layer);
                 ctx.drawImage(sprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
             }
-
             ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
             ctx.font = '12px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(player.username, x, y + SPRITE_SIZE / 2 + 15);
-
-            if (!isCurrentPlayer) {
-                ctx.beginPath();
-                ctx.arc(x, y, SPRITE_SIZE / 2, 0, 2 * Math.PI);
-                if (ctx.isPointInPath(lastClickX, lastClickY)) {
-                    handlePlayerClick(player);
-                }
-            }
         } catch (error) {
             console.error('Error loading sprite:', error);
             ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
@@ -377,6 +477,7 @@
             ctx.fill();
         }
     }
+
 
     function loadSprite(spriteName) {
         return new Promise((resolve, reject) => {
@@ -388,190 +489,115 @@
     }
 
     function updatePlayerInfo() {
-        if (currentPlayer && currentPlayer.player.username)
-            document.getElementById('player-name').textContent = currentPlayer.player.username;
-        if (currentPlayer && currentPlayer.player.level) {
-            document.getElementById('player-level').textContent = currentPlayer.player.level;
-        }
-        if (currentPlayer && currentPlayer.player.experience) {
-            document.getElementById('player-exp').textContent = currentPlayer.player.experience;
+        if (currentPlayer) {
+            document.getElementById('player-name').textContent = currentPlayer.username || '';
+            document.getElementById('player-level').textContent = currentPlayer.level || '';
+            document.getElementById('player-exp').textContent = currentPlayer.currentSubmapId || 'NO SUBMAP';
         }
     }
 
     function updateNearbyPlayersList() {
         const nearbyPlayersList = document.getElementById('nearby-players');
-        if (!nearbyPlayersList) {
-            console.error('Failed to find the nearby players list element in the document.');
-            return;
-        }
-
         nearbyPlayersList.innerHTML = '';
 
-        if (!Array.isArray(players)) {
-            console.error('Players data is not an array or is undefined.');
-            return;
-        }
-
         players.forEach(player => {
-            if (!player || typeof player !== 'object') {
-                console.error('Invalid player data detected.', player);
-                return;
-            }
-
-            if (!currentPlayer || !currentPlayer.player.id) {
-                console.error('Current player data is missing or incomplete.');
-                return;
-            }
-
-            if (player.id !== currentPlayer.player.id) {
-                if (!player.username || typeof player.level === 'undefined') {
-                    console.error('Player data is incomplete. Missing username or level.', player);
-                    return;
-                }
-
+            if (player.id !== currentPlayer.id) {
                 const li = document.createElement('li');
-                li.textContent = `${player.username} (Level ${player.level})${player.isNPC ? ' [NPC]' : ''}`;                nearbyPlayersList.appendChild(li);
+                li.textContent = `${player.username} (Level ${player.level})${player.isNPC ? ' [NPC]' : ''}`;
+                nearbyPlayersList.appendChild(li);
             }
         });
     }
-
-    const MOVE_SPEED = 32; // pixels per second
     const MOVE_INTERVAL = 1000 / 60; // 60 FPS
     const SEND_INTERVAL = 200; // Send position to server every 200ms
 
-    let moveInterval;
     let sendInterval;
-    let movementVector = { x: 0, y: 0 };
     let accumulatedMovement = { x: 0, y: 0 };
 
     function updatePlayerPosition(playerIdOfPlayerToUpdate, x, y) {
-        // Prevent movement to 0,0 or negative coordinates
+        if (!currentPlayer) {
+            console.error('Current player is not initialized');
+            return;
+        }
+
         if (x <= 0 || y <= 0) {
             console.log('Attempted move to invalid position:', x, y);
             return;
         }
 
-        // Round the coordinates to prevent floating point issues
         x = Math.round(x);
         y = Math.round(y);
 
-        if (playerIdOfPlayerToUpdate === currentPlayer.player.id) {
-            // Update current player's position
-            if (x === currentPlayer.worldPositionX && y === currentPlayer.worldPositionY) {
-                console.log('Current player position unchanged, skipping update');
+        if (playerIdOfPlayerToUpdate === getCurrentPlayerId()) {
+            if (x === getCurrentPlayerX() && y === getCurrentPlayerY()) {
                 return;
             }
 
-            console.log('Updating current player position to:', x, y);
-
-            fetch('/api/world-map/move', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    playerId: currentPlayer.player.id,
-                    newX: x,
-                    newY: y
-                })
-            })
-                .then(response => response.json())
-                .then(updatedPlayer => {
-                    if (updatedPlayer.worldPositionX !== currentPlayer.worldPositionX ||
-                        updatedPlayer.worldPositionY !== currentPlayer.worldPositionY) {
-                        currentPlayer.worldPositionX = updatedPlayer.worldPositionX;
-                        currentPlayer.worldPositionY = updatedPlayer.worldPositionY;
-                        updatePlayerInfo();
-                        fetchPlayersInViewport();
-                    }
-                    drawWorldMap();
-                })
-                .catch(error => console.error('Error updating player position:', error));
+            setCurrentPlayerPosition(x, y);
+            updatePlayerInfo();
+            drawWorldMap();
         } else {
-            // Update other player's position
             const player = players.find(p => p.id === playerIdOfPlayerToUpdate);
             if (player) {
-                console.log('Updating other player position:', playerIdOfPlayerToUpdate, x, y);
                 player.worldPositionX = x;
                 player.worldPositionY = y;
                 drawWorldMap();
             } else {
                 console.log('Player not found in viewport:', playerIdOfPlayerToUpdate);
-                fetchPlayersInViewport(); // Refresh the players in viewport
+                fetchPlayersInViewport();
             }
         }
     }
 
 
-
-
     const sendPositionToServer = debounce(() => {
-        updatePlayerPosition(playerId, currentPlayer.worldPositionX, currentPlayer.worldPositionY);
-    }, SEND_INTERVAL);
+        if (isInSubmap) {
+            fetch(`/api/submaps/${currentSubmap.id}/move-player`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerId: getCurrentPlayerId(),
+                    x: Math.round(currentPlayer.submapCoordinateX),
+                    y: Math.round(currentPlayer.submapCoordinateY)
+                })
+            }).catch(error => console.error('Error updating player position in submap:', error));
+        } else {
+            fetch('/api/world-map/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playerId: getCurrentPlayerId(),
+                    newX: Math.round(currentPlayer.worldPositionX),
+                    newY: Math.round(currentPlayer.worldPositionY)
+                })
+            }).catch(error => console.error('Error updating player position in overworld:', error));
+        }
+    }, 100); // Debounce for 100msebounce for 100ms
+
 
     function updateLocalPosition() {
         if (movementVector.x !== 0 || movementVector.y !== 0) {
             const normalizedVector = normalizeVector(movementVector);
-            accumulatedMovement.x += normalizedVector.x * (MOVE_SPEED * MOVE_INTERVAL / 1000);
-            accumulatedMovement.y += normalizedVector.y * (MOVE_SPEED * MOVE_INTERVAL / 1000);
+            const dx = normalizedVector.x * (MOVE_SPEED * MOVE_INTERVAL / 1000);
+            const dy = normalizedVector.y * (MOVE_SPEED * MOVE_INTERVAL / 1000);
 
-            // Only update position when accumulated movement is >= 1 pixel
-            if (Math.abs(accumulatedMovement.x) >= 1) {
-                currentPlayer.worldPositionX += Math.trunc(accumulatedMovement.x);
-                accumulatedMovement.x = accumulatedMovement.x % 1;
+            if (isInSubmap) {
+                currentPlayer.submapCoordinateX = Math.max(0, Math.min(currentSubmap.width - 1, currentPlayer.submapCoordinateX + dx));
+                currentPlayer.submapCoordinateY = Math.max(0, Math.min(currentSubmap.height - 1, currentPlayer.submapCoordinateY + dy));
+                drawSubmap();
+            } else {
+                currentPlayer.worldPositionX += dx;
+                currentPlayer.worldPositionY += dy;
+                drawWorldMap();
             }
-            if (Math.abs(accumulatedMovement.y) >= 1) {
-                currentPlayer.worldPositionY += Math.trunc(accumulatedMovement.y);
-                accumulatedMovement.y = accumulatedMovement.y % 1;
-            }
-
-            drawWorldMap();
         }
     }
-
     function normalizeVector(vector) {
         const magnitude = Math.sqrt(vector.x * vector.x + vector.y * vector.y);
         return magnitude !== 0 ? { x: vector.x / magnitude, y: vector.y / magnitude } : { x: 0, y: 0 };
     }
 
-    // Event listeners for movement
-    canvas.addEventListener('click', (event) => {
-        const rect = canvas.getBoundingClientRect();
-        lastClickX = event.clientX - rect.left;
-        lastClickY = event.clientY - rect.top;
 
-        const worldX = currentPlayer.worldPositionX + Math.round(lastClickX - VIEWPORT_WIDTH / 2);
-        const worldY = currentPlayer.worldPositionY + Math.round(lastClickY - VIEWPORT_HEIGHT / 2);
-
-        updatePlayerPosition(currentPlayer.player.id, worldX, worldY);
-    });
-
-    document.addEventListener('keydown', (event) => {
-        switch (event.key.toLowerCase()) {
-            case 'w': movementVector.y = -1; break;
-            case 'a': movementVector.x = -1; break;
-            case 's': movementVector.y = 1; break;
-            case 'd': movementVector.x = 1; break;
-        }
-        if (!moveInterval) {
-            moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
-        }
-        if (!sendInterval) {
-            sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
-        }
-    });
-
-    document.addEventListener('keyup', (event) => {
-        switch (event.key.toLowerCase()) {
-            case 'w': case 's': movementVector.y = 0; break;
-            case 'a': case 'd': movementVector.x = 0; break;
-        }
-        if (movementVector.x === 0 && movementVector.y === 0) {
-            clearInterval(moveInterval);
-            clearInterval(sendInterval);
-            moveInterval = null;
-            sendInterval = null;
-            sendPositionToServer(); // Send final position
-        }
-    });
 
     // Debounce function
     function debounce(func, wait) {
@@ -588,17 +614,14 @@
 
 
 
-    function fetchPlayersInViewport() {
-        const centerX = currentPlayer.worldPositionX;
-        const centerY = currentPlayer.worldPositionY;
 
-        fetch(`/api/world-map/players?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
-            .then(response => response.json())
-            .then(data => {
-                players = data;
-                updateNearbyPlayersList();
-                drawWorldMap();
-            });
+
+
+    function startCombat(combatId) {
+        currentCombatId = combatId;
+        document.getElementById('worldMapContainer').style.display = 'none';
+        document.getElementById('combatArea').style.display = 'block';
+        fetchCombatState(combatId);
     }
 
     function fetchCombatState(combatId) {
@@ -607,17 +630,158 @@
             .then(combat => {
                 updateCombatUI(combat);
                 fetchPlayerSpells();
+                fetchStatusEffects(combatId);
                 pollCombatStatus();
             })
             .catch(error => console.error('Error fetching combat state:', error));
     }
 
-    function startCombat(combatId) {
-        currentCombatId = combatId;
-        document.getElementById('worldMapContainer').style.display = 'none';
-        document.getElementById('combatArea').style.display = 'block';
-        fetchCombatState(combatId);
+    function fetchStatusEffects(combatId) {
+        fetch(`/api/combat/${combatId}/status-effects`)
+            .then(response => response.json())
+            .then(effects => {
+                statusEffects = effects || {}; // Ensure statusEffects is always an object
+                updateStatusEffectsDisplay();
+            })
+            .catch(error => {
+                console.error('Error fetching status effects:', error);
+                statusEffects = {}; // Reset to empty object on error
+            });
     }
+
+
+    function updateCombatUI(combat) {
+        updatePlayerCards(combat);
+        updateTurnIndicator(combat);
+        updateCombatInfo(combat);
+        updateSpellCooldowns(combat);
+        updateActionButtons(combat);
+        updateSelectionVisibility(combat);
+        fetchAndUpdateCombatLog(combat.id);
+        updateStatusEffectsDisplay();
+    }
+
+
+    function updatePlayerCards(combat) {
+        const playerCardsContainer = document.getElementById('playerCards');
+        playerCardsContainer.innerHTML = '';
+
+        const playerCount = combat.playerIds.length;
+        const spriteSize = playerCount < 5 ? 128 : 64;
+
+        combat.playerIds.forEach(id => {
+            const health = combat.playerHealth[id];
+            const maxHealth = combat.playerHealthStarting[id];
+            const healthPercentage = (health / maxHealth) * 100;
+
+            const playerCard = document.createElement('div');
+            playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
+            playerCard.innerHTML = `
+            <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
+                ${getPlayerSprite(id, spriteSize)}
+            </div>
+            <h3 class="text-center mt-2">${id}</h3>
+            <div class="health-bar">
+                <div class="health-bar-fill" style="width: ${healthPercentage}%"></div>
+            </div>
+            <p class="text-center mt-2">HP: ${health} / ${maxHealth}</p>
+            <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
+            <div class="status-effects" id="status-effects-${id}"></div>
+        `;
+            playerCardsContainer.appendChild(playerCard);
+        });
+    }
+
+    function updateStatusEffectsDisplay() {
+        if (!statusEffects || Object.keys(statusEffects).length === 0) {
+            console.log('No status effects to display');
+            return; // Exit the function if there are no status effects
+        }
+
+        Object.keys(statusEffects).forEach(playerId => {
+            const statusEffectsContainer = document.getElementById(`status-effects-${playerId}`);
+            if (statusEffectsContainer) {
+                statusEffectsContainer.innerHTML = '';
+                const playerEffects = statusEffects[playerId] || [];
+                playerEffects.forEach(effect => {
+                    if (effect && effect.statusEffect) {
+                        const effectElement = document.createElement('div');
+                        effectElement.className = 'status-effect';
+                        effectElement.style.backgroundColor = effect.statusEffect.color || '#cccccc';
+                        effectElement.style.border = `2px solid ${effect.statusEffect.borderColor || '#999999'}`;
+                        effectElement.title = `${effect.statusEffect.displayName || 'Unknown Effect'} (${effect.duration} turns)`;
+                        effectElement.textContent = effect.statusEffect.shortDisplayName || '?';
+                        statusEffectsContainer.appendChild(effectElement);
+                    }
+                });
+            }
+        });
+    }
+
+    function performAction(actionType) {
+        selectedAction = actionType;
+        const spellSelection = document.getElementById('spellSelection');
+        const targetSelection = document.getElementById('targetSelection');
+
+        spellSelection.style.display = 'none';
+        targetSelection.style.display = 'none';
+
+        if (actionType === 'SPELL') {
+            spellSelection.style.display = 'block';
+            updateSpellSelection();
+            updateSpellInfo();
+        } else {
+            updateTargetSelection();
+            targetSelection.style.display = 'block';
+        }
+    }
+
+
+    function confirmAction() {
+        const targetPlayerId = document.getElementById('targetSelect').value;
+        if (!targetPlayerId) {
+            alert('Please select a target.');
+            return;
+        }
+
+        let actionData = {
+            playerId: playerId,
+            type: selectedAction,
+            targetPlayerId: targetPlayerId,
+            actionPoints: 1
+        };
+
+        if (selectedAction === 'SPELL') {
+            if (!selectedSpell) {
+                alert('Please select a spell.');
+                return;
+            }
+            actionData.spellId = selectedSpell.id;
+        }
+
+        fetch(`/api/combat/${currentCombatId}/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(actionData)
+        })
+            .then(response => response.json())
+            .then(updatedCombat => {
+                updateCombatUI(updatedCombat);
+                document.getElementById('spellSelection').style.display = 'none';
+                document.getElementById('targetSelection').style.display = 'none';
+                fetchStatusEffects(currentCombatId); // This will now handle cases with no status effects
+                if (!updatedCombat.active) {
+                    showCombatResults(updatedCombat);
+                }
+            })
+            .catch(error => {
+                console.error('Error performing action:', error);
+                alert('An error occurred while performing the action. Please try again.');
+            });
+
+        selectedSpell = null;
+    }
+
     function fetchPlayerSpells() {
         fetch(`/api/players/${playerId}/spells`)
             .then(response => response.json())
@@ -653,45 +817,8 @@
             });
     }
 
-    function updateCombatUI(combat) {
-        console.log('Updating combat UI:', combat);
-        updatePlayerCards(combat);
-        updateTurnIndicator(combat);
-        updateCombatInfo(combat);
-        updateSpellCooldowns(combat);
-        updateActionButtons(combat);
-        updateSelectionVisibility(combat);
-        fetchAndUpdateCombatLog(combat.id);
-    }
 
-    function updatePlayerCards(combat) {
-        const playerCardsContainer = document.getElementById('playerCards');
-        playerCardsContainer.innerHTML = '';
 
-        const playerCount = combat.playerIds.length;
-        const spriteSize = playerCount < 5 ? 128 : 64;
-
-        combat.playerIds.forEach(id => {
-            const health = combat.playerHealth[id];
-            const maxHealth = combat.playerHealthStarting[id];
-            const healthPercentage = (health / maxHealth) * 100;
-
-            const playerCard = document.createElement('div');
-            playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
-            playerCard.innerHTML = `
-            <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
-                ${getPlayerSprite(id, spriteSize)}
-            </div>
-            <h3 class="text-center mt-2">${id}</h3>
-            <div class="health-bar">
-                <div class="health-bar-fill" style="width: ${healthPercentage}%"></div>
-            </div>
-            <p class="text-center mt-2">HP: ${health} / ${maxHealth}</p>
-            <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
-        `;
-            playerCardsContainer.appendChild(playerCard);
-        });
-    }
 
     function getPlayerSprite(playerId, size) {
         if (playerId && playerId.startsWith('AI')) {
@@ -778,23 +905,6 @@
     `;
     }
 
-    function performAction(actionType) {
-        selectedAction = actionType;
-        const spellSelection = document.getElementById('spellSelection');
-        const targetSelection = document.getElementById('targetSelection');
-
-        spellSelection.style.display = 'none';
-        targetSelection.style.display = 'none';
-
-        if (actionType === 'SPELL') {
-            spellSelection.style.display = 'block';
-            updateSpellSelection();
-            updateSpellInfo();
-        } else {
-            updateTargetSelection();
-            targetSelection.style.display = 'block';
-        }
-    }
 
 
     function handleSpellSelection() {
@@ -887,46 +997,7 @@
             .catch(error => console.error('Error updating target selection:', error));
     }
 
-    function confirmAction() {
-        const targetPlayerId = document.getElementById('targetSelect').value;
-        if (!targetPlayerId) {
-            alert('Please select a target.');
-            return;
-        }
 
-        let actionData = {
-            playerId: playerId,
-            type: selectedAction,
-            targetPlayerId: targetPlayerId,
-            actionPoints: 1
-        };
-
-        if (selectedAction === 'SPELL') {
-            if (!selectedSpell) {
-                alert('Please select a spell.');
-                return;
-            }
-            actionData.spellId = selectedSpell.id;
-        }
-
-        fetch(`/api/combat/${currentCombatId}/action`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(actionData)
-        })
-            .then(response => response.json())
-            .then(updatedCombat => {
-                updateCombatUI(updatedCombat);
-                document.getElementById('spellSelection').style.display = 'none';
-                document.getElementById('targetSelection').style.display = 'none';
-                if (!updatedCombat.active) {
-                    showCombatResults(updatedCombat);
-                }
-            })
-            .catch(error => console.error('Error performing action:', error));
-
-        selectedSpell = null;
-    }
 
     function showCombatResults(combat) {
         document.getElementById('combatArea').style.display = 'none';
@@ -1010,10 +1081,19 @@
     // Duel functions
     function handlePlayerClick(player) {
         selectedPlayer = player;
-        const distance = Math.sqrt(
-            Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
-            Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
-        );
+        let distance;
+
+        if (isInSubmap) {
+            distance = Math.sqrt(
+                Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
+                Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+            );
+        } else {
+            distance = Math.sqrt(
+                Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
+                Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+            );
+        }
 
         if (distance <= DUEL_RANGE) {
             showDuelButton();
@@ -1021,6 +1101,7 @@
             hideDuelButton();
         }
     }
+
 
     function showDuelButton() {
         const duelButton = document.getElementById('duelButton');
@@ -1053,7 +1134,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                challengerId: currentPlayer.player.id,
+                challengerId: currentPlayer.id,
                 targetId: selectedPlayer.id
             })
         })
@@ -1061,7 +1142,7 @@
             .then(data => {
                 console.log('Duel request response:', data); // Add this for debugging
                 if (data.success) {
-                    if (data.combatStarted) {
+                    if (data.combatId) {
                         // Combat started immediately (NPC)
                         console.log('Starting combat with NPC:', data.combatId);
                         startCombat(data.combatId);
@@ -1090,6 +1171,183 @@
         }
     }
 
+    //SubMaps:
+    function returnToOverworld() {
+        fetch(`/api/submaps/${currentSubmap.id}/return/${getCurrentPlayerId()}`, {
+            method: 'POST'
+        })
+            .then(response => response.json())
+            .then(updatedPlayer => {
+                currentPlayer = {
+                    id: updatedPlayer.id,
+                    username: updatedPlayer.username,
+                    level: updatedPlayer.level,
+                    experience: updatedPlayer.experience,
+                    worldPositionX: updatedPlayer.worldPositionX,
+                    worldPositionY: updatedPlayer.worldPositionY,
+                    currentSubmapId: null,
+                    submapCoordinateX: null,
+                    submapCoordinateY: null,
+                    submapCoordinateZ: null
+                    // Add any other relevant properties here
+                };
+                currentSubmap = null;
+                isInSubmap = false;
+                drawWorldMap();
+                fetchPlayersInViewport();
+            })
+            .catch(error => console.error('Error returning to overworld:', error));
+    }
+
+    function movePlayerInSubmap(x, y) {
+        x = Math.round(x);
+        y = Math.round(y);
+
+        // Ensure the movement is within submap boundaries
+        x = Math.max(0, Math.min(currentSubmap.width - 1, x));
+        y = Math.max(0, Math.min(currentSubmap.height - 1, y));
+
+        if (x === currentPlayer.submapCoordinateX && y === currentPlayer.submapCoordinateY) {
+            return;
+        }
+
+        currentPlayer.submapCoordinateX = x;
+        currentPlayer.submapCoordinateY = y;
+        drawSubmap();
+    }
+
+
+    function processMovement() {
+        if (isKeyboardMovement) {
+            processKeyboardMovement();
+        } else if (movementQueue.length > 0) {
+            const nextPosition = movementQueue.shift();
+            movePlayer(nextPosition.x, nextPosition.y);
+        } else {
+            stopMovementInterval();
+        }
+    }
+    function startMovementInterval() {
+        if (!moveInterval) {
+            moveInterval = setInterval(processMovement, 1000 / 60); // 60 FPS
+        }
+    }
+
+    function stopMovementInterval() {
+        if (moveInterval) {
+            clearInterval(moveInterval);
+            moveInterval = null;
+            sendPositionToServer(); // Send final position
+        }
+    }
+
+
+
+    function movePlayer(x, y) {
+        if (isInSubmap) {
+            movePlayerInSubmap(x, y);
+        } else {
+            updatePlayerPosition(getCurrentPlayerId(), x, y);
+        }
+
+        checkAndReportPosition();
+    }
+
+    function checkAndReportPosition() {
+        const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
+        const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+
+        const dx = currentX - lastReportedPosition.x;
+        const dy = currentY - lastReportedPosition.y;
+        const distanceMoved = Math.sqrt(dx * dx + dy * dy);
+
+        if (distanceMoved >= REPORT_THRESHOLD) {
+            sendPositionToServer();
+            lastReportedPosition = { x: currentX, y: currentY };
+        }
+    }
+
+    function processKeyboardMovement() {
+        if (movementVector.x !== 0 || movementVector.y !== 0) {
+            const normalizedVector = normalizeVector(movementVector);
+            const newX = (isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX()) + normalizedVector.x * MOVE_SPEED;
+            const newY = (isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY()) + normalizedVector.y * MOVE_SPEED;
+            movePlayer(Math.round(newX), Math.round(newY));
+        }
+    }
+
+    function drawSubmapElement(element) {
+        ctx.fillStyle = element.color || '#CCCCCC';
+        ctx.fillRect(element.x, element.y, element.width, element.height);
+
+        if (element.type === 'exit') {
+            ctx.fillStyle = '#FF0000';
+            ctx.beginPath();
+            ctx.arc(element.x + element.width / 2, element.y + element.height / 2, 5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+    }
+    function drawSubmap() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw submap background and elements
+        if (currentSubmap && currentSubmap.elements) {
+            currentSubmap.elements.forEach(element => drawSubmapElement(element));
+        }
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#D3D3D3');  // Light gray at the top
+        gradient.addColorStop(1, '#696969');  // Dark gray at the bottom
+
+        // Apply gradient background
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+
+
+        // Draw other players in the submap
+        players.forEach(player => {
+            if (player.id !== getCurrentPlayerId()) {
+                const x = player.submapCoordinateX - currentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
+                const y = player.submapCoordinateY - currentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
+                drawPlayer(x, y, player, false);
+            }
+        });
+
+        // Draw current player
+        drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
+
+        coordsDisplay.textContent = `Submap: ${currentSubmap ? currentSubmap.title : 'Unknown'} | X: ${currentPlayer.submapCoordinateX}, Y: ${currentPlayer.submapCoordinateY}`;
+    }
+
+    function loadSubmapData(submapId) {
+        fetch(`/api/submaps/${submapId}`)
+            .then(response => response.json())
+            .then(submapData => {
+                currentSubmap = submapData;
+                drawSubmap();
+                fetchPlayersInSubmap(submapId);
+            })
+            .catch(error => console.error('Error loading submap data:', error));
+    }
+
+    function fetchPlayersInSubmap(submapId) {
+        fetch(`/api/submaps/${submapId}/players`)
+            .then(response => response.json())
+            .then(submapPlayers => {
+                players = submapPlayers.filter(player => player.id !== getCurrentPlayerId());
+                updateNearbyPlayersList();
+                drawSubmap();
+            })
+            .catch(error => console.error('Error fetching players in submap:', error));
+    }
+
+
+
+
+
+
+
     function setupWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
@@ -1097,7 +1355,7 @@
 
         socket.onopen = function(event) {
             console.log('WebSocket connection established');
-            socket.send(JSON.stringify({ type: 'register', playerId: currentPlayer.player.id }));
+            socket.send(JSON.stringify({ type: 'register', playerId: currentPlayer.id }));
         };
 
         socket.onmessage = function(event) {
@@ -1114,6 +1372,12 @@
                     break;
                 case 'duelRejected':
                     alert(`${data.targetUsername} has rejected your duel request.`);
+                    break;
+                case 'enterSubmap':
+                    enterSubmap(data.submapId);
+                    break;
+                case 'exitSubmap':
+                    returnToOverworld();
                     break;
             }
         };
@@ -1151,7 +1415,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 challengerId: challengerId,
-                targetId: currentPlayer.player.id
+                targetId: currentPlayer.id
             })
         })
             .then(response => response.json())
@@ -1172,7 +1436,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 challengerId: challengerId,
-                targetId: currentPlayer.player.id
+                targetId: currentPlayer.id
             })
         })
             .then(response => response.json())
@@ -1189,16 +1453,16 @@
     // WebSocket setup and handling
 
     // Event listeners
-    canvas.addEventListener('click', (event) => {
-        const rect = canvas.getBoundingClientRect();
-        lastClickX = event.clientX - rect.left;
-        lastClickY = event.clientY - rect.top;
-
-        const worldX = currentPlayer.worldPositionX + Math.round(lastClickX - VIEWPORT_WIDTH / 2);
-        const worldY = currentPlayer.worldPositionY + Math.round(lastClickY - VIEWPORT_HEIGHT / 2);
-
-        updatePlayerPosition(currentPlayer, worldX, worldY);
-    });
+    // canvas.addEventListener('click', (event) => {
+    //     const rect = canvas.getBoundingClientRect();
+    //     lastClickX = event.clientX - rect.left;
+    //     lastClickY = event.clientY - rect.top;
+    //
+    //     const worldX = currentPlayer.worldPositionX + Math.round(lastClickX - VIEWPORT_WIDTH / 2);
+    //     const worldY = currentPlayer.worldPositionY + Math.round(lastClickY - VIEWPORT_HEIGHT / 2);
+    //
+    //     updatePlayerPosition(currentPlayer, worldX, worldY);
+    // });
 
     // Debounce function
 
@@ -1227,8 +1491,32 @@
                 dx = MOVE_SPEED;
                 break;
         }
+
         if (dx !== 0 || dy !== 0) {
-            updatePlayerPosition(currentPlayer.worldPositionX + dx, currentPlayer.worldPositionY + dy);
+            if (isInSubmap) {
+                const newX = Math.max(0, Math.min(currentSubmap.width - 1, currentPlayer.submapCoordinateX + dx));
+                const newY = Math.max(0, Math.min(currentSubmap.height - 1, currentPlayer.submapCoordinateY + dy));
+                movePlayerInSubmap(Math.round(newX), Math.round(newY));
+            } else {
+                const newX = currentPlayer.worldPositionX + dx;
+                const newY = currentPlayer.worldPositionY + dy;
+                updatePlayerPosition(getCurrentPlayerId(), Math.round(newX), Math.round(newY));
+            }
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        switch (event.key.toLowerCase()) {
+            case 'w': movementVector.y = -1; break;
+            case 'a': movementVector.x = -1; break;
+            case 's': movementVector.y = 1; break;
+            case 'd': movementVector.x = 1; break;
+        }
+        if (!moveInterval) {
+            moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
+        }
+        if (!sendInterval) {
+            sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
         }
     });
 
@@ -1239,11 +1527,10 @@
             case 'a': case 'd': movementVector.x = 0; break;
         }
         if (movementVector.x === 0 && movementVector.y === 0) {
-            clearInterval(moveInterval);
-            clearInterval(sendInterval);
-            moveInterval = null;
-            sendInterval = null;
-            sendPositionToServer(); // Send final position
+            isKeyboardMovement = false;
+            if (movementQueue.length === 0) {
+                stopMovementInterval();
+            }
         }
     });
 
@@ -1253,7 +1540,7 @@
             const message = this.value;
             if (message.trim() !== '') {
                 // In a real implementation, you would send this message to your server
-                addChatMessage(currentPlayer.player.username, message);
+                addChatMessage(currentPlayer.username, message);
                 this.value = '';
             }
         }
@@ -1268,7 +1555,36 @@
     }
 
 
-        initWorldMap();
+    //HELPERS:
+
+    function getCurrentPlayerId() {
+        return currentPlayer ? currentPlayer.id : null;
+    }
+
+    function getCurrentPlayerX() {
+        return currentPlayer ? currentPlayer.worldPositionX : 0;
+    }
+
+    function getCurrentPlayerY() {
+        return currentPlayer ? currentPlayer.worldPositionY : 0;
+    }
+
+    function getCurrentPlayerData() {
+        return currentPlayer || null;
+    }
+
+    function setCurrentPlayerPosition(x, y) {
+        if (currentPlayer) {
+            currentPlayer.worldPositionX = x;
+            currentPlayer.worldPositionY = y;
+        }
+    }
+
+
+    //
+
+
+    initWorldMap();
         setInterval(fetchPlayersInViewport, 5000); // Update every 5 seconds
 </script>
 </body>

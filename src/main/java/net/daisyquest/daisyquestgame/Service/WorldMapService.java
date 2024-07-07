@@ -1,13 +1,12 @@
 package net.daisyquest.daisyquestgame.Service;
 
 
-import net.daisyquest.daisyquestgame.Model.Land;
-import net.daisyquest.daisyquestgame.Model.LandType;
-import net.daisyquest.daisyquestgame.Model.Player;
-import net.daisyquest.daisyquestgame.Model.WorldMap;
-import net.daisyquest.daisyquestgame.Repository.LandRepository;
-import net.daisyquest.daisyquestgame.Repository.PlayerRepository;
-import net.daisyquest.daisyquestgame.Repository.WorldMapRepository;
+import jakarta.annotation.PostConstruct;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import net.daisyquest.daisyquestgame.Model.*;
+import net.daisyquest.daisyquestgame.Repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Service
 public class WorldMapService {
@@ -26,8 +26,13 @@ public class WorldMapService {
     @Autowired
     private LandRepository landRepository;
 
-    private final Random random = new Random();
+    @Autowired
+    PlayerInventoryRepository playerInventoryRepository;
 
+    @Autowired
+    SubmapRepository submapRepository;
+    private final Random random = new Random();
+    private final Map<String, SubmapEntrance> submapEntrances = new HashMap<>();
     @Transactional
     public WorldMap getOrCreateWorldMap(int width, int height) {
         List<WorldMap> existingMaps = worldMapRepository.findAll();
@@ -120,10 +125,14 @@ public class WorldMapService {
         int rightX = Math.min(worldPixelWidth - 1, centerX + viewportWidth / 2);
         int topY = Math.max(0, centerY - viewportHeight / 2);
         int bottomY = Math.min(worldPixelHeight - 1, centerY + viewportHeight / 2);
-
+        //todo:cleanup
         // Query for players within these boundaries
-        return playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(leftX, rightX, topY, bottomY);
-    }
+        var x = playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(leftX, rightX, topY, bottomY);
+        for(Player p : x){
+            p.setInventory(playerInventoryRepository.findByPlayerId(p.getId()));
+        }
+        return x;
+        }
 
     public Land getLandAtPosition(int x, int y) {
         WorldMap worldMap = getWorldMap();
@@ -131,4 +140,70 @@ public class WorldMapService {
         int landY = (y / LAND_SIZE) % worldMap.getHeight();
         return landRepository.findByXCoordinateAndYCoordinate(landX, landY);
     }
+
+
+    @PostConstruct
+    public void initializeSubmapEntrances() {
+        addSubmapEntrance("60d5ec9f82c2a8c9a8b9e1a1", 10000, 10000); // Peaceful Meadow
+        addSubmapEntrance("60d5ec9f82c2a8c9a8b9e1a2", 10500, 10500); // Mystic Cave
+        addSubmapEntrance("60d5ec9f82c2a8c9a8b9e1a3", 11000, 11000); // Player House
+    }
+
+    private void addSubmapEntrance(String submapId, int x, int y) {
+        submapEntrances.put(submapId, new SubmapEntrance(submapId, x, y));
+    }
+
+    public boolean isPlayerNearSubmapEntrance(int playerX, int playerY) {
+        for (SubmapEntrance entrance : submapEntrances.values()) {
+            double distance = calculateDistance(playerX, playerY, entrance.getX(), entrance.getY());
+            if (distance <= 5.0) { // 5.0 is the threshold distance
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public String getSubmapIdNearPlayer(int playerX, int playerY) {
+        for (SubmapEntrance entrance : submapEntrances.values()) {
+            double distance = calculateDistance(playerX, playerY, entrance.getX(), entrance.getY());
+            if (distance <= 5.0) { // 5.0 is the threshold distance
+                return entrance.getSubmapId();
+            }
+        }
+        return null;
+    }
+
+    private double calculateDistance(int x1, int y1, int x2, int y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    }
+
+    public List<SubmapEntranceDTO> getSubmapEntrances() {
+        return submapEntrances.values().stream()
+                .map(entrance -> new SubmapEntranceDTO(entrance.getSubmapId(), entrance.getX(), entrance.getY()))
+                .collect(Collectors.toList());
+    }
+
+
+
+// Add this DTO class
+
+
+
+    // Inner class to represent a submap entrance
+    @Getter
+    private static class SubmapEntrance {
+        private final String submapId;
+        private final int x;
+        private final int y;
+
+        public SubmapEntrance(String submapId, int x, int y) {
+            this.submapId = submapId;
+            this.x = x;
+            this.y = y;
+        }
+
+    }
+
+
+
     }

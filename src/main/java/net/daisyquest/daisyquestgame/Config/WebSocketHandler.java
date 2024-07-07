@@ -25,12 +25,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
         // The playerId will be set when the client sends a register message
     }
 
+
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         try (JsonReader jsonReader = Json.createReader(new StringReader(message.getPayload()))) {
             JsonObject jsonMessage = jsonReader.readObject();
             String type = jsonMessage.getString("type");
-
             switch (type) {
                 case "register":
                     String playerId = jsonMessage.getString("playerId");
@@ -38,6 +38,15 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     break;
                 case "playerMove":
                     broadcastPlayerMove(jsonMessage);
+                    break;
+                case "chat":
+                    broadcastChatMessage(jsonMessage);
+                    break;
+                case "enterSubmap":
+                    handleEnterSubmap(jsonMessage);
+                    break;
+                case "exitSubmap":
+                    handleExitSubmap(jsonMessage);
                     break;
             }
         }
@@ -97,4 +106,65 @@ public class WebSocketHandler extends TextWebSocketHandler {
             }
         }
     }
+
+    private void broadcastChatMessage(JsonObject chatMessage) throws IOException {
+        String senderId = chatMessage.getString("playerId");
+        for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
+            if (!entry.getKey().equals(senderId)) {
+                entry.getValue().sendMessage(new TextMessage(chatMessage.toString()));
+            }
+        }
+    }
+
+    private void handleEnterSubmap(JsonObject enterSubmapMessage) throws IOException {
+        String playerId = enterSubmapMessage.getString("playerId");
+        String submapId = enterSubmapMessage.getString("submapId");
+        for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
+            if (!entry.getKey().equals(playerId)) {
+                JsonObject message = Json.createObjectBuilder()
+                        .add("type", "playerEnteredSubmap")
+                        .add("playerId", playerId)
+                        .add("submapId", submapId)
+                        .build();
+                entry.getValue().sendMessage(new TextMessage(message.toString()));
+            }
+        }
+    }
+
+    private void handleExitSubmap(JsonObject exitSubmapMessage) throws IOException {
+        String playerId = exitSubmapMessage.getString("playerId");
+        String submapId = exitSubmapMessage.getString("submapId");
+        for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
+            if (!entry.getKey().equals(playerId)) {
+                JsonObject message = Json.createObjectBuilder()
+                        .add("type", "playerExitedSubmap")
+                        .add("playerId", playerId)
+                        .add("submapId", submapId)
+                        .build();
+                entry.getValue().sendMessage(new TextMessage(message.toString()));
+            }
+        }
+    }
+
+    public void sendEnterSubmapNotification(String playerId, String submapId) throws IOException {
+        WebSocketSession session = sessions.get(playerId);
+        if (session != null && session.isOpen()) {
+            JsonObject message = Json.createObjectBuilder()
+                    .add("type", "enterSubmap")
+                    .add("submapId", submapId)
+                    .build();
+            session.sendMessage(new TextMessage(message.toString()));
+        }
+    }
+
+    public void sendExitSubmapNotification(String playerId) throws IOException {
+        WebSocketSession session = sessions.get(playerId);
+        if (session != null && session.isOpen()) {
+            JsonObject message = Json.createObjectBuilder()
+                    .add("type", "exitSubmap")
+                    .build();
+            session.sendMessage(new TextMessage(message.toString()));
+        }
+    }
+
 }

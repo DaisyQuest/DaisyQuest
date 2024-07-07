@@ -3,54 +3,26 @@ package net.daisyquest.daisyquestgame.Service;
 import net.daisyquest.daisyquestgame.Model.*;
 import net.daisyquest.daisyquestgame.Model.Currency;
 import net.daisyquest.daisyquestgame.Repository.*;
+import net.daisyquest.daisyquestgame.Service.Failure.InvalidCurrencyException;
+import net.daisyquest.daisyquestgame.Service.Failure.RewardNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.LocalDate;
 import java.util.*;
-/**
- * The RewardService class manages all reward-related operations in the DaisyQuest game.
- * This service handles chest opening, reward claiming, daily rewards, and reward application to players.
- * <p>
- * Key functionalities include:
- * <ul>
- *     <li>Opening chests and generating rewards</li>
- *     <li>Claiming rewards and applying them to players</li>
- *     <li>Managing daily rewards</li>
- *     <li>Retrieving unclaimed rewards for players</li>
- * </ul>
- * <p>
- * The reward system is built around the concept of RewardContainers, which encapsulate
- * a set of Rewards. These containers can be generated from various sources (e.g., chests,
- * daily rewards) and are stored for players to claim later.
- * <p>
- * Rewards can be of different types (CURRENCY, RESOURCE, ITEM, ATTRIBUTE_EXPERIENCE),
- * and each type is handled differently when applied to a player.
- * <p>
- * The service interacts with several repositories to manage game entities:
- * <ul>
- *     <li>PlayerRepository: For player data management</li>
- *     <li>RewardContainerRepository: For storing and retrieving reward containers</li>
- *     <li>ChestRepository: For chest data management</li>
- *     <li>ItemRepository: For item data management</li>
- *     <li>CurrencyRepository: For currency data management</li>
- * </ul>
- * <p>
- * It also utilizes a RewardGeneratorService for creating rewards based on specific criteria.
- *
- * @author DaisyQuest Development Team
- * @version 1.0
- * @since 2024-06-30
- */
 
+/**
+ * The RewardService manages all reward-related operations in the DaisyQuest game.
+ */
 @Service
 public class RewardService {
+    private static final Logger logger = LoggerFactory.getLogger(RewardService.class);
+
     @Autowired
-    private PlayerRepository playerRepository;
+    private PlayerService playerService;
 
     @Autowired
     private RewardContainerRepository rewardContainerRepository;
@@ -67,188 +39,205 @@ public class RewardService {
     @Autowired
     private CurrencyRepository currencyRepository;
 
+    /**
+     * Opens a chest for a player and generates rewards.
+     *
+     * @param playerId The ID of the player opening the chest
+     * @param chestId  The ID of the chest to open
+     * @return A list of generated rewards
+     * @throws PlayerNotFoundException if the player is not found
+     * @throws ItemNotFoundException if the chest is not found
+     * @throws IllegalArgumentException if the player doesn't own the chest
+     */
     @Transactional
     public List<Reward> openChest(String playerId, String chestId) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
+        Player player = playerService.getPlayer(playerId);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with id: " + playerId);
+        }
 
-        Chest chest = chestRepository.findById(chestId)
-                .orElseThrow(() -> new RuntimeException("Chest not found"));
+        Item chestItem = itemRepository.findById(chestId)
+                .orElseThrow(() -> new ItemNotFoundException("Chest not found with id: " + chestId));
 
-        // Check if the player owns the chest
-        if (player.getInventory().stream().noneMatch(o -> o.getId().equals(chest.getItemId()))) {
+        if (!chestItem.isChest()) {
+            throw new IllegalArgumentException("Item is not a chest: " + chestId);
+        }
+
+        PlayerInventory inventory = player.getInventory();
+        if (!inventory.hasItem(chestItem.getId())){
             throw new IllegalArgumentException("Player does not own this chest");
         }
 
-        // Generate rewards based on chest type
+        Chest chest = chestRepository.findById(chestId)
+                .orElseThrow(() -> new ItemNotFoundException("Chest data not found for item: " + chestId));
+
         List<Reward> rewards = rewardGeneratorService.generateRewardsForChest(chest);
 
-        // Create a new RewardContainer
         RewardContainer container = new RewardContainer();
         container.setPlayerId(playerId);
         container.setRewards(rewards);
         container.setMultipliers(new HashMap<>());
         rewardContainerRepository.save(container);
 
-        // Remove the chest from the player's inventory
+        inventory.removeItem(chestId, 1);
+        playerService.updatePlayer(player);
 
-
-        Item chestToDelete = player.getInventory().stream().filter(o -> o.getId().equals(chest.getItemId())).findFirst().orElseThrow();
-        player.getInventory().remove(chestToDelete);
-
-        playerRepository.save(player);
-
-        // Delete the chest item
-        itemRepository.deleteById(chestId);
-
+        logger.info("Player {} opened chest {}. Generated {} rewards.", playerId, chestId, rewards.size());
         return rewards;
     }
 
-
-    //todo delete me:
+    /**
+     * Claims a reward for a player.
+     *
+     * @param playerId           The ID of the player claiming the reward
+     * @param rewardContainerId  The ID of the reward container to claim
+     * @throws PlayerNotFoundException if the player is not found
+     * @throws RewardNotFoundException if the reward container is not found
+     * @throws IllegalArgumentException if the reward doesn't belong to the player
+     */
     @Transactional
-    public List<Reward> openChestTest(String playerId, String chestId) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
-
-        Chest chest = chestRepository.findById(chestId)
-                .orElse(new Chest());
-
-        // Check if the player owns the chest
-        if (player.getInventory().stream().noneMatch(o -> o.getId().equals(chest.getItemId()))) {
-            throw new IllegalArgumentException("Player does not own this chest");
+    public void claimReward(String playerId, String rewardContainerId) {
+        Player player = playerService.getPlayer(playerId);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with id: " + playerId);
         }
 
-        // Generate rewards based on chest type
-        List<Reward> rewards = rewardGeneratorService.generateRewardsForChest(chest);
-
-        // Create a new RewardContainer
-        RewardContainer container = new RewardContainer();
-        container.setPlayerId(playerId);
-        container.setRewards(rewards);
-        container.setMultipliers(new HashMap<>());
-        rewardContainerRepository.save(container);
-
-        // Remove the chest from the player's inventory
-
-
-        Item chestToDelete = player.getInventory().stream().filter(o -> o.getId().equals(chest.getItemId())).findFirst().orElseThrow();
-        player.getInventory().remove(chestToDelete);
-
-        playerRepository.save(player);
-
-        // Delete the chest item
-        itemRepository.deleteById(chestId);
-
-        return rewards;
-    }
-
-    //todo: delete above
-    //TESTING
-
-
-    public void claimReward(String playerId, String rewardContainerId) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
         RewardContainer container = rewardContainerRepository.findById(rewardContainerId)
-                .orElseThrow(() -> new RuntimeException("Reward container not found"));
+                .orElseThrow(() -> new RewardNotFoundException("Reward container not found with id: " + rewardContainerId));
 
         if (!container.getPlayerId().equals(playerId)) {
             throw new IllegalArgumentException("This reward does not belong to the player");
         }
+
         for (Reward reward : container.getRewards()) {
             applyRewardToPlayer(player, reward);
         }
-        List<Reward> calculatedRewards = calculateRewards(player);
-        for (Reward reward : calculatedRewards) {
-            //
-        }
 
         rewardContainerRepository.delete(container);
-        playerRepository.save(player);
+        playerService.updatePlayer(player);
+        logger.info("Player {} claimed reward container {}.", playerId, rewardContainerId);
     }
 
-    private List<Reward> calculateRewards(Player player) {
-        return new ArrayList<>();
-    }
+    /**
+     * Checks if a player can claim their daily reward.
+     *
+     * @param playerId The ID of the player
+     * @return true if the player can claim their daily reward, false otherwise
+     * @throws PlayerNotFoundException if the player is not found
+     */
+    public boolean canClaimDailyReward(String playerId) {
+        Player player = playerService.getPlayer(playerId);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with id: " + playerId);
+        }
 
-    public boolean canClaimDailyReward(Player player) {
+        LocalDate lastClaimDate = player.getLastDailyRewardClaim();
         LocalDate today = LocalDate.now();
-        return player.getLastDailyRewardClaim() == null || player.getLastDailyRewardClaim().isBefore(today);
+
+        return lastClaimDate == null || !lastClaimDate.equals(today);
     }
 
+    /**
+     * Claims the daily reward for a player.
+     *
+     * @param playerId The ID of the player claiming the daily reward
+     * @throws PlayerNotFoundException if the player is not found
+     * @throws IllegalStateException if the player has already claimed their daily reward
+     */
+    @Transactional
     public void claimDailyReward(String playerId) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
+        Player player = playerService.getPlayer(playerId);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with id: " + playerId);
+        }
 
-        if (canClaimDailyReward(player)) {
+        if (canClaimDailyReward(playerId)) {
             RewardContainer dailyReward = createDailyReward(player);
             rewardContainerRepository.save(dailyReward);
             player.setLastDailyRewardClaim(LocalDate.now());
-            playerRepository.save(player);
+            playerService.updatePlayer(player);
+            logger.info("Player {} claimed daily reward.", playerId);
         } else {
             throw new IllegalStateException("Daily reward already claimed today");
         }
     }
 
+    /**
+     * Creates a daily reward for a player.
+     *
+     * @param player The player to create the daily reward for
+     * @return A RewardContainer with the daily rewards
+     */
     public RewardContainer createDailyReward(Player player) {
-        // Logic to create daily reward
         RewardContainer container = new RewardContainer();
         container.setPlayerId(player.getId());
-        // Set rewards based on your game's daily reward system
+        container.setRewards(rewardGeneratorService.generateDailyRewards());
         return container;
     }
 
+    /**
+     * Applies a reward to a player.
+     *
+     * @param player The player to apply the reward to
+     * @param reward The reward to apply
+     */
     private void applyRewardToPlayer(Player player, Reward reward) {
+        PlayerInventory inventory = player.getInventory();
         switch (reward.getType()) {
             case CURRENCY:
-                //player.addCurrency(reward.getRewardId(), reward.getQuantity());
-                Optional<Currency> c = currencyRepository.findById(reward.getRewardId());
-                c.ifPresent(currency -> player.getCurrencies().put(currency.getId(), reward.getQuantity()));
+                Currency currency = currencyRepository.findById(reward.getRewardId())
+                        .orElseThrow(() -> new InvalidCurrencyException("Currency not found with id: " + reward.getRewardId()));
+                player.getCurrencies().merge(currency.getId(), reward.getQuantity(), Integer::sum);
                 break;
             case RESOURCE:
                 player.setResources(player.getResources() + reward.getQuantity());
                 break;
             case ITEM:
-                if (itemRepository.findById(reward.getRewardId()).isPresent()) {
-                    for (int i = 0; i < reward.getQuantity(); i++) {
-                        player.getInventory().add(itemRepository.findById(reward.getRewardId()).get());
-                    }
+                Item item = itemRepository.findById(reward.getRewardId())
+                        .orElseThrow(() -> new ItemNotFoundException("Item not found with id: " + reward.getRewardId()));
+                try {
+                    inventory.addItem(item, reward.getQuantity());
+                } catch (InventoryFullException e) {
+                    logger.warn("Player {}'s inventory is full. Could not add all of item {}.", player.getId(), item.getId());
                 }
                 break;
             case ATTRIBUTE_EXPERIENCE:
-                Attribute a = player.getAttributes().get(reward.getRewardId());
-                if (a != null) {
-                    a.setExperience(a.getExperience() + reward.getQuantity());
+                Attribute attribute = player.getAttributes().get(reward.getRewardId());
+                if (attribute != null) {
+                    attribute.setExperience(attribute.getExperience() + reward.getQuantity());
+                } else {
+                    logger.warn("Attribute {} not found for player {}.", reward.getRewardId(), player.getId());
                 }
                 break;
         }
     }
 
+    /**
+     * Gets all unclaimed rewards for a player.
+     *
+     * @param playerId The ID of the player
+     * @return A list of unclaimed RewardContainers
+     */
     public List<RewardContainer> getUnclaimedRewards(String playerId) {
         return rewardContainerRepository.findByPlayerId(playerId);
     }
 
+    // Test methods (should be removed or moved to a separate test service in production)
 
-    /**
-     * Generates a random reward and applies it to the specified player.
-     * This method is for testing purposes only.
-     *
-     * @param playerId The ID of the player to receive the random reward
-     * @return The generated and applied Reward
-     * @throws RuntimeException if the player is not found
-     */
+    @Transactional
     public Reward generateAndApplyRandomReward(String playerId) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
+        Player player = playerService.getPlayer(playerId);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with id: " + playerId);
+        }
 
         Reward randomReward = generateRandomReward();
         applyRewardToPlayer(player, randomReward);
-        playerRepository.save(player);
+        playerService.updatePlayer(player);
 
+        logger.info("Generated and applied random reward for player {}.", playerId);
         return randomReward;
     }
-
 
     private Reward generateRandomReward() {
         RewardType[] types = RewardType.values();
@@ -284,61 +273,47 @@ public class RewardService {
     }
 
 
-    /**
-     * Opens a random chest for the specified player.
-     * If the player doesn't have any chests, it creates a random one.
-     *
-     * @param playerId The ID of the player opening the chest
-     * @return A List of Reward objects generated from the chest
-     * @throws RuntimeException if the player is not found
-     */
     @Transactional
     public List<Reward> openRandomChest(String playerId) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
-
-        // Find a chest in the player's inventory or create a random one
-        Item chestItem = player.getInventory().stream()
-                .filter(Item::isChest)
-                .findAny()
-                .orElseGet(() -> itemRepository.findAll().stream().findAny().get());
-        Chest c = new Chest();
-        c.setItemId(chestItem.getId());
-        c.setName("Test Chest");
-        c.setDescription("Testing This!!");
-        chestRepository.save(c);
-        // If we created a new chest, we need to save the player to persist it
-        if (!player.getInventory().contains(chestItem)) {
-            player.getInventory().add(chestItem);
-            playerRepository.save(player);
+        Player player = playerService.getPlayer(playerId);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with id: " + playerId);
         }
 
-        // Now open the chest
+        PlayerInventory inventory = player.getInventory();
+        Item chestItem = inventory.getInventorySlots().stream()
+                .filter(slot -> slot.hasItem() && slot.getItem().isChest())
+                .map(InventorySlot::getItem)
+                .findAny()
+                .orElseGet(this::createRandomChest);
+
+        if (!inventory.hasItem(chestItem.getId())) {
+            try {
+                inventory.addItem(chestItem, 1);
+            } catch (InventoryFullException e) {
+                throw new IllegalStateException("Cannot add random chest to inventory. Inventory is full.");
+            }
+            playerService.updatePlayer(player);
+        }
+
+        logger.info("Player {} opened a random chest.", playerId);
         return openChest(playerId, chestItem.getId());
     }
 
-    private Chest createRandomChest(Player player) {
+    private Item createRandomChest() {
+        Item chestItem = new Item();
+        chestItem.setId(UUID.randomUUID().toString());
+        chestItem.setName("Random Test Chest");
+        chestItem.setDescription("A chest created for testing purposes");
+        chestItem.setChest(true);
+        itemRepository.save(chestItem);
+
         Chest chest = new Chest();
-        chest.setItemId(UUID.randomUUID().toString());
+        chest.setItemId(chestItem.getId());
         chest.setName("Random Test Chest");
         chest.setDescription("A chest created for testing purposes");
-        // You might want to set other properties of the chest here
+        chestRepository.save(chest);
 
-        return chestRepository.save(chest);
-    }
-
-
-
-    public boolean canClaimDailyReward(String playerId) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new RuntimeException("Player not found"));
-
-        LocalDate lastClaimDate = player.getLastDailyRewardClaim();
-        LocalDate today = LocalDate.now();
-
-        return lastClaimDate == null || !lastClaimDate.equals(today);
+        return chestItem;
     }
 }
-
-
-

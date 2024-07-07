@@ -1,5 +1,6 @@
 package net.daisyquest.daisyquestgame.Model;
 
+import net.daisyquest.daisyquestgame.Service.StatusEffectService;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.Data;
@@ -28,5 +29,49 @@ public class Combat {
     private Instant createdAt;
     private List<String> combatLogIds = new ArrayList<>(); // New field to store references to combat logs
     private Map<String, Map<String, Integer>> spellCooldowns = new HashMap<>(); // New field for tracking spell cooldowns
+    private TurnPhase currentPhase = TurnPhase.START_PHASE;
+    private Map<String, Map<String, CombatStatusContainer>> playerStatusEffects = new HashMap<>();
+
+    public void progressPhase() {
+        switch (currentPhase) {
+            case START_PHASE:
+                currentPhase = TurnPhase.PLAYER_PHASE;
+                break;
+            case PLAYER_PHASE:
+                currentPhase = TurnPhase.END_PHASE;
+                break;
+            case END_PHASE:
+                currentPhase = TurnPhase.START_PHASE;
+                turnNumber++;
+                // Logic to move to next player's turn
+                break;
+        }
+    }
+
+    public void addStatusEffect(String playerId, StatusEffect effect, int duration) {
+        playerStatusEffects
+                .computeIfAbsent(playerId, k -> new HashMap<>())
+                .put(effect.getId(), new CombatStatusContainer(playerId, effect, duration));
+    }
+
+    public void removeStatusEffect(String playerId, StatusEffect effect) {
+        Map<String, CombatStatusContainer> playerEffects = playerStatusEffects.get(playerId);
+        if (playerEffects != null) {
+            playerEffects.remove(effect.getId());
+        }
+    }
+
+
+
+    public void applyDamage(String playerId, int amount) {
+        int currentHealth = playerHealth.get(playerId);
+        playerHealth.put(playerId, Math.max(0, currentHealth - amount));
+    }
+
+    private void applyHealing(String playerId, int amount) {
+        int currentHealth = playerHealth.get(playerId);
+        int maxHealth = playerHealthStarting.get(playerId);
+        playerHealth.put(playerId, Math.min(maxHealth, currentHealth + amount));
+    }
 
 }

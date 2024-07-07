@@ -1,0 +1,5 @@
+<!-- Critical Strike -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    <path d="M16 2 L30 16 L16 30 L2 16 Z" fill="#ff0000"/>
+    <text x="16" y="22" font-family="Arial" font-size="20" fill="white" text-anchor="middle">!</text>
+</svg>

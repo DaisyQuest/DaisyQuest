@@ -11,7 +11,7 @@ import java.util.*;
 
 @Component
 public class PlayerInitializer {
-
+    private static final int INITIAL_INVENTORY_SIZE = 16; // You can adjust this value as needed
     public static void initPlayer(Player p1, List<Currency> p_cur, List<Spell> p_spells){
         if(p1 == null){
             p1 = new Player();
@@ -22,7 +22,6 @@ public class PlayerInitializer {
         initializeTalents(p1);
 
         initializeQuests(p1);
-        initalizeInventory(p1);
         initializeCurrency(p1, p_cur);
 
         initalizeSpells(p1, p_spells);
@@ -74,11 +73,7 @@ public class PlayerInitializer {
         }
     }
 
-    private static void initalizeInventory(Player p1) {
-        if(p1.getInventory() == null){
-            p1.setInventory(new ArrayList<Item>());
-        }
-    }
+
 
     private static void initializeQuests(Player p1) {
         if(p1.getCompletedQuests() == null){

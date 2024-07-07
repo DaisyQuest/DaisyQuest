@@ -11,6 +11,7 @@ let currentPlayer;
 let unclaimedRewardCount = 0;
 let combatLogs = [];
 let currencyDetails;
+let playerCurrencies = {};
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
 document.getElementById('startCombatBtn').addEventListener('click', startCombat);
@@ -33,7 +34,7 @@ function initializeGame() {
             displayUnclaimedRewards();
             updateUnclaimedRewardsIndicator(unclaimedRewardCount);
         });
-        updateInventory();
+      //  updateInventory();
     }
 }
 
@@ -251,25 +252,38 @@ let availableCurrencies = [];
 
 // This function should be called whenever the player data is updated
 function updateAvailableCurrencies() {
-    if (currentPlayer && currentPlayer.currencies) {
-        // Create an object to store available currencies with their details
-        availableCurrencies = Object.entries(currentPlayer.currencies)
-            .filter(([currencyId, amount]) => amount > 0)
-            .reduce((acc, [currencyId, amount]) => {
-                const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
-                acc[currencyId] = {
-                    ...details,
-                    amount: amount
-                };
-                return acc;
-            }, {});
-    } else {
-        console.error('Current player or currencies not available');
-        availableCurrencies = {};
-    }
-    console.log('Available currencies:', availableCurrencies);
+    fetch('/api/currencies')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data || !Array.isArray(data)) {
+                throw new Error('Invalid data received from server');
+            }
+            availableCurrencies = data;
+            updateCurrencyUI();
+        })
+        .catch(error => {
+            console.error('Error fetching currencies:', error);
+            availableCurrencies = []; // Set to empty array in case of error
+            updateCurrencyUI();
+        });
 }
 
+function updateCurrencyUI() {
+    const currenciesList = document.getElementById('currencies-list');
+    if (currenciesList) {
+        currenciesList.innerHTML = '';
+        availableCurrencies.forEach(currency => {
+            const li = document.createElement('li');
+            li.textContent = `${currency.name}: ${playerCurrencies[currency.id] || 0}`;
+            currenciesList.appendChild(li);
+        });
+    }
+}
 
 // Call this function when the game initializes and after any updates to player data
 
@@ -491,8 +505,8 @@ function updateCraftingInventory() {
             }
             return response.json();
         })
-        .then(inventory => {
-            craftingInventory = inventory;
+        .then(data => {
+            craftingInventory = data.inventorySlots;
             updateCraftingUI();
         })
         .catch(error => {
@@ -503,16 +517,43 @@ function updateCraftingInventory() {
 
 function updateCraftingUI() {
     const inventoryList = document.getElementById('craftingInventoryList');
-    const ingredientsList = document.getElementById('craftingIngredientsList');
+    inventoryList.innerHTML = '';
 
-    if (!inventoryList || !ingredientsList) {
-        console.error('Crafting list elements not found');
-        return;
-    }
-
-    inventoryList.innerHTML = craftingInventory.map(item => createCraftingItemHTML(item, 'inventory')).join('');
-    ingredientsList.innerHTML = craftingIngredients.map(item => createCraftingItemHTML(item, 'ingredients')).join('');
+    craftingInventory.forEach(slot => {
+        if (slot.item) {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'crafting-item';
+            itemElement.innerHTML = `
+                <img src="/images/items/${slot.item.id}.png" alt="${slot.item.name}">
+                <span>${slot.item.name} (x${slot.quantity})</span>
+                <button onclick="addToCraftingIngredients('${slot.item.id}')">Add</button>
+            `;
+            inventoryList.appendChild(itemElement);
+        }
+    });
 }
+
+function addToCraftingIngredients(itemId) {
+    const slot = craftingInventory.find(slot => slot.item && slot.item.id === itemId);
+    if (slot) {
+        const existingIngredient = craftingIngredients.find(i => i.id === itemId);
+        if (existingIngredient) {
+            if (existingIngredient.quantity < slot.quantity) {
+                existingIngredient.quantity++;
+            }
+        } else {
+            craftingIngredients.push({
+                id: itemId,
+                name: slot.item.name,
+                quantity: 1
+            });
+        }
+        updateCraftingIngredientsUI();
+    }
+}
+
+
+
 
 function createCraftingItemHTML(item, listType) {
     return `
@@ -525,7 +566,6 @@ function createCraftingItemHTML(item, listType) {
                 ${listType === 'inventory' ? '→' : '←'}
             </button>
             </div>
-
         </div>
     `;
 }
@@ -599,6 +639,36 @@ function attemptCrafting() {
             console.error('Error crafting:', error);
             alert('Error crafting: ' + error.message);
         });
+}
+
+
+
+function updateCraftingIngredientsUI() {
+    const ingredientsList = document.getElementById('craftingIngredientsList');
+    ingredientsList.innerHTML = '';
+
+    craftingIngredients.forEach(ingredient => {
+        const ingredientElement = document.createElement('div');
+        ingredientElement.className = 'crafting-ingredient';
+        ingredientElement.innerHTML = `
+            <img src="/images/items/${ingredient.id}.png" alt="${ingredient.name}">
+            <span>${ingredient.name} (x${ingredient.quantity})</span>
+            <button onclick="removeFromCraftingIngredients('${ingredient.id}')">Remove</button>
+        `;
+        ingredientsList.appendChild(ingredientElement);
+    });
+}
+
+function removeFromCraftingIngredients(itemId) {
+    const index = craftingIngredients.findIndex(i => i.id === itemId);
+    if (index !== -1) {
+        if (craftingIngredients[index].quantity > 1) {
+            craftingIngredients[index].quantity--;
+        } else {
+            craftingIngredients.splice(index, 1);
+        }
+        updateCraftingIngredientsUI();
+    }
 }
 
 
@@ -705,11 +775,6 @@ function pollCombatStatus() {
 // Add new functions for the updated UI
 function updatePlayerCards(combat) {
     const playerCardsContainer = document.getElementById('playerCards');
-    if (!playerCardsContainer) {
-        console.error('Player cards container not found');
-        return;
-    }
-
     playerCardsContainer.innerHTML = '';
 
     const playerCount = combat.playerIds.length;
@@ -722,6 +787,7 @@ function updatePlayerCards(combat) {
 
         const playerCard = document.createElement('div');
         playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
+        playerCard.dataset.playerId = id;
         playerCard.innerHTML = `
             <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
                 ${getPlayerSprite(id, spriteSize)}
@@ -732,9 +798,12 @@ function updatePlayerCards(combat) {
             </div>
             <p class="text-center mt-2">HP: ${health} / ${maxHealth}</p>
             <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
+            <div class="status-effects"></div>
         `;
         playerCardsContainer.appendChild(playerCard);
     });
+
+    updateStatusEffectsDisplay();
 }
 
 
@@ -787,26 +856,13 @@ function createCombatLogEntry(log) {
     `;
 }
 
+// Add these global variables
+let currentTurnPhase = '';
+let playerStatusEffects = {};
+
+// Modify the updateCombatUI function
 function updateCombatUI(combat) {
     console.log('Updating combat UI:', combat);
-
-    const combatArea = document.getElementById('combatArea');
-
-    if (!combatArea) {
-        console.error('Combat area not found in the DOM');
-        return;
-    }
-
-    // Ensure the player cards container exists
-    let playerCardsContainer = document.getElementById('playerCards');
-    if (!playerCardsContainer) {
-        console.log('Creating playerCards container');
-        playerCardsContainer = document.createElement('div');
-        playerCardsContainer.id = 'playerCards';
-        playerCardsContainer.className = 'row';
-        combatArea.appendChild(playerCardsContainer);
-    }
-
     updatePlayerCards(combat);
     updateTurnIndicator(combat);
     updateCombatInfo(combat);
@@ -814,7 +870,57 @@ function updateCombatUI(combat) {
     updateActionButtons(combat);
     updateSelectionVisibility(combat);
     fetchAndUpdateCombatLog(combat.id);
+    fetchAndUpdateStatusEffects(combat.id);
+    fetchAndUpdateTurnPhase(combat.id);
 }
+
+// Add these new functions
+function fetchAndUpdateStatusEffects(combatId) {
+    fetch(`/api/combat/${combatId}/status-effects`)
+        .then(response => response.json())
+        .then(data => {
+            playerStatusEffects = data;
+            updateStatusEffectsDisplay();
+        })
+        .catch(error => console.error('Error fetching status effects:', error));
+}
+
+function updateStatusEffectsDisplay() {
+    const playerCards = document.querySelectorAll('.player-card');
+    playerCards.forEach(card => {
+        const playerId = card.dataset.playerId;
+        const statusEffectsContainer = card.querySelector('.status-effects');
+        statusEffectsContainer.innerHTML = '';
+
+        if (playerStatusEffects[playerId]) {
+            playerStatusEffects[playerId].forEach(effect => {
+                const effectElement = document.createElement('div');
+                effectElement.className = 'status-effect';
+                effectElement.style.backgroundColor = effect.statusEffect.color;
+                effectElement.style.borderColor = effect.statusEffect.borderColor;
+                effectElement.title = `${effect.statusEffect.displayName} (${effect.duration} turns remaining)`;
+                effectElement.textContent = effect.statusEffect.shortDisplayName;
+                statusEffectsContainer.appendChild(effectElement);
+            });
+        }
+    });
+}
+
+function fetchAndUpdateTurnPhase(combatId) {
+    fetch(`/api/combat/${combatId}/turn-phase`)
+        .then(response => response.json())
+        .then(data => {
+            currentTurnPhase = data;
+            updateTurnPhaseDisplay();
+        })
+        .catch(error => console.error('Error fetching turn phase:', error));
+}
+
+function updateTurnPhaseDisplay() {
+    const turnPhaseElement = document.getElementById('turnPhase');
+    turnPhaseElement.textContent = `Current Phase: ${currentTurnPhase}`;
+}
+
 
 // Modify the existing updateCombatInfo function to include the combat log
 
@@ -1085,53 +1191,53 @@ function openSpriteSelectionModal() {
         });
 }
 
-function updateInventory() {
-    Promise.all([
-        fetch(`/api/players/${playerId}/inventory`).then(response => response.json()),
-        fetch(`/api/players/${playerId}`).then(response => response.json())
-    ])
-        .then(([inventory, playerData]) => {
-            const inventoryList = document.getElementById('inventoryList');
-            const currencyDetails = playerData.currencyDetails;
-            const player = playerData.player;
-
-            let inventoryHTML = '<h5>Inventory</h5>';
-            inventoryHTML += inventory.map(item => `
-            <div class="inventory-item">
-                <h6>${item.name}</h6>
-                <p>${item.description}</p>
-                <p>Sell Price: ${item.sellPrice} gold</p>
-                ${item.isChest ?
-                `<button class="btn btn-sm btn-primary" onclick="openChest('${item.id}')">Open Chest</button>` :
-                `<button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>`
-            }
-                <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
-                <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
-                <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
-            </div>
-        `).join('');
-
-            inventoryHTML += '<h5 class="mt-4">Currencies</h5>';
-            inventoryHTML += '<ul class="list-group">';
-            inventoryHTML += Object.entries(player.currencies || {}).map(([currencyId, amount]) => {
-                const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
-                return `<li class="list-group-item">
-                ${details.name}: ${details.symbol}${amount}
-            </li>`;
-            }).join('');
-            inventoryHTML += '</ul>';
-
-            inventoryList.innerHTML = inventoryHTML;
-        })
-        .catch(error => {
-            console.error('Error updating inventory:', error);
-            document.getElementById('inventoryList').innerHTML = `
-            <div class="alert alert-danger" role="alert">
-                Failed to update inventory. Please try again later.
-            </div>
-        `;
-        });
-}
+// function updateInventory() {
+//     Promise.all([
+//         fetch(`/api/players/${playerId}/inventory`).then(response => response.json()),
+//         fetch(`/api/players/${playerId}`).then(response => response.json())
+//     ])
+//         .then(([inventory, playerData]) => {
+//             const inventoryList = document.getElementById('inventoryList');
+//             const currencyDetails = playerData.currencyDetails;
+//             const player = playerData.player;
+//
+//             let inventoryHTML = '<h5>Inventory</h5>';
+//             inventoryHTML += inventory.map(item => `
+//             <div class="inventory-item">
+//                 <h6>${item.name}</h6>
+//                 <p>${item.description}</p>
+//                 <p>Sell Price: ${item.sellPrice} gold</p>
+//                 ${item.isChest ?
+//                 `<button class="btn btn-sm btn-primary" onclick="openChest('${item.id}')">Open Chest</button>` :
+//                 `<button class="btn btn-sm btn-primary" onclick="useItem('${item.id}')">Use</button>`
+//             }
+//                 <button class="btn btn-sm btn-danger" onclick="dropItem('${item.id}')">Drop</button>
+//                 <button class="btn btn-sm btn-info" onclick="openSendItemModal('${item.id}')">Send</button>
+//                 <button class="btn btn-sm btn-success" onclick="openListItemModal('${item.id}')">List for Sale</button>
+//             </div>
+//         `).join('');
+//
+//             inventoryHTML += '<h5 class="mt-4">Currencies</h5>';
+//             inventoryHTML += '<ul class="list-group">';
+//             inventoryHTML += Object.entries(player.currencies || {}).map(([currencyId, amount]) => {
+//                 const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
+//                 return `<li class="list-group-item">
+//                 ${details.name}: ${details.symbol}${amount}
+//             </li>`;
+//             }).join('');
+//             inventoryHTML += '</ul>';
+//
+//             inventoryList.innerHTML = inventoryHTML;
+//         })
+//         .catch(error => {
+//             console.error('Error updating inventory:', error);
+//             document.getElementById('inventoryList').innerHTML = `
+//             <div class="alert alert-danger" role="alert">
+//                 Failed to update inventory. Please try again later.
+//             </div>
+//         `;
+//         });
+// }
 
 // Quest and Activity Functions
     function updateQuestList() {
@@ -1297,7 +1403,7 @@ function useItem(itemId) {
         .then(result => {
             alert(`Item used! ${result.message}`);
             updatePlayerInfo();
-            updateInventory();
+          //  updateInventory();
         });
 }
 
@@ -1307,7 +1413,7 @@ function dropItem(itemId) {
             .then(response => response.json())
             .then(result => {
                 alert(`Item dropped! ${result.message}`);
-                updateInventory();
+               // updateInventory();
             });
     }
 }
@@ -1331,7 +1437,7 @@ function sendItem() {
         .then(response => response.json())
         .then(result => {
             alert(`Item sent! ${result.message}`);
-            updateInventory();
+         //   updateInventory();
             bootstrap.Modal.getInstance(document.getElementById('sendItemModal')).hide();
         })
         .catch(error => {
@@ -1402,7 +1508,7 @@ function buyItem(shopId, itemId) {
         .then(result => {
             alert(result.message);
             updatePlayerInfo();
-            updateInventory();
+           // updateInventory();
             viewShop(shopId); // Refresh the shop view
         })
         .catch(error => {
@@ -1444,7 +1550,7 @@ function listItemForSale() {
         .then(result => {
             alert(result.message);
             updatePlayerShop();
-            updateInventory();
+          //  updateInventory();
             bootstrap.Modal.getInstance(document.getElementById('listItemModal')).hide();
         })
         .catch(error => {
@@ -1460,7 +1566,7 @@ function removeShopItem(shopItemId) {
             .then(result => {
                 alert(result.message);
                 updatePlayerShop();
-                updateInventory();
+          //      updateInventory();
             })
             .catch(error => {
                 alert('Error removing item: ' + error.message);
@@ -1584,7 +1690,7 @@ function claimReward(rewardContainerId) {
         .then(result => {
             alert('Reward claimed successfully!');
             updatePlayerInfo();
-            updateInventory();
+         //   updateInventory();
         })
         .catch(error => console.error('Error claiming reward:', error));
 }
@@ -1670,7 +1776,7 @@ function openRandomChest() {
             console.log('Opened random chest:', rewards);
             showRewardAnimation(rewards);
             updatePlayerInfo();  // Refresh player info to show the applied rewards
-            updateInventory();   // Refresh inventory to show the removed chest
+           // updateInventory();   // Refresh inventory to show the removed chest
         })
         .catch(error => console.error('Error opening random chest:', error));
 }

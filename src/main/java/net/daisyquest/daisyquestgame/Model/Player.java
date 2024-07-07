@@ -1,9 +1,12 @@
 package net.daisyquest.daisyquestgame.Model;
 
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
@@ -11,6 +14,8 @@ import java.util.*;
 
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Document(collection = "players")
 public class Player {
     @Id
@@ -18,8 +23,11 @@ public class Player {
     private String username;
     private String emailAddress;
     private Map<String, Attribute> attributes;
-    private List<Item> inventory;
-    private Set<String> completedQuests;
+
+    @DBRef
+    private PlayerInventory inventory;
+
+   private Set<String> completedQuests;
     private Set<String> achievements;
     private int totalExperience;
     private int level = 1;
@@ -38,6 +46,8 @@ public class Player {
     private String subspriteFace;
     private String subspriteEyes;
     private String subspriteHairHat;
+
+
     private int worldPositionX= 10000;
     private int worldPositionY= 10000;
 
@@ -55,8 +65,11 @@ public class Player {
 
     private Map<Talent, Integer> talents = new EnumMap<>(Talent.class);
 
-    public Player() {
-        // Initialize talents map with all talents set to 0
-    }
+    private String currentSubmapId;
+    private int submapCoordinateX;
+    private int submapCoordinateY;
+    private int submapCoordinateZ;
+
+
 
 }
