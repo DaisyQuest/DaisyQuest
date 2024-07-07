@@ -182,30 +182,96 @@
     function initWorldMap() {
         initGameData();
     }
+
+
     function handleMapClick(event) {
         const rect = canvas.getBoundingClientRect();
         const clickX = event.clientX - rect.left;
         const clickY = event.clientY - rect.top;
-        lastClickX = clickX;
-        lastClickY = clickY;
-        if (isInSubmap) {
-            handleSubmapClick(clickX, clickY);
-        } else {
-            const worldX = getCurrentPlayerX() + Math.round(clickX - VIEWPORT_WIDTH / 2);
-            const worldY = getCurrentPlayerY() + Math.round(clickY - VIEWPORT_HEIGHT / 2);
 
-            // Check if click is on a submap entrance
-            fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.nearEntrance) {
-                        enterSubmap(data.submapId);
-                    } else {
-                        setupMovementPath(worldX, worldY);
-                    }
-                })
-                .catch(error => console.error('Error checking submap entrance:', error));
+        // Find if a player was clicked
+        const clickedPlayer = findClickedPlayer(clickX, clickY);
+
+        if (clickedPlayer) {
+            handlePlayerClick(clickedPlayer);
+        } else {
+            handleTerrainClick(clickX, clickY);
         }
+    }
+
+    // Add a new function to handle map clicks
+    function handleTerrainClick(clickX, clickY) {
+        if (isInSubmap) {
+            handleSubmapTerrainClick(clickX, clickY);
+        } else {
+            handleOverworldTerrainClick(clickX, clickY);
+        }
+    }
+    function handleSubmapTerrainClick(clickX, clickY) {
+        // Convert click coordinates to submap coordinates
+        const submapX = currentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
+        const submapY = currentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
+
+        // Check if the click is on an exit point
+        if(currentSubmap.elements) {
+            const exit = currentSubmap.elements.find(element =>
+                element.type === 'exit' &&
+                submapX >= element.x && submapX <= element.x + element.width &&
+                submapY >= element.y && submapY <= element.y + element.height
+            );
+        }
+        //todo: clean
+        if (false && exit) {
+            returnToOverworld();
+        } else {
+            // Ensure the target is within submap boundaries
+            const targetX = Math.max(0, Math.min(currentSubmap.width - 1, submapX));
+            const targetY = Math.max(0, Math.min(currentSubmap.height - 1, submapY));
+
+            setupMovementPath(targetX, targetY);
+        }
+    }
+    function handleOverworldTerrainClick(clickX, clickY) {
+        const worldX = getCurrentPlayerX() + Math.round(clickX - VIEWPORT_WIDTH / 2);
+        const worldY = getCurrentPlayerY() + Math.round(clickY - VIEWPORT_HEIGHT / 2);
+
+        // Check if click is on a submap entrance
+        fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.nearEntrance) {
+                    enterSubmap(data.submapId);
+                } else {
+                    setupMovementPath(worldX, worldY);
+                }
+            })
+            .catch(error => console.error('Error checking submap entrance:', error));
+    }
+
+    // Add a function to find the clicked player
+    function findClickedPlayer(clickX, clickY) {
+        const playerList =  players;
+        for (const player of playerList) {
+            if (player.id === currentPlayer.id) continue; // Skip current player
+
+            let playerX, playerY;
+            if (isInSubmap) {
+                playerX = player.submapCoordinateX - currentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
+                playerY = player.submapCoordinateY - currentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
+            } else {
+                playerX = player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+                playerY = player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            }
+
+            const dx = clickX - playerX;
+            const dy = clickY - playerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= SPRITE_SIZE / 2) {
+                return player;
+            }
+        }
+        return null;
     }
 
     function handleSubmapClick(clickX, clickY) {
@@ -235,7 +301,7 @@
     }
     // New function to set up the movement path
     let movementQueue = [];
-    const MOVE_SPEED = 5; // pixels per frame
+    const MOVE_SPEED = 3; // pixels per frame
     let moveInterval = null;
     let movementVector = { x: 0, y: 0 };
     let isKeyboardMovement = false;
@@ -394,25 +460,15 @@
             player.subspriteEyes || 'eyes_0',
             player.subspriteHairHat || 'hairhat_0'
         ];
-
         try {
             for (const layer of layers) {
                 const sprite = await loadSprite(layer);
                 ctx.drawImage(sprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
             }
-
             ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
             ctx.font = '12px Arial';
             ctx.textAlign = 'center';
             ctx.fillText(player.username, x, y + SPRITE_SIZE / 2 + 15);
-
-            if (!isCurrentPlayer) {
-                ctx.beginPath();
-                ctx.arc(x, y, SPRITE_SIZE / 2, 0, 2 * Math.PI);
-                if (ctx.isPointInPath(lastClickX, lastClickY)) {
-                    handlePlayerClick(player);
-                }
-            }
         } catch (error) {
             console.error('Error loading sprite:', error);
             ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
@@ -1025,10 +1081,19 @@
     // Duel functions
     function handlePlayerClick(player) {
         selectedPlayer = player;
-        const distance = Math.sqrt(
-            Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
-            Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
-        );
+        let distance;
+
+        if (isInSubmap) {
+            distance = Math.sqrt(
+                Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
+                Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+            );
+        } else {
+            distance = Math.sqrt(
+                Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
+                Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+            );
+        }
 
         if (distance <= DUEL_RANGE) {
             showDuelButton();
@@ -1036,6 +1101,7 @@
             hideDuelButton();
         }
     }
+
 
     function showDuelButton() {
         const duelButton = document.getElementById('duelButton');
@@ -1076,7 +1142,7 @@
             .then(data => {
                 console.log('Duel request response:', data); // Add this for debugging
                 if (data.success) {
-                    if (data.combatStarted) {
+                    if (data.combatId) {
                         // Combat started immediately (NPC)
                         console.log('Starting combat with NPC:', data.combatId);
                         startCombat(data.combatId);
