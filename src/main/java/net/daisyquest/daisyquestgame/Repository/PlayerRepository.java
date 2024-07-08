@@ -10,5 +10,7 @@ public interface PlayerRepository extends MongoRepository<Player, String> {
         Player findTopByCurrentMana(int numOfBest);
         boolean existsByUsername(String username);
         List<Player> findByWorldPositionXBetweenAndWorldPositionYBetween(int x, int x2, int y, int y2);
-    }
+
+         List<Player> findByCurrentSubmapId(String submapId);
+}
 

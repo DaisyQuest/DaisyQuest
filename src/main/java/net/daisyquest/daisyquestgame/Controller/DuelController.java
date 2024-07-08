@@ -19,56 +19,83 @@ import javax.json.JsonObject;
 
 
 @RestController
-    @RequestMapping("/api/duel")
-    public class DuelController {
+@RequestMapping("/api/duel")
+public class DuelController {
 
-        @Autowired
-        private PlayerService playerService;
+    @Autowired
+    private PlayerService playerService;
 
-        @Autowired
-        private ItemService itemService;
+    @Autowired
+    private ItemService itemService;
 
-        @Autowired
-        private CombatService combatService;
+    @Autowired
+    private CombatService combatService;
 
-        @Autowired
-        private WebSocketService webSocketService;
+    @Autowired
+    private WebSocketService webSocketService;
 
-        @PostMapping("/request")
-        public ResponseEntity<?> requestDuel(@RequestBody DuelRequest request) {
-            Player challenger = playerService.getPlayer(request.getChallengerId());
-            Player target = playerService.getPlayer(request.getTargetId());
+    @Autowired
+    private SubmapService submapService;
 
-            if (challenger == null || target == null) {
-                return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player IDs"));
-            }
+    @PostMapping("/request")
+    public ResponseEntity<?> requestDuel(@RequestBody DuelRequest request) {
+        Player challenger = playerService.getPlayer(request.getChallengerId());
+        Player target = playerService.getPlayer(request.getTargetId());
 
-            double distance = calculateDistance(challenger, target);
-            if (distance > 100) {
-                return ResponseEntity.badRequest().body(new ErrorResponse("Players are too far apart"));
-            }
-
-            if (!target.isDuelable()) {
-                return ResponseEntity.badRequest().body(new ErrorResponse("Target player is not duelable"));
-            }
-
-            if (target.isNPC()) {
-                // Automatically start combat with NPC
-                Combat combat = combatService.startCombat(Arrays.asList(challenger.getId(), target.getId()), Collections.emptyMap());
-                target.setDuelable(false);
-                playerService.updatePlayer(target);
-                return ResponseEntity.ok(new CombatStartedResponse(true ,combat.getId()));
-            } else {
-
-                webSocketService.sendDuelRequest(target.getId(), challenger.getId());
-                return ResponseEntity.ok(new SuccessResponse(true, "Duel request sent"));
-            }
+        if (challenger == null || target == null) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player IDs"));
         }
 
-    private double calculateDistance(Player challenger, Player target) {
-        int dx = challenger.getWorldPositionX() - target.getWorldPositionX();
-        int dy = challenger.getWorldPositionY() - target.getWorldPositionY();
-        return Math.sqrt(dx * dx + dy * dy);
+        // Check if both players are in the same location (either both in overworld or same submap)
+        if (!arePlayersInSameLocation(challenger, target)) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Players are not in the same location"));
+        }
+
+        double distance = calculateDistance(challenger, target);
+        if (distance > 100) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Players are too far apart"));
+        }
+
+        if (!target.isDuelable()) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Target player is not duelable"));
+        }
+
+        if (target.isNPC()) {
+            // Automatically start combat with NPC
+            Combat combat = combatService.startCombat(Arrays.asList(challenger.getId(), target.getId()), Collections.emptyMap());
+            target.setDuelable(false);
+            playerService.updatePlayer(target);
+            return ResponseEntity.ok(new CombatStartedResponse(true, combat.getId()));
+        } else {
+            webSocketService.sendDuelRequest(target.getId(), challenger.getId());
+            return ResponseEntity.ok(new SuccessResponse(true, "Duel request sent"));
+        }
+    }
+
+    private boolean arePlayersInSameLocation(Player player1, Player player2) {
+        if (player1.getCurrentSubmapId() != null && player2.getCurrentSubmapId() != null) {
+            // Both players are in submaps
+            return player1.getCurrentSubmapId().equals(player2.getCurrentSubmapId());
+        } else if (player1.getCurrentSubmapId() == null && player2.getCurrentSubmapId() == null) {
+            // Both players are in the overworld
+            return true;
+        }
+        // One player is in a submap and the other is not
+        return false;
+    }
+
+    private double calculateDistance(Player player1, Player player2) {
+        if (player1.getCurrentSubmapId() != null) {
+            // Players are in a submap
+            int dx = player1.getSubmapCoordinateX() - player2.getSubmapCoordinateX();
+            int dy = player1.getSubmapCoordinateY() - player2.getSubmapCoordinateY();
+            return Math.sqrt(dx * dx + dy * dy);
+        } else {
+            // Players are in the overworld
+            int dx = player1.getWorldPositionX() - player2.getWorldPositionX();
+            int dy = player1.getWorldPositionY() - player2.getWorldPositionY();
+            return Math.sqrt(dx * dx + dy * dy);
+        }
     }
 
     @PostMapping("/accept")
@@ -80,101 +107,67 @@ import javax.json.JsonObject;
             return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player IDs"));
         }
 
-            Combat combat = combatService.startCombat(Arrays.asList(challenger.getId(), target.getId()), Collections.emptyMap());
+        if (!arePlayersInSameLocation(challenger, target)) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Players are no longer in the same location"));
+        }
 
-            // Notify both players through WebSocket
-            webSocketService.sendDuelAccepted(challenger.getId(), target.getId(), combat.getId());
+        Combat combat = combatService.startCombat(Arrays.asList(challenger.getId(), target.getId()), Collections.emptyMap());
 
-            return ResponseEntity.ok(new CombatStartedResponse(true, combat.getId()));
+        // Notify both players through WebSocket
+        webSocketService.sendDuelAccepted(challenger.getId(), target.getId(), combat.getId());
 
+        return ResponseEntity.ok(new CombatStartedResponse(true, combat.getId()));
     }
 
-// In your WebSocketHandler or relevant WebSocket service
+    @PostMapping("/reject")
+    public ResponseEntity<?> rejectDuel(@RequestBody DuelRequest request) {
+        Player challenger = playerService.getPlayer(request.getChallengerId());
+        Player target = playerService.getPlayer(request.getTargetId());
 
-
-        @PostMapping("/reject")
-        public ResponseEntity<?> rejectDuel(@RequestBody DuelRequest request) {
-            Player challenger = playerService.getPlayer(request.getChallengerId());
-            Player target = playerService.getPlayer(request.getTargetId());
-
-            if (challenger == null || target == null) {
-                return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player IDs"));
-            }
-
-            webSocketService.sendDuelRejection(challenger.getId(), target.getUsername());
-            return ResponseEntity.ok(new SuccessResponse(true, "Duel request rejected"));
+        if (challenger == null || target == null) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player IDs"));
         }
-    @PostMapping("/transfer")
-    @Transactional
-    public ResponseEntity<?> transferItem(@RequestBody ItemTransferRequest request) {
-        try {
-            Player fromPlayer = playerService.getPlayer(request.getFromPlayerId());
-            Player toPlayer = playerService.getPlayer(request.getToPlayerId());
-            Item item = itemService.getItem(request.getItemId());
 
-            if (fromPlayer == null || toPlayer == null || item == null) {
-                return ResponseEntity.badRequest().body(new ErrorResponse("Invalid player or item IDs"));
-            }
+        webSocketService.sendDuelRejection(challenger.getId(), target.getUsername());
+        return ResponseEntity.ok(new SuccessResponse(true, "Duel request rejected"));
+    }
 
-            PlayerInventory fromInventory = fromPlayer.getInventory();
-            PlayerInventory toInventory = toPlayer.getInventory();
+    // ... rest of the code remains the same ...
 
-            // Find the item in the from player's inventory
-            InventorySlot fromSlot = fromInventory.getInventorySlots().stream()
-                    .filter(slot -> slot.hasItem() && slot.getItem().getId().equals(item.getId()))
-                    .findFirst()
-                    .orElse(null);
-
-            if (fromSlot == null) {
-                return ResponseEntity.badRequest().body(new ErrorResponse("Item not found in player's inventory"));
-            }
-
-            int quantityToTransfer = Math.min(request.getQuantity(), fromSlot.getQuantity());
-
-            // Remove item from the sender's inventory
-            fromSlot.removeItem(quantityToTransfer);
-            if (fromSlot.getQuantity() == 0) {
-                fromSlot.setItem(null);
-            }
-
-            // Add item to the recipient's inventory
-            try {
-                toInventory.addItem(item, quantityToTransfer);
-            } catch (InventoryFullException e) {
-                // If recipient's inventory is full, return the item to the sender
-                fromSlot.addItem(item, quantityToTransfer);
-                return ResponseEntity.badRequest().body(new ErrorResponse("Recipient's inventory is full. Item cannot be transferred."));
-            }
-
-            // Save changes
-            playerService.updatePlayer(fromPlayer);
-            playerService.updatePlayer(toPlayer);
-
-            return ResponseEntity.ok(new SuccessResponse(true, "Item transferred successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Error transferring item: " + e.getMessage()));
-        }
+    @Data
+    static class DuelRequest {
+        private String challengerId;
+        private String targetId;
     }
 
     @Data
-    static
-    class DuelRequestSentResponse {
-        public boolean success;
-        public boolean combatStarted;
+    static class CombatStartedResponse {
+        private boolean success;
+        private String combatId;
 
-        public DuelRequestSentResponse(boolean success) {
+        public CombatStartedResponse(boolean success, String combatId) {
             this.success = success;
-            this.combatStarted = false;
+            this.combatId = combatId;
         }
     }
-    @Data
-    public static class ItemTransferRequest {
-        private String fromPlayerId;
-        private String toPlayerId;
-        private String itemId;
-        private int quantity;
 
-        // Getters and setters...
+    @Data
+    static class SuccessResponse {
+        private boolean success;
+        private String message;
+
+        public SuccessResponse(boolean success, String message) {
+            this.success = success;
+            this.message = message;
+        }
     }
 
+    @Data
+    static class ErrorResponse {
+        private String error;
+
+        public ErrorResponse(String error) {
+            this.error = error;
+        }
+    }
 }

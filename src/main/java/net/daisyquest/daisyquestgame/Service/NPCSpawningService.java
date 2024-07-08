@@ -40,6 +40,12 @@ public class NPCSpawningService {
         for (int i = 0; i < npcCount; i++) {
             //todo: clean this up.
             Player npc = createNPC(worldWidth, worldHeight);
+            if(i == 1){
+                npc.setCurrentSubmapId("60d5ec9f82c2a8c9a8b9e1a2");
+                npc.setSubmapCoordinateX(100);
+                npc.setSubmapCoordinateY(100);
+            }
+
             npc = playerRepository.save(npc);
             npc.setInventory(new PlayerInventory(npc.getId(), 10));
             playerInventoryRepository.save(npc.getInventory());

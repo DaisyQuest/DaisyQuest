@@ -6,6 +6,7 @@ import net.daisyquest.daisyquestgame.Service.*;
 import net.daisyquest.daisyquestgame.Service.Failure.UsernameAlreadyExistsException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,19 +33,19 @@ public class PlayerController {
 
     @Autowired CurrencyService currencyService;
 
-    @PostMapping("/register")
-    public ResponseEntity<?> registerPlayer(@RequestBody Player player) {
+    @PostMapping("/register/{username}")
+    public ResponseEntity<?> registerPlayer(@PathVariable String username) {
         try {
-            Player newPlayer = playerService.createPlayer(player);
+            Player newPlayer = playerService.createPlayer(username);
             return ResponseEntity.ok(newPlayer);
         } catch (UsernameAlreadyExistsException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> loginPlayer(@RequestBody Player player) {
-        Player existingPlayer = playerService.getPlayerByUsername(player.getUsername());
+    @PostMapping(value = "/login/{username}")
+    public ResponseEntity<?> loginPlayer(@PathVariable String username) {
+        Player existingPlayer = playerService.getPlayerByUsername(username);
         if (existingPlayer != null) {
             return ResponseEntity.ok(existingPlayer);
         } else {

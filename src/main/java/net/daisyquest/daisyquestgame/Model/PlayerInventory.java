@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,6 +23,8 @@ public class PlayerInventory {
     private List<InventorySlot> inventorySlots;
     private List<EquipmentSlot> equipmentSlots;
     private int maxInventorySize;
+    List<EquipmentProperty> equipmentProperties = new ArrayList<>();
+    Map<String, Integer> effectivePropertyAmounts = new HashMap<>();
 
     public PlayerInventory(String playerId, int maxInventorySize) {
         this.playerId = playerId;
