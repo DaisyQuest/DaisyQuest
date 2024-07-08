@@ -1,6 +1,6 @@
 package net.daisyquest.daisyquestgame.Model;
 
-    import lombok.Data;
+import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -15,6 +15,8 @@ public class Item {
     private String description;
     private Map<String, Integer> attributeModifiers;
     private Map<String, Integer> attributeRequirements;
+    private Map<String, Integer> equipmentPropertyModifiers;
+
     private int sellPrice;
     private boolean isChest;
     private boolean retainOnDeath;
