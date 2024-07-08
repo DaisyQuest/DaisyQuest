@@ -80,4 +80,8 @@ public class StatusEffectService {
 
         return activeEffects;
     }
+
+    public StatusEffect getStatusEffectByDisplayNameNoCache(String searchDisplayName) {
+    return statusEffectRepository.findStatusEffectByDisplayName(searchDisplayName);
+    }
 }

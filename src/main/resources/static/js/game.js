@@ -14,7 +14,7 @@ let currencyDetails;
 let playerCurrencies = {};
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
-document.getElementById('startCombatBtn').addEventListener('click', startCombat);
+//document.getElementById('startCombatBtn').addEventListener('click', startCombat);
 document.getElementById('spellSelect').addEventListener('change', handleSpellSelection);
 
 // Initialization
