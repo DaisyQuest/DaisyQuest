@@ -1,6 +1,5 @@
 package net.daisyquest.daisyquestgame.Service;
 
-import lombok.extern.java.Log;
 import net.daisyquest.daisyquestgame.Model.*;
 import net.daisyquest.daisyquestgame.Repository.CombatLogRepository;
 import net.daisyquest.daisyquestgame.Repository.CombatRepository;
@@ -36,6 +35,8 @@ public class CombatService {
     @Autowired
     StatusEffectTestData testData;
 
+
+
     private static final int TURN_DURATION_SECONDS = 5;
     private static final int COMBAT_EXPIRATION_MINUTES = 2;
     private static final int INITIAL_HEALTH = 100;
@@ -57,6 +58,10 @@ public class CombatService {
         for (String playerId : playerIds) {
             playerHealth.put(playerId, INITIAL_HEALTH);
             playerActionPoints.put(playerId, INITIAL_ACTION_POINTS);
+
+            //InitializeEquipmentTotals For Each Player
+            PlayerInventory pInventory = playerService.getPlayerInventory(playerId);
+            combat.getPlayerEquipmentBonuses().put(playerId, pInventory.calculateEffectiveEquipmentBonuses());
         }
 
         //Initialize Damage Modifier Map
@@ -330,15 +335,23 @@ public class CombatService {
     }
 
     private void performAttack(Combat combat, Action action) {
-        int damage = calculateDamage(action.getPlayerId(), 10, 20);
+        int damage = calculateDamage(action.getPlayerId(), 10, 20, getMeleeBonusOfAttackingPlayer(combat, action), 1);
         applyDamage(combat, action.getTargetPlayerId(), damage);
         createCombatLog(combat, action.getPlayerId(), "ATTACK", action.getTargetPlayerId(),
                 String.format("%s deals %d damage to %s", action.getPlayerId(), damage, action.getTargetPlayerId()));
     }
 
+    private static Integer getMeleeBonusOfAttackingPlayer(Combat combat, Action action) {
+        return combat.getPlayerEquipmentBonuses().get(action.getPlayerId()).get("Melee Bonus");
+    }
+
+    private static Integer getSpellBonusOfAttackingPlayer(Combat combat, Action action) {
+        return combat.getPlayerEquipmentBonuses().get(action.getPlayerId()).get("Spell Bonus");
+    }
+
 
     private void performSpecialAttack(Combat combat, Action action) {
-        int damage = calculateDamage(action.getPlayerId(), 5, 10);
+        int damage = calculateDamage(action.getPlayerId(), 5, 10, getMeleeBonusOfAttackingPlayer(combat, action), 1);
         applyDamage(combat, action.getTargetPlayerId(), damage);
         statusEffectService.applyStatusEffect(combat, action.getPlayerId(), statusEffectService.getStatusEffectByDisplayNameNoCache("Poison"), 10);
     }
@@ -380,7 +393,7 @@ public class CombatService {
 
         switch (spell.getEffect()) {
             case DAMAGE:
-                int damage = calculateSpellDamage(caster, spell);
+                int damage = calculateSpellDamage(caster, spell, getSpellBonusOfAttackingPlayer(combat, caster.getId()));
                 logger.info("Spell Damage: " + damage);
                 applyDamage(combat, targetPlayerId, damage);
                 break;
@@ -397,6 +410,10 @@ public class CombatService {
         }
     }
 
+    private static Integer getSpellBonusOfAttackingPlayer(Combat combat, String playerId) {
+        return combat.getPlayerEquipmentBonuses().get(playerId).get("Spell Bonus");
+    }
+
     private void applyHealing(Combat combat, String targetPlayerId, int healing) {
 
     }
@@ -405,8 +422,8 @@ public class CombatService {
         return 10;
     }
 
-    private int calculateSpellDamage(Player caster, Spell spell) {
-        return spell.getManaCost() * 2;
+    private int calculateSpellDamage(Player caster, Spell spell, int bonusAmount) {
+        return spell.getManaCost() * 2 + bonusAmount;
     }
 
     private void updateSpellCooldown(Combat combat, String playerId, Spell spell) {
@@ -436,7 +453,7 @@ public class CombatService {
         // Implement tactical actions (e.g., increase defense, prepare for next turn)
     }
 
-    private int calculateDamage(String playerId, int minDamage, int maxDamage) {
+    private int calculateDamage(String playerId, int minDamage, int maxDamage, int bonusAmountInteger, double bonusMultiplier) {
        //todo remove legacy check
         if(playerId.startsWith("AI")){
             return minDamage + (int)(Math.random() * (maxDamage - minDamage + 1)) + 5;
@@ -444,7 +461,7 @@ public class CombatService {
 
         Player player = playerService.getPlayer(playerId);
         int attackAttribute = player.getAttributes().get("combat").getLevel();
-        return minDamage + (int)(Math.random() * (maxDamage - minDamage + 1)) + (attackAttribute / 10);
+        return minDamage + (int)(Math.random() * (maxDamage - minDamage + 1)) + (attackAttribute / 10) + bonusAmountInteger;
     }
 
     private void applyDamage(Combat combat, String targetPlayerId, int damage) {

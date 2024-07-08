@@ -19,6 +19,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         mp3Player = new MP3Player('audio-player-container');
         mp3Player.loadTrack('/audio/world.mp3');
+        mp3Player.audio.loop = true;
         mp3Player.togglePlayPause();
     });
 

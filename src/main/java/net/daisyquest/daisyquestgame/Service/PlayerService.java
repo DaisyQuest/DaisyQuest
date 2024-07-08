@@ -29,6 +29,9 @@ public class PlayerService {
     @Autowired
     private SpellService spellService;
 
+    @Autowired
+    private EquipmentPropertyService equipmentPropertyService;
+
 
     @Transactional
     public void addItemToInventory(String playerId, Item item, int quantity) {
@@ -47,7 +50,7 @@ public class PlayerService {
         Player playerWithId = playerRepository.save(player);
 
         PlayerInventory inventory = new PlayerInventory(playerWithId.getId(), 16); // or whatever initial size
-
+        inventory.setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
 
         inventory = playerInventoryRepository.save(inventory);
         playerWithId.setInventory(inventory);
