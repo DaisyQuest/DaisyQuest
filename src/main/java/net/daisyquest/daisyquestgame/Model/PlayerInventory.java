@@ -7,10 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Data
@@ -233,9 +230,10 @@ public class PlayerInventory {
         }
 
         // Calculate the sum of all equipment bonuses
-        for (InventorySlot slot : inventorySlots) {
+        for (EquipmentSlot slot : equipmentSlots) {
             if (slot.getItem() != null) {
                 Map<String, Integer> itemBonuses = slot.getItem().getEquipmentPropertyModifiers();
+                if(itemBonuses == null) continue;
                 for (Map.Entry<String, Integer> entry : itemBonuses.entrySet()) {
                     String propertyName = entry.getKey();
                     int bonusValue = entry.getValue();

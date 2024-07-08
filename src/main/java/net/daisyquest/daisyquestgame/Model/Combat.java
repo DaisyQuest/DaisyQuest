@@ -26,7 +26,7 @@ public class Combat {
     private Map<String, Integer> playerHealth;
     private Map<String, Integer> playerHealthStarting;
     private Map<String, Integer> playerActionPoints;
-    private Map<String, Map<String, Integer>> playerEquipmentBonuses;
+    private Map<String, Map<String, Integer>> playerEquipmentBonuses = new HashMap<>();
 
 
     private Instant createdAt;

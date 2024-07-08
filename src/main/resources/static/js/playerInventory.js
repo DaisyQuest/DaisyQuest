@@ -58,7 +58,7 @@ function renderInventory() {
 
         if (slot.item) {
             slotElement.innerHTML = `
-                <img src="/sprites/items/${slot.item.id}.svg" alt="${slot.item.name}" 
+                <img src="/sprites/items/${slot.item.id}.png" alt="${slot.item.name}" 
                      class="item-sprite" data-item-id="${slot.item.id}" draggable="true">
                 <span class="item-quantity">${slot.quantity}</span>
             `;
@@ -98,7 +98,7 @@ function renderEquipment() {
             const equippedItem = playerInventory.equipmentSlots.find(slot => slot.type === slotType);
             if (equippedItem && equippedItem.item) {
                 slotElement.innerHTML = `
-                    <img src="/sprites/items/${equippedItem.item.id}.svg" alt="${equippedItem.item.name}" 
+                    <img src="/sprites/items/${equippedItem.item.id}.png" alt="${equippedItem.item.name}" 
                          class="item-sprite" data-item-id="${equippedItem.item.id}" draggable="true">
                     ${equippedItem.item.equippableInStacks ? `<span class="item-quantity">${equippedItem.quantity}</span>` : ''}
                 `;
@@ -199,7 +199,7 @@ function renderSelectedItemInfo() {
 
         container.innerHTML = `
             <h3>${selectedItem.name} ${equipSlotIcon}</h3>
-            <img src="/sprites/items/${selectedItem.id}.svg" style="width: 64px; height: 64px;" alt="${selectedItem.name}" 
+            <img src="/sprites/items/${selectedItem.id}.png" style="width: 64px; height: 64px;" alt="${selectedItem.name}" 
                  class="item-sprite-small" data-item-id="${selectedItem.id}">
             <p>${selectedItem.description}</p>
             <p>Sell Price: ${selectedItem.sellPrice}</p>

@@ -48,10 +48,13 @@ public class NPCSpawningService {
 
             npc = playerRepository.save(npc);
             npc.setInventory(new PlayerInventory(npc.getId(), 10));
+            npc.getInventory().setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
             playerInventoryRepository.save(npc.getInventory());
             playerRepository.save(npc);
         }
     }
+    @Autowired
+    EquipmentPropertyService equipmentPropertyService;
 
     private Player createNPC(int worldWidth, int worldHeight) {
         Player npc = new Player();
