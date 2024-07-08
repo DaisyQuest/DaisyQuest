@@ -953,6 +953,7 @@
     `;
 
     if (winner === playerId) {
+        mp3Player.audio.loop = false;
         mp3Player.loadTrack('/audio/win.mp3');
         mp3Player.audio.play();
     fetch(`/api/players/${loser}/inventory`)
@@ -1009,6 +1010,7 @@
 }
 
     function returnToWorldMap() {
+        mp3Player.audio.loop = true;
         mp3Player.loadTrack('/audio/world.mp3');
         mp3Player.audio.play();
     document.getElementById('combatResults').style.display = 'none';
