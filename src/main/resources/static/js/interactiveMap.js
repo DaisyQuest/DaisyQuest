@@ -18,7 +18,7 @@
     let mp3Player;
     document.addEventListener('DOMContentLoaded', function() {
         mp3Player = new MP3Player('audio-player-container');
-        mp3Player.loadTrack('/audio/battle.mp3');
+        mp3Player.loadTrack('/audio/world.mp3');
         mp3Player.togglePlayPause();
     });
 
@@ -553,6 +553,8 @@
 
 
     function startCombat(combatId) {
+    mp3Player.loadTrack('/audio/battle.mp3');
+    mp3Player.togglePlayPause();
     currentCombatId = combatId;
     document.getElementById('worldMapContainer').style.display = 'none';
     document.getElementById('combatArea').style.display = 'block';
@@ -1007,7 +1009,7 @@
 }
 
     function returnToWorldMap() {
-        mp3Player.loadTrack('/audio/battle.mp3');
+        mp3Player.loadTrack('/audio/world.mp3');
         mp3Player.audio.play();
     document.getElementById('combatResults').style.display = 'none';
     document.getElementById('worldMapContainer').style.display = 'block';
