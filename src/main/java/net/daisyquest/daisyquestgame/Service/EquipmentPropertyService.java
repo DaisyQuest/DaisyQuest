@@ -27,5 +27,5 @@ public class EquipmentPropertyService {
         return returnList;
 
     }
-E
+
 }
