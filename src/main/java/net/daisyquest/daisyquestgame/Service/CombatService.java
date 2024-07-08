@@ -353,7 +353,7 @@ public class CombatService {
     private void performSpecialAttack(Combat combat, Action action) {
         int damage = calculateDamage(action.getPlayerId(), 5, 10, getMeleeBonusOfAttackingPlayer(combat, action), 1);
         applyDamage(combat, action.getTargetPlayerId(), damage);
-        statusEffectService.applyStatusEffect(combat, action.getPlayerId(), statusEffectService.getStatusEffectByDisplayNameNoCache("Poison"), 10);
+        statusEffectService.applyStatusEffect(combat, action.getTargetPlayerId(), statusEffectService.getStatusEffectByDisplayNameNoCache("Poison"), 10);
     }
 
     private void performSpell(Combat combat, Action action) {

@@ -963,12 +963,12 @@
     if (inventory.length > 0) {
     const randomItem = inventory[Math.floor(Math.random() * inventory.length)];
     resultsDiv.innerHTML += `
-                        <p>You won the duel and took ${randomItem.name} from ${loser}!</p>
+                        <p>You won the duel and took ${randomItem.name} from  ${loser} has fallen!</p>
                     `;
-    transferItem(randomItem.id, loser, winner);
+    //transferItem(randomItem.id, loser, winner);
 } else {
     resultsDiv.innerHTML += `
-                        <p>You won the duel, but ${loser} had no items to take.</p>
+                        <p>You won the duel, ${loser} has fallen</p>
                     `;
 }
 })

@@ -116,7 +116,57 @@ function renderEquipment() {
 
         container.appendChild(tierElement);
     });
+
+    // Assuming we have a function to calculate effective equipment bonuses
+    const effectiveBonuses = calculateEffectiveEquipmentBonuses(playerInventory.equipmentSlots);
+
+    const bonusesElement = document.createElement('div');
+    bonusesElement.className = 'equipment-bonuses';
+    bonusesElement.innerHTML = '<h4>Equipment Bonuses</h4>';
+
+    Object.entries(effectiveBonuses).forEach(([bonusName, bonusValue]) => {
+        const bonusElement = document.createElement('div');
+        bonusElement.className = 'bonus-item';
+        bonusElement.innerHTML = `
+            <span class="bonus-name">${bonusName}:</span>
+            <span class="bonus-value ${bonusValue > 0 ? 'positive' : bonusValue < 0 ? 'negative' : ''}">${bonusValue > 0 ? '+' : ''}${bonusValue}</span>
+        `;
+        bonusesElement.appendChild(bonusElement);
+    });
+
+    container.appendChild(bonusesElement);
 }
+
+function calculateEffectiveEquipmentBonuses(equipmentSlots) {
+    const bonuses = {};
+
+    // Helper function to add or update a bonus
+    function addBonus(name, value) {
+        if (bonuses[name]) {
+            bonuses[name] += value;
+        } else {
+            bonuses[name] = value;
+        }
+    }
+
+    // Iterate through all equipment slots
+    equipmentSlots.forEach(slot => {
+        if (slot.item && slot.item.equipmentPropertyModifiers) {
+            Object.entries(slot.item.equipmentPropertyModifiers).forEach(([bonusName, bonusValue]) => {
+                addBonus(bonusName, bonusValue);
+            });
+        }
+    });
+
+    // You can add any global modifiers or calculations here
+    // For example, multiply certain bonuses by a factor
+    if (bonuses['Melee Bonus']) {
+       // bonuses['Melee Damage'] = Math.floor(bonuses['Melee Bonus'] * 1.5);
+    }
+
+    return bonuses;
+}
+
 
 function dragEquipped(ev) {
     ev.dataTransfer.setData("text", JSON.stringify({

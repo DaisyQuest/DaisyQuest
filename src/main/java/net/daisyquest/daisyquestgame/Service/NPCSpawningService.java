@@ -49,6 +49,7 @@ public class NPCSpawningService {
             npc = playerRepository.save(npc);
             npc.setInventory(new PlayerInventory(npc.getId(), 10));
             npc.getInventory().setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
+            npc.getInventory().addItem(itemService.getItemByName("Bone Sword"), 1);
             playerInventoryRepository.save(npc.getInventory());
             playerRepository.save(npc);
         }
