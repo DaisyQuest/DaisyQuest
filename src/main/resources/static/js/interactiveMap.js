@@ -1352,27 +1352,37 @@
 })
     .catch(error => console.error('Error fetching initial combat state:', error));
 }
-
     function acceptDuelRequest(challengerId) {
-    fetch('/api/duel/accept', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            challengerId: challengerId,
-            targetId: currentPlayer.id
+        return fetch('/api/duel/accept', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                challengerId: challengerId,
+                targetId: currentPlayer.id
+            })
         })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log('Duel acceptance sent to server');
-                // The server will send a WebSocket message to both players to start the combat
-            } else {
-                console.error('Failed to accept duel:', data.message);
-            }
-        })
-        .catch(error => console.error('Error accepting duel request:', error));
-}
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    console.log('Duel acceptance sent to server');
+                    // The server will send a WebSocket message to both players to start the combat
+                    return data;
+                } else {
+                    throw new Error(`Failed to accept duel: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error accepting duel request:', error);
+                throw error; // Re-throw to allow caller to handle the error
+            });
+    }
+
+
 
     function rejectDuelRequest(challengerId) {
     fetch('/api/duel/reject', {

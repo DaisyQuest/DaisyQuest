@@ -26,8 +26,9 @@ public class PlayerInitializer {
 
         initalizeSpells(p1, p_spells);
         initializeSocial(p1);
-
     }
+
+
 
     private static void initializeTalents(Player p1) {
         if (p1.getTalents() == null || p1.getTalents().isEmpty()){

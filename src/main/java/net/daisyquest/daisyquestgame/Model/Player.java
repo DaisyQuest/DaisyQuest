@@ -27,7 +27,7 @@ public class Player {
     @DBRef
     private PlayerInventory inventory;
 
-   private Set<String> completedQuests;
+    private Set<String> completedQuests;
     private Set<String> achievements;
     private int totalExperience;
     private int level = 1;
@@ -69,7 +69,6 @@ public class Player {
     private int submapCoordinateX;
     private int submapCoordinateY;
     private int submapCoordinateZ;
-
 
 
 }
