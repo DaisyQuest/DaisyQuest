@@ -42,6 +42,7 @@ public class CombatService {
     private static final int INITIAL_HEALTH = 100;
     private static final int INITIAL_ACTION_POINTS = 1;
     private static final int MAX_TURNS = 100;
+    private static final int HP_COEFFICIENT = 15;
 
     public Combat startCombat(List<String> playerIds, Map<String, String> playerTeams) {
         logger.info("Starting new combat with players: {}", playerIds);
@@ -56,11 +57,11 @@ public class CombatService {
         Map<String, Integer> playerHealth = new HashMap<>();
         Map<String, Integer> playerActionPoints = new HashMap<>();
         for (String playerId : playerIds) {
-            playerHealth.put(playerId, INITIAL_HEALTH);
+            Player p = playerService.getPlayer(playerId);
+            playerHealth.put(playerId, p.getAttributes().get("hitpoints").getLevel() * HP_COEFFICIENT);
             playerActionPoints.put(playerId, INITIAL_ACTION_POINTS);
-
             //InitializeEquipmentTotals For Each Player
-            PlayerInventory pInventory = playerService.getPlayerInventory(playerId);
+            PlayerInventory pInventory = p.getInventory();
             combat.getPlayerEquipmentBonuses().put(playerId, pInventory.calculateEffectiveEquipmentBonuses());
         }
 
@@ -577,6 +578,7 @@ public class CombatService {
             if (winnerId.startsWith("AI")) continue; // Skip AI winners
             Player winner = playerService.getPlayer(winnerId);
             winner.setTotalExperience(winner.getTotalExperience() + calculateExperienceGain(combat, winner));
+            winner.setDuelable(true);
             playerService.updatePlayer(winner);
         }
 
@@ -598,6 +600,7 @@ public class CombatService {
                 else {
                     applyLossPenalty(loser);
                 }
+                loser.setDuelable(true);
                 playerService.updatePlayer(loser);
             }
 

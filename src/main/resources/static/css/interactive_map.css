@@ -1,195 +1,267 @@
 body {
-    font-family: 'Arial', sans-serif;
-    background-color: #f0f0f0;
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
     margin: 0;
     padding: 0;
     display: flex;
     height: 100vh;
+    color: #ecf0f1;
 }
 
 #sidebar {
-    width: 300px;
-    background-color: #2c3e50;
-    color: #ecf0f1;
+    width: 320px;
+    background-color: rgba(44, 62, 80, 0.9);
     padding: 20px;
     overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.3);
 }
+
 #main-content {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
 }
+
 #worldMapContainer {
     flex-grow: 1;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #34495e;
+    background: radial-gradient(circle, #2c3e50, #34495e);
     position: relative;
 }
+
 #worldMapCanvas {
-    border: 2px solid #2c3e50;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    border: 3px solid #ecf0f1;
+    box-shadow: 0 0 20px rgba(236, 240, 241, 0.3);
+    border-radius: 10px;
 }
+
 #coordinates {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    background-color: rgba(44, 62, 80, 0.7);
+    top: 20px;
+    left: 20px;
+    background-color: rgba(52, 73, 94, 0.8);
     color: #ecf0f1;
-    padding: 5px 10px;
-    border-radius: 5px;
+    padding: 10px 15px;
+    border-radius: 25px;
     font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .player-info {
-    background-color: #34495e;
-    border-radius: 5px;
-    padding: 10px;
-    margin-bottom: 10px;
+    background-color: rgba(52, 73, 94, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
 }
+
+.player-info:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 8px rgba(0,0,0,0.2);
+}
+
 .player-info h3 {
     margin-top: 0;
     color: #3498db;
+    font-size: 1.2em;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 5px;
 }
+
 #chat-box {
     height: 200px;
-    background-color: #34495e;
-    border-radius: 5px;
-    padding: 10px;
+    background-color: rgba(52, 73, 94, 0.7);
+    border-radius: 10px;
+    padding: 15px;
     overflow-y: auto;
     margin-top: 20px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
 }
+
 #chat-input {
     width: 100%;
     margin-top: 10px;
+    padding: 10px;
+    border: none;
+    border-radius: 25px;
+    background-color: rgba(236, 240, 241, 0.2);
+    color: #ecf0f1;
+    transition: all 0.3s ease;
 }
 
-/* New styles for combat interface */
-#combatArea {
-    background-color: #2c3e50;
-    color: #ecf0f1;
-    padding: 20px;
-    border-radius: 10px;
-    margin-top: 20px;
+#chat-input:focus {
+    background-color: rgba(236, 240, 241, 0.3);
+    outline: none;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
 }
+
+/* Combat interface enhancements */
+#combatArea {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: #ecf0f1;
+    padding: 25px;
+    border-radius: 15px;
+    margin-top: 20px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
 #turnIndicator {
-    font-size: 1.2em;
+    font-size: 1.4em;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     text-align: center;
     color: #f39c12;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
 }
+
 #combatInfo {
-    background-color: #34495e;
-    padding: 10px;
-    border-radius: 5px;
-    margin-bottom: 15px;
+    background-color: rgba(52, 73, 94, 0.7);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
+
 .player-card {
-    background-color: #34495e;
-    border-radius: 5px;
-    padding: 10px;
-    margin-bottom: 15px;
+    background: linear-gradient(to bottom, #34495e, #2c3e50);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
     text-align: center;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
 }
+
+.player-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0,0,0,0.2);
+}
+
 .player-sprite {
     position: relative;
     width: 128px;
     height: 128px;
-    margin: 0 auto;
+    margin: 0 auto 15px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-.sprite-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
 .health-bar {
     height: 20px;
-    background-color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.3);
     border-radius: 10px;
     overflow: hidden;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
 }
+
 .health-bar-fill {
     height: 100%;
-    background-color: #2ecc71;
-    transition: width 0.3s ease-in-out;
+    background: linear-gradient(to right, #27ae60, #2ecc71);
+    transition: width 0.5s ease-in-out;
 }
+
 #actionButtons button {
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    background-color: #3498db;
+    color: #ecf0f1;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
+
+#actionButtons button:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
 #spellSelection, #targetSelection {
-    background-color: #34495e;
-    padding: 10px;
-    border-radius: 5px;
+    background-color: rgba(52, 73, 94, 0.7);
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+#spellInfo {
+    background-color: rgba(44, 62, 80, 0.7);
+    color: #ecf0f1;
+    padding: 15px;
+    border-radius: 10px;
     margin-top: 15px;
 }
-#spellInfo {
-    background-color: #2c3e50;
-    color: #ecf0f1;
-}
+
 .combat-log {
     height: 300px;
-    background-color: #34495e;
-    border-radius: 5px;
-    padding: 10px;
+    background-color: rgba(52, 73, 94, 0.7);
+    border-radius: 10px;
+    padding: 15px;
     overflow-y: auto;
     font-size: 0.9em;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
 }
+
 .combat-log-entry {
-    margin-bottom: 5px;
-    padding: 5px;
-    border-radius: 3px;
+    margin-bottom: 8px;
+    padding: 8px;
+    border-radius: 5px;
+    background-color: rgba(44, 62, 80, 0.5);
 }
+
 #combatResults {
-    background-color: #2c3e50;
+    background: linear-gradient(135deg, #2c3e50, #34495e);
     color: #ecf0f1;
-    padding: 20px;
-    border-radius: 10px;
+    padding: 30px;
+    border-radius: 15px;
     text-align: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
+
 .dialog-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.7);
 }
 
 .dialog-content {
-    background-color: white;
-    padding: 20px;
-    border-radius: 5px;
+    background-color: #ecf0f1;
+    padding: 25px;
+    border-radius: 15px;
     width: 90%;
     height: 90%;
-    position: relative;
-    display: flex;
-    flex-direction: column;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.3);
 }
 
 .dialog-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-size: 24px;
-    cursor: pointer;
-    background: none;
-    border: none;
-    color: #333;
-    z-index: 1001;
+    font-size: 28px;
+    color: #34495e;
+    transition: color 0.3s ease;
 }
 
-.dialog-iframe {
-    flex-grow: 1;
-    border: none;
-    margin-top: 20px;
+.dialog-close:hover {
+    color: #e74c3c;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(52, 73, 94, 0.3);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(236, 240, 241, 0.5);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(236, 240, 241, 0.7);
 }
