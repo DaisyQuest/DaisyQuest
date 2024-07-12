@@ -1109,27 +1109,61 @@
     // Duel functions
     function handlePlayerClick(player) {
     selectedPlayer = player;
+    updateTargetedPlayerInfo(player);
     let distance;
 
-    if (isInSubmap) {
-    distance = Math.sqrt(
-    Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
-    Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
-    );
-} else {
-    distance = Math.sqrt(
-    Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
-    Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
-    );
+//     if (isInSubmap) {
+//     distance = Math.sqrt(
+//     Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
+//     Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+//     );
+// } else {
+//     distance = Math.sqrt(
+//     Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
+//     Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+//     );
+// }
+//
+//     if (distance <= DUEL_RANGE) {
+//     showDuelButton();
+// } else {
+//     hideDuelButton();
+// }
 }
 
-    if (distance <= DUEL_RANGE) {
-    showDuelButton();
-} else {
-    hideDuelButton();
-}
-}
+    function updateTargetedPlayerInfo(player) {
+        const targetedPlayerInfo = document.getElementById('targeted-player-info');
+        const duelButton = document.getElementById('duelButton');
 
+        if (player) {
+            document.getElementById('targeted-player-name').textContent = player.username || 'Unknown';
+            document.getElementById('targeted-player-level').textContent = player.level || 'N/A';
+            const position = isInSubmap
+                ? `SubX: ${player.submapCoordinateX}, SubY: ${player.submapCoordinateY}`
+                : `X: ${player.worldPositionX}, Y: ${player.worldPositionY}`;
+            document.getElementById('targeted-player-position').textContent = position;
+            targetedPlayerInfo.style.display = 'block';
+
+            let distance;
+            if (isInSubmap) {
+                distance = Math.sqrt(
+                    Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
+                    Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+                );
+            } else {
+                distance = Math.sqrt(
+                    Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
+                    Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+                );
+            }
+
+            duelButton.style.display = distance <= DUEL_RANGE ? 'block' : 'none';
+        } else {
+            targetedPlayerInfo.style.display = 'none';
+            duelButton.style.display = 'none';
+        }
+    }
+    document.getElementById('duelButton').addEventListener('click', sendDuelRequest);
 
     function showDuelButton() {
     const duelButton = document.getElementById('duelButton');
