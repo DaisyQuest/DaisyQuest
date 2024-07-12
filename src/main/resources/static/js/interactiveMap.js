@@ -84,6 +84,10 @@
     submapCoordinateX: playerData.player.submapCoordinateX,
     submapCoordinateY: playerData.player.submapCoordinateY,
     submapCoordinateZ: playerData.player.submapCoordinateZ,
+    subspriteBackground: playerData.player.subspriteBackground,
+    subspriteFace:playerData.player.subspriteFace,
+    subspriteEyes:playerData.player.subspriteEyes,
+    subspriteHairHat:playerData.player.subspriteHairHat
     // Add other relevant player properties here
 };
     isInSubmap = currentPlayer.currentSubmapId != null;
@@ -408,10 +412,10 @@
 
     async function drawPlayer(x, y, player, isCurrentPlayer) {
     const layers = [
-    player.subspriteBackground || 'background_0',
-    player.subspriteFace || 'face_0',
-    player.subspriteEyes || 'eyes_0',
-    player.subspriteHairHat || 'hairhat_0'
+    player.subspriteBackground || 'background_1',
+    player.subspriteFace || 'face_1',
+    player.subspriteEyes || 'eyes_1',
+    player.subspriteHairHat || 'hairhat_1'
     ];
     try {
     for (const layer of layers) {
@@ -496,13 +500,13 @@
             if (x === getCurrentPlayerX() && y === getCurrentPlayerY()) {
                 return;
             }
-
             setCurrentPlayerPosition(x, y);
             updatePlayerInfo();
         } else {
             const player = players.find(p => p.id === playerIdOfPlayerToUpdate);
             if (player) {
-                startInterpolation(player, x, y);
+                player.worldPositionX = x;
+                player.worldPositionY = y;
             } else {
                 console.log('Player not found in viewport:', playerIdOfPlayerToUpdate);
                 fetchPlayersInViewport();
@@ -1267,30 +1271,33 @@
 
 
 
-    function movePlayer(x, y) {
-    if (isInSubmap) {
-    movePlayerInSubmap(x, y);
-} else {
-    updatePlayerPosition(getCurrentPlayerId(), x, y);
-}
-        wsTransmitPosition();
+    const debouncedWsTransmitPosition = debounce(wsTransmitPosition, 100);
 
-    checkAndReportPosition();
-}
+    function movePlayer(x, y) {
+        if (isInSubmap) {
+            movePlayerInSubmap(x, y);
+        } else {
+            updatePlayerPosition(getCurrentPlayerId(), x, y);
+        }
+        throttledWsTransmitPosition();
+    }
+
+    const throttledWsTransmitPosition = throttle(wsTransmitPosition, 200);
 
     function checkAndReportPosition() {
-    const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
-    const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+        const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
+        const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
 
-    const dx = currentX - lastReportedPosition.x;
-    const dy = currentY - lastReportedPosition.y;
-    const distanceMoved = Math.sqrt(dx * dx + dy * dy);
+        const dx = currentX - lastReportedPosition.x;
+        const dy = currentY - lastReportedPosition.y;
+        const distanceMoved = Math.sqrt(dx * dx + dy * dy);
 
-    if (distanceMoved >= REPORT_THRESHOLD) {
-    sendPositionToServer();
-    lastReportedPosition = { x: currentX, y: currentY };
-}
-}
+        if (distanceMoved >= REPORT_THRESHOLD) {
+            debouncedWsTransmitPosition();
+            lastReportedPosition = { x: currentX, y: currentY };
+        }
+    }
+
 
     function processKeyboardMovement() {
     if (movementVector.x !== 0 || movementVector.y !== 0) {
@@ -1541,9 +1548,7 @@
     if (!moveInterval) {
     moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
 }
-    if (!sendInterval) {
-    sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
-}
+
 });
 
     // Handle keyup events
