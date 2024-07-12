@@ -100,12 +100,19 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     private void broadcastPlayerMove(JsonObject moveMessage) throws IOException {
         String movingPlayerId = moveMessage.getString("playerId");
+        long timestamp = System.currentTimeMillis();
+
+        JsonObject enhancedMoveMessage = Json.createObjectBuilder(moveMessage)
+                .add("timestamp", timestamp)
+                .build();
+
         for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
             if (!entry.getKey().equals(movingPlayerId)) {
-                entry.getValue().sendMessage(new TextMessage(moveMessage.toString()));
+                entry.getValue().sendMessage(new TextMessage(enhancedMoveMessage.toString()));
             }
         }
     }
+
 
     private void broadcastChatMessage(JsonObject chatMessage) throws IOException {
         String senderId = chatMessage.getString("playerId");
