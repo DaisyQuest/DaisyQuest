@@ -12,9 +12,9 @@
     window.location.href = '/';
 }
     const LAND_SIZE = 10000;
-    const VIEWPORT_WIDTH = 1000;
-    const VIEWPORT_HEIGHT = 800;
-    const SPRITE_SIZE = 32;
+    const VIEWPORT_WIDTH = 1240;
+    const VIEWPORT_HEIGHT = 720;
+    const SPRITE_SIZE = 64;
     let mp3Player;
     document.addEventListener('DOMContentLoaded', function() {
         mp3Player = new MP3Player('audio-player-container');
@@ -139,7 +139,7 @@
     }
 
     // Throttle the drawWorldMap function
-    const throttledDrawWorldMap = throttle(drawWorldMap, 1000 / 60); //60fps
+    const throttledDrawWorldMap = throttle(drawWorldMap, 1000 / 240); //60fps
 
 
 
@@ -357,9 +357,16 @@
         .catch(error => console.error('Error entering submap:', error));
 }
 
+    const offscreenCanvas = document.createElement('canvas');
+    const offscreenCtx = offscreenCanvas.getContext('2d');
 
+    // Set dimensions
+    offscreenCanvas.width = VIEWPORT_WIDTH;
+    offscreenCanvas.height = VIEWPORT_HEIGHT;
     function drawWorldMap() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+
 
         const startX = Math.floor(currentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
         const startY = Math.floor(currentPlayer.worldPositionY / LAND_SIZE) * LAND_SIZE;
@@ -372,16 +379,16 @@
                 const offsetX = Math.round(x - (currentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
                 const offsetY = Math.round(y - (currentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
 
-                ctx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
-                ctx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
+                offscreenCtx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
+                offscreenCtx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
 
-                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                ctx.strokeRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
+                offscreenCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+                offscreenCtx.strokeRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
             }
         }
 
         for (const player of players) {
-            if (player.id !== currentPlayer.id) {
+            if (player.id !== currentPlayer.id && !currentPlayer.currentSubmapId) {
                 const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
                 const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
 
@@ -395,13 +402,15 @@
         submapEntrances.forEach(entrance => {
             const x = entrance.x - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
             const y = entrance.y - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
-            ctx.fillStyle = '#FF00FF'; // Magenta color for visibility
-            ctx.fillRect(x - 5, y - 5, 10, 10);
+            offscreenCtx.fillStyle = '#FF00FF'; // Magenta color for visibility
+            offscreenCtx.fillRect(x - 5, y - 5, 10, 10);
         });
 
         drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
 
         coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(offscreenCanvas, 0, 0);
     }
     function getTileColor(x, y) {
     // In a real implementation, you would fetch the actual terrain type for these coordinates
@@ -513,7 +522,8 @@
             }
         }
 
-        throttledDrawWorldMap();
+    //    throttledDrawWorldMap();
+        drawWorldMap();
     }
 
     function startInterpolation(player, targetX, targetY) {
@@ -560,7 +570,8 @@
         }
 
         if (needsRedraw) {
-            throttledDrawWorldMap();
+         //   throttledDrawWorldMap();
+            drawWorldMap();
         }
 
         if (Object.keys(interpolationData).length > 0) {
