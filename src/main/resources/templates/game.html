@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DaisyQuest</title>
     <link th:href="@{/css/inventory.css}" rel = "stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -224,6 +225,7 @@
             background-color: #ccc;
             padding: 1px;
         }
+
 
         .land-tile {
             width: 50px;
@@ -476,6 +478,112 @@
             font-size: 0.8em;
         }
 
+        #playerInfoCollapse {
+            transition: height 0.3s ease-out;
+        }
+
+        #playerInfoHeader button {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1.25rem;
+            font-weight: bold;
+            color: #495057;
+            text-decoration: none;
+        }
+
+        #playerInfoHeader button:hover,
+        #playerInfoHeader button:focus {
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        #playerInfoHeader button::after {
+            content: '\25BC';
+            float: right;
+            transition: transform 0.3s ease-out;
+        }
+
+        #playerInfoHeader button[aria-expanded="true"]::after {
+            transform: rotate(180deg);
+        }
+
+
+        .world-map-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .world-map-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin: 0 0 20px 0;
+            text-align: center;
+        }
+        .html-viewer-embed{
+            height:100% !important;
+        }
+        .world-map-content {
+            flex-grow: 1;
+            min-height: 900px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .world-map-button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .world-map-button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+
+        @media (max-height: 1000px) {
+            .world-map-content {
+                min-height: 700px;
+            }
+        }
+
+        @media (max-height: 800px) {
+            .world-map-content {
+                min-height: 600px;
+            }
+        }
+        #action-button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        #action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .world-map-content {
+                height: 50vh;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -491,52 +599,68 @@
 </nav>
 
 <div class="container-fluid game-container">
-    <div class="row">
-        <div class="col-md-3">
-            <div class="card">
+    <div id="sidebar">
+        <div class="card">
+            <div class="card-header" id="playerInfoHeader">
+                <h5 class="mb-0">
+                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#playerInfoCollapse" aria-expanded="true" aria-controls="playerInfoCollapse">
+                        Player Info
+                    </button>
+                </h5>
+            </div>
+            <div id="playerInfoCollapse" class="collapse show" aria-labelledby="playerInfoHeader">
                 <div class="card-body">
-                    <h5 class="card-title">Player Info</h5>
                     <div id="playerInfo"></div>
                 </div>
             </div>
-            <div class="card">
-                <div class="card-body">
-                    <ul class="nav nav-tabs" id="inventoryTab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="inventory-tab" data-bs-toggle="tab"
-                                    data-bs-target="#inventory" type="button" role="tab" aria-controls="inventory"
-                                    aria-selected="true">Inventory
-                            </button>
-                        </li>
-                    </ul>
-                    <div class="tab-content" id="inventoryTabContent">
-                        <div class="tab-pane fade show active" id="inventory" role="tabpanel"
-                             aria-labelledby="inventory-tab">
-                            <div id="inventoryList"></div>
-                            <h6 class="mt-3">Currencies:</h6>
-                            <ul id = "currencies-list" class="list-group"></ul>
-                            <div id="unclaimedRewardsList"></div>
-                            <button id="testRandomRewardBtn" class="btn btn-warning" onclick="testRandomReward()">Test
-                                Random Reward
-                            </button>
-                            <button id="openRandomChestBtn" class="btn btn-info" onclick="openRandomChest()">Open Random
-                                Chest
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
+        <!-- Other sidebar content -->
+    </div>
+    <div class="world-map-container">
+        <h2 class="world-map-title">DaisyQuest World Map</h2>
+        <div id="embeddedContent" class="world-map-content"></div>
+        <button class="world-map-button" id="action-button" onclick="embedHTML('/worldMap', 'embeddedContent')">
+            Start / Reload World Map
+        </button>
+    </div>
+<!--            <div class="card">-->
+<!--                <div class="card-body">-->
+<!--                    <ul class="nav nav-tabs" id="inventoryTab" role="tablist">-->
+<!--                        <li class="nav-item" role="presentation">-->
+<!--                            <button class="nav-link active" id="inventory-tab" data-bs-toggle="tab"-->
+<!--                                    data-bs-target="#inventory" type="button" role="tab" aria-controls="inventory"-->
+<!--                                    aria-selected="true">Inventory-->
+<!--                            </button>-->
+<!--                        </li>-->
+<!--                    </ul>-->
+<!--                    <div class="tab-content" id="inventoryTabContent">-->
+<!--                        <div class="tab-pane fade show active" id="inventory" role="tabpanel"-->
+<!--                             aria-labelledby="inventory-tab">-->
+<!--                            <div id="inventoryList"></div>-->
+<!--                            <h6 class="mt-3">Currencies:</h6>-->
+<!--                            <ul id = "currencies-list" class="list-group"></ul>-->
+<!--                            <div id="unclaimedRewardsList"></div>-->
+<!--                            <button id="testRandomRewardBtn" class="btn btn-warning" onclick="testRandomReward()">Test-->
+<!--                                Random Reward-->
+<!--                            </button>-->
+<!--                            <button id="openRandomChestBtn" class="btn btn-info" onclick="openRandomChest()">Open Random-->
+<!--                                Chest-->
+<!--                            </button>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                </div>-->
+<!--            </div>-->
+<!--        </div>-->
         <div class="col-md-9">
             <ul class="nav nav-tabs" id="myTab" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="combat-tab" data-bs-toggle="tab" data-bs-target="#combat" type="button"
-                            role="tab" aria-controls="combat" aria-selected="false">Game
+                            role="tab" aria-controls="combat" aria-selected="true">Game
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="quests-tab" data-bs-toggle="tab" data-bs-target="#quests"
-                            type="button" role="tab" aria-controls="quests" aria-selected="true">Quests
+                            type="button" role="tab" aria-controls="quests" aria-selected="false">Quests
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -652,13 +776,7 @@
                     <div class="card combat-container">
                         <div class="card-body">
                             <h5 class="card-title text-center">DaisyQuest World Map</h5>
-                            <!-- Combat Lobby -->
-                            <div id="embeddedContent"></div>
-                            <button class = "btn btn-primary" id = "action-button"  onclick="embedHTML('/worldMap', 'embeddedContent')">Start / Reload World Map!</button>
-<!--                                <button id="startCombatBtn" class="btn btn-primary">Start Combat</button>-->
 
-
-                            <!-- Combat Area -->
                             <div id="combatArea" style="display: none;">
                                 <div class="turn-indicator" id="turnIndicator"></div>
                                 <div class="row" id="playerCards"></div>
@@ -1021,7 +1139,7 @@
 
     .html-viewer-embed {
         width: 100%;
-        height: 900px;
+        height: 95%px;
         border: 1px solid #ccc;
         margin-top: 20px;
     }
@@ -1086,6 +1204,20 @@
     })();
 
     //
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const playerInfoHeader = document.getElementById('playerInfoHeader');
+        const playerInfoCollapse = document.getElementById('playerInfoCollapse');
+
+        playerInfoHeader.addEventListener('click', function() {
+            const isCollapsed = playerInfoCollapse.classList.contains('show');
+            if (isCollapsed) {
+                playerInfoCollapse.classList.remove('show');
+            } else {
+                playerInfoCollapse.classList.add('show');
+            }
+        });
+    });
 </script>
 
 <script th:src="@{/js/game.js}"></script>
