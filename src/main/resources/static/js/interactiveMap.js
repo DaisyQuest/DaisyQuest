@@ -139,7 +139,7 @@
     }
 
     // Throttle the drawWorldMap function
-    const throttledDrawWorldMap = throttle(drawWorldMap, 1000 / 30); // 30 FPS
+    const throttledDrawWorldMap = throttle(drawWorldMap, 1000 / 60); //60fps
 
 
 
