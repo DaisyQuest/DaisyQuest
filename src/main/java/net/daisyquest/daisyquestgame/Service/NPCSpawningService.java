@@ -71,9 +71,11 @@ public class NPCSpawningService {
         npc.setSubspriteEyes("enemy_skeleton");
         npc.setSubspriteBackground("enemy_skeleton");
         npc.setSubspriteHairHat("enemy_skeleton");
-        npc.setLevel(3);
         Random r = new Random(System.currentTimeMillis());
-        npc.setAttributes(PlayerInitializer.getInitializedCombatMapForNPC(r.nextInt(15), 20));
+        int x = r.nextInt(15);
+        npc.setLevel(x);
+
+        npc.setAttributes(PlayerInitializer.getInitializedCombatMapForNPC(x, x));
         npc.setCurrentMana(100);
         npc.setMaxMana(100);
         npc.setKnownSpells(List.of(spellService.getSpell("skeleton_rot")));

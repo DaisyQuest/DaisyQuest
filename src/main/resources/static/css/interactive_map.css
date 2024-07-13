@@ -48,7 +48,7 @@ body {
     top: 20px;
     left: 20px;
     background-color: rgba(52, 73, 94, 0.8);
-    color: #ecf0f1;
+    color: #1a1a2e;
     padding: 10px 15px;
     border-radius: 25px;
     font-size: 14px;
@@ -293,6 +293,9 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 0;
+}
+li{
+    color: #1a1a2e;
 }
 .container-fluid {
     flex: 1;

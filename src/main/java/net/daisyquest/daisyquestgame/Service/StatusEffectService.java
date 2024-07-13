@@ -81,7 +81,7 @@ public class StatusEffectService {
         return activeEffects;
     }
 
-    public StatusEffect getStatusEffectByDisplayNameNoCache(String searchDisplayName) {
-    return statusEffectRepository.findStatusEffectByDisplayName(searchDisplayName);
+    public StatusEffect getStatusEffectByShortDisplayNameNoCache(String searchDisplayName) {
+    return statusEffectRepository.findStatusEffectByShortDisplayName(searchDisplayName);
     }
 }

@@ -29,7 +29,7 @@ public class SpellService {
         fireball.setManaCost(20);
         fireball.setCooldown(10);
         fireball.setEffect(Spell.SpellEffect.DAMAGE);
-        fireball.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Burn"), 4);
+        fireball.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("BRN"), 4);
         spells.put(fireball.getId(), fireball);
 
 
@@ -41,7 +41,7 @@ public class SpellService {
         iceball.setManaCost(45);
         iceball.setCooldown(20);
         iceball.setEffect(Spell.SpellEffect.DAMAGE);
-        iceball.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Freeze"), 4);
+        iceball.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("FRZ"), 4);
         spells.put(iceball.getId(), iceball);
 
 
@@ -52,7 +52,7 @@ public class SpellService {
         thunder.setManaCost(10);
         thunder.setCooldown(5);
         thunder.setEffect(Spell.SpellEffect.DAMAGE);
-        thunder.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Stun"), 4);
+        thunder.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("STN"), 4);
 
         spells.put(thunder.getId(), thunder);
 
@@ -63,7 +63,7 @@ public class SpellService {
         skeletonRot.setManaCost(10);
         skeletonRot.setCooldown(5);
         skeletonRot.setEffect(Spell.SpellEffect.DAMAGE);
-        skeletonRot.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Skeleton Rot"), 10);
+        skeletonRot.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("ROT"), 10);
 
         spells.put(skeletonRot.getId(), skeletonRot);
     }
