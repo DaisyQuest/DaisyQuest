@@ -29,6 +29,9 @@ public class PlayerService {
     @Autowired
     private SpellService spellService;
 
+    @Autowired
+    private EquipmentPropertyService equipmentPropertyService;
+
 
     @Transactional
     public void addItemToInventory(String playerId, Item item, int quantity) {
@@ -47,7 +50,7 @@ public class PlayerService {
         Player playerWithId = playerRepository.save(player);
 
         PlayerInventory inventory = new PlayerInventory(playerWithId.getId(), 16); // or whatever initial size
-
+        inventory.setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
 
         inventory = playerInventoryRepository.save(inventory);
         playerWithId.setInventory(inventory);
@@ -669,22 +672,7 @@ public class PlayerService {
         PlayerInventory inventory = player.getInventory();
 
         String[] itemNames = {
-            "Flaming Sword",
-            "Helm of Wisdom",
-            "Pauldrons of Might",
-            "Amulet of Vitality",
-            "Epaulettes of Protection",
-            "Quiver of Endless Arrows",
-            "Bracers of Agility",
-            "Chestplate of Resilience",
-            "Vambraces of Defense",
-            "Gauntlets of Strength",
-            "Gloves of Dexterity",
-            "Shield of the Ancients",
-            "Ring of Power",
-            "Band of Elemental Mastery",
-            "Belt of Giant Strength",
-            "Signet of the King"
+            "Flaming Sword", "Bone Sword"
         };
 
         for (String itemName : itemNames) {

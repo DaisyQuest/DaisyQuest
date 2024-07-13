@@ -55,6 +55,17 @@ public class SpellService {
         thunder.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Stun"), 4);
 
         spells.put(thunder.getId(), thunder);
+
+        Spell skeletonRot = new Spell();
+        skeletonRot.setId("skeleton_rot");
+        skeletonRot.setName("Skeleton Rot");
+        skeletonRot.setDescription("Inflicts rot on the target, causing damage over time");
+        skeletonRot.setManaCost(10);
+        skeletonRot.setCooldown(5);
+        skeletonRot.setEffect(Spell.SpellEffect.DAMAGE);
+        skeletonRot.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Skeleton Rot"), 10);
+
+        spells.put(skeletonRot.getId(), skeletonRot);
     }
 
     public Spell getSpell(String spellId) {

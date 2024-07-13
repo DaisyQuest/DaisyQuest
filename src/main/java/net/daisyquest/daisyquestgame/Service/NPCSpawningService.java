@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 @Service
@@ -48,28 +49,38 @@ public class NPCSpawningService {
 
             npc = playerRepository.save(npc);
             npc.setInventory(new PlayerInventory(npc.getId(), 10));
+            npc.getInventory().setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
+            npc.getInventory().addItem(itemService.getItemByName("Bone Sword"), 1);
             playerInventoryRepository.save(npc.getInventory());
             playerRepository.save(npc);
         }
     }
+    @Autowired
+    EquipmentPropertyService equipmentPropertyService;
 
+    @Autowired
+    SpellService spellService;
     private Player createNPC(int worldWidth, int worldHeight) {
         Player npc = new Player();
         npc.setNPC(true);
         npc.setDuelable(true);
         npc.setUsername("Skeleton");
-        npc.setWorldPositionX(new Random().nextInt(1000));
-        npc.setWorldPositionY(new Random().nextInt(1000));
+        npc.setWorldPositionX(new Random().nextInt(20000));
+        npc.setWorldPositionY(new Random().nextInt(20000));
         npc.setSubspriteFace("enemy_skeleton");
         npc.setSubspriteEyes("enemy_skeleton");
         npc.setSubspriteBackground("enemy_skeleton");
         npc.setSubspriteHairHat("enemy_skeleton");
         npc.setLevel(3);
-        npc.setAttributes(PlayerInitializer.getInitializedCombatMapForNPC(100, 20));
+        Random r = new Random(System.currentTimeMillis());
+        npc.setAttributes(PlayerInitializer.getInitializedCombatMapForNPC(r.nextInt(15), 20));
         npc.setCurrentMana(100);
         npc.setMaxMana(100);
-        npc.setKnownSpells(new ArrayList<>());
+        npc.setKnownSpells(List.of(spellService.getSpell("skeleton_rot")));
         // Set other NPC attributes (level, health, etc.)
+
+        System.err.println(npc.getUsername() + " spawned at (X: " + npc.getWorldPositionX() + " Y: "+ npc.getWorldPositionY() + ")");
+
         return npc;
     }
 }

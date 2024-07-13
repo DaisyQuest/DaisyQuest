@@ -7,10 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Data
@@ -221,6 +218,65 @@ public class PlayerInventory {
             "LEFT_FINGER_1","LEFT_FINGER_2", "RIGHT_FINGER_1","RIGHT_FINGER_2", "AMMO"
     };
 
+
+    public Map<String, Integer> calculateEffectiveEquipmentBonuses() {
+        Map<String, Integer> effectiveBonuses = new HashMap<>();
+        Map<String, EquipmentProperty> propertyMap = new HashMap<>();
+
+        // Create a map of property names to EquipmentProperty objects
+        for (EquipmentProperty property : equipmentProperties) {
+            propertyMap.put(property.getName(), property);
+            effectiveBonuses.put(property.getName(), 0);
+        }
+
+        // Calculate the sum of all equipment bonuses
+        for (EquipmentSlot slot : equipmentSlots) {
+            if (slot.getItem() != null) {
+                Map<String, Integer> itemBonuses = slot.getItem().getEquipmentPropertyModifiers();
+                if(itemBonuses == null) continue;
+                for (Map.Entry<String, Integer> entry : itemBonuses.entrySet()) {
+                    String propertyName = entry.getKey();
+                    int bonusValue = entry.getValue();
+                    effectiveBonuses.merge(propertyName, bonusValue, Integer::sum);
+                }
+            }
+        }
+
+        // Apply the property types (additive, multiplicative, etc.)
+        for (Map.Entry<String, Integer> entry : new HashMap<>(effectiveBonuses).entrySet()) {
+            String propertyName = entry.getKey();
+            int currentValue = entry.getValue();
+            EquipmentProperty property = propertyMap.get(propertyName);
+
+            if (property == null) {
+                continue; // Skip if the property is not found in the equipmentProperties list
+            }
+
+            int finalValue;
+
+            switch (property.getType()) {
+                case ADDITITIVE:
+                    finalValue = property.getDefaultAmount() + currentValue;
+                    break;
+                case MULTIPLICATIVE:
+                    finalValue = (int) (property.getDefaultAmount() * (1 + currentValue * property.getAmountMultiplicative()));
+                    break;
+                case NON_QUANTITATIVE:
+                    finalValue = currentValue > 0 ? 1 : 0;
+                    break;
+                case HIDDEN:
+                    // For hidden properties, we keep the calculated value but it won't be displayed to the player
+                    finalValue = currentValue;
+                    break;
+                default:
+                    finalValue = currentValue;
+            }
+
+            effectiveBonuses.put(propertyName, finalValue);
+        }
+
+        return effectiveBonuses;
+    }
 
     }
 

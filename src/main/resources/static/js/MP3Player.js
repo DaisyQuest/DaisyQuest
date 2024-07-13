@@ -44,7 +44,6 @@ class MP3Player {
     loadTrack(src) {
         this.audio.src = src;
         this.audio.load();
-        this.audio.loop = true;
     }
 
     togglePlayPause() {

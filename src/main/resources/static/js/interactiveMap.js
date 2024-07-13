@@ -19,6 +19,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         mp3Player = new MP3Player('audio-player-container');
         mp3Player.loadTrack('/audio/world.mp3');
+        mp3Player.audio.loop = true;
         mp3Player.togglePlayPause();
     });
 
@@ -83,6 +84,10 @@
     submapCoordinateX: playerData.player.submapCoordinateX,
     submapCoordinateY: playerData.player.submapCoordinateY,
     submapCoordinateZ: playerData.player.submapCoordinateZ,
+    subspriteBackground: playerData.player.subspriteBackground,
+    subspriteFace:playerData.player.subspriteFace,
+    subspriteEyes:playerData.player.subspriteEyes,
+    subspriteHairHat:playerData.player.subspriteHairHat
     // Add other relevant player properties here
 };
     isInSubmap = currentPlayer.currentSubmapId != null;
@@ -110,6 +115,32 @@
     function initWorldMap() {
     initGameData();
 }
+
+    // Add this function at the top of your script
+    function throttle(func, limit) {
+        let lastFunc;
+        let lastRan;
+        return function() {
+            const context = this;
+            const args = arguments;
+            if (!lastRan) {
+                func.apply(context, args);
+                lastRan = Date.now();
+            } else {
+                clearTimeout(lastFunc);
+                lastFunc = setTimeout(function() {
+                    if ((Date.now() - lastRan) >= limit) {
+                        func.apply(context, args);
+                        lastRan = Date.now();
+                    }
+                }, limit - (Date.now() - lastRan));
+            }
+        }
+    }
+
+    // Throttle the drawWorldMap function
+    const throttledDrawWorldMap = throttle(drawWorldMap, 1000 / 60); //60fps
+
 
 
     function handleMapClick(event) {
@@ -229,7 +260,7 @@
 }
     // New function to set up the movement path
     let movementQueue = [];
-    const MOVE_SPEED = 3; // pixels per frame
+    const MOVE_SPEED = 1; // pixels per frame
     let moveInterval = null;
     let movementVector = { x: 0, y: 0 };
     let isKeyboardMovement = false;
@@ -328,52 +359,50 @@
 
 
     function drawWorldMap() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const startX = Math.floor(currentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
-    const startY = Math.floor(currentPlayer.worldPositionY / LAND_SIZE) * LAND_SIZE;
+        const startX = Math.floor(currentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
+        const startY = Math.floor(currentPlayer.worldPositionY / LAND_SIZE) * LAND_SIZE;
 
-    for (let y = -LAND_SIZE; y <= VIEWPORT_HEIGHT + LAND_SIZE; y += LAND_SIZE) {
-    for (let x = -LAND_SIZE; x <= VIEWPORT_WIDTH + LAND_SIZE; x += LAND_SIZE) {
-    const worldX = startX + x;
-    const worldY = startY + y;
+        for (let y = -LAND_SIZE; y <= VIEWPORT_HEIGHT + LAND_SIZE; y += LAND_SIZE) {
+            for (let x = -LAND_SIZE; x <= VIEWPORT_WIDTH + LAND_SIZE; x += LAND_SIZE) {
+                const worldX = startX + x;
+                const worldY = startY + y;
 
-    const offsetX = Math.round(x - (currentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
-    const offsetY = Math.round(y - (currentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
+                const offsetX = Math.round(x - (currentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
+                const offsetY = Math.round(y - (currentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
 
-    ctx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
-    ctx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
+                ctx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
+                ctx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.strokeRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
-}
-}
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.strokeRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
+            }
+        }
 
-    for (const player of players) {
-    if (player.id !== currentPlayer.id) {
-    const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
-    const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
+        for (const player of players) {
+            if (player.id !== currentPlayer.id) {
+                const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
+                const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
 
-    if (x >= -SPRITE_SIZE/2 && x < VIEWPORT_WIDTH + SPRITE_SIZE/2 &&
-    y >= -SPRITE_SIZE/2 && y < VIEWPORT_HEIGHT + SPRITE_SIZE/2) {
-    drawPlayer(x, y, player, false);
-}
-}
-}
+                if (x >= -SPRITE_SIZE/2 && x < VIEWPORT_WIDTH + SPRITE_SIZE/2 &&
+                    y >= -SPRITE_SIZE/2 && y < VIEWPORT_HEIGHT + SPRITE_SIZE/2) {
+                    drawPlayer(x, y, player, false);
+                }
+            }
+        }
 
-    submapEntrances.forEach(entrance => {
-    const x = entrance.x - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-    const y = entrance.y - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
-    ctx.fillStyle = '#FF00FF'; // Magenta color for visibility
-    ctx.fillRect(x - 5, y - 5, 10, 10);
-});
+        submapEntrances.forEach(entrance => {
+            const x = entrance.x - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = entrance.y - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            ctx.fillStyle = '#FF00FF'; // Magenta color for visibility
+            ctx.fillRect(x - 5, y - 5, 10, 10);
+        });
 
+        drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
 
-    drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
-
-    coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
-}
-
+        coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
+    }
     function getTileColor(x, y) {
     // In a real implementation, you would fetch the actual terrain type for these coordinates
     const terrainType = ['PLAINS', 'FOREST', 'MOUNTAIN', 'WATER', 'DESERT'][Math.floor(Math.random() * 5)];
@@ -383,10 +412,10 @@
 
     async function drawPlayer(x, y, player, isCurrentPlayer) {
     const layers = [
-    player.subspriteBackground || 'background_0',
-    player.subspriteFace || 'face_0',
-    player.subspriteEyes || 'eyes_0',
-    player.subspriteHairHat || 'hairhat_0'
+    player.subspriteBackground || 'background_1',
+    player.subspriteFace || 'face_1',
+    player.subspriteEyes || 'eyes_1',
+    player.subspriteHairHat || 'hairhat_1'
     ];
     try {
     for (const layer of layers) {
@@ -449,41 +478,97 @@
     let sendInterval;
     let accumulatedMovement = { x: 0, y: 0 };
 
+
+    const INTERPOLATION_DURATION = 200; // milliseconds
+    let interpolationData = {};
+
     function updatePlayerPosition(playerIdOfPlayerToUpdate, x, y) {
-    if (!currentPlayer) {
-    console.error('Current player is not initialized');
-    return;
-}
+        if (!currentPlayer) {
+            console.error('Current player is not initialized');
+            return;
+        }
 
-    if (x <= 0 || y <= 0) {
-    console.log('Attempted move to invalid position:', x, y);
-    return;
-}
+        if (x <= 0 || y <= 0) {
+            console.log('Attempted move to invalid position:', x, y);
+            return;
+        }
 
-    x = Math.round(x);
-    y = Math.round(y);
+        x = Math.round(x);
+        y = Math.round(y);
 
-    if (playerIdOfPlayerToUpdate === getCurrentPlayerId()) {
-    if (x === getCurrentPlayerX() && y === getCurrentPlayerY()) {
-    return;
-}
+        if (playerIdOfPlayerToUpdate === getCurrentPlayerId()) {
+            if (x === getCurrentPlayerX() && y === getCurrentPlayerY()) {
+                return;
+            }
+            setCurrentPlayerPosition(x, y);
+            updatePlayerInfo();
+        } else {
+            const player = players.find(p => p.id === playerIdOfPlayerToUpdate);
+            if (player) {
+                player.worldPositionX = x;
+                player.worldPositionY = y;
+            } else {
+                console.log('Player not found in viewport:', playerIdOfPlayerToUpdate);
+                fetchPlayersInViewport();
+            }
+        }
 
-    setCurrentPlayerPosition(x, y);
-    updatePlayerInfo();
-    drawWorldMap();
-} else {
-    const player = players.find(p => p.id === playerIdOfPlayerToUpdate);
-    if (player) {
-    player.worldPositionX = x;
-    player.worldPositionY = y;
-    drawWorldMap();
-} else {
-    console.log('Player not found in viewport:', playerIdOfPlayerToUpdate);
-    fetchPlayersInViewport();
-}
-}
-}
+        throttledDrawWorldMap();
+    }
 
+    function startInterpolation(player, targetX, targetY) {
+        const startX = player.worldPositionX;
+        const startY = player.worldPositionY;
+        const startTime = Date.now();
+
+        interpolationData[player.id] = {
+            startX,
+            startY,
+            targetX,
+            targetY,
+            startTime
+        };
+
+        // Ensure the interpolation loop is running
+        if (!interpolationLoop) {
+            interpolationLoop = requestAnimationFrame(interpolateMovements);
+        }
+    }
+
+    let interpolationLoop;
+
+    function interpolateMovements() {
+        const currentTime = Date.now();
+        let needsRedraw = false;
+
+        for (const playerId in interpolationData) {
+            const data = interpolationData[playerId];
+            const player = players.find(p => p.id === playerId);
+
+            if (!player) continue;
+
+            const progress = Math.min((currentTime - data.startTime) / INTERPOLATION_DURATION, 1);
+
+            player.worldPositionX = Math.round(data.startX + (data.targetX - data.startX) * progress);
+            player.worldPositionY = Math.round(data.startY + (data.targetY - data.startY) * progress);
+
+            if (progress === 1) {
+                delete interpolationData[playerId];
+            }
+
+            needsRedraw = true;
+        }
+
+        if (needsRedraw) {
+            throttledDrawWorldMap();
+        }
+
+        if (Object.keys(interpolationData).length > 0) {
+            interpolationLoop = requestAnimationFrame(interpolateMovements);
+        } else {
+            interpolationLoop = null;
+        }
+    }
 
     const sendPositionToServer = debounce(() => {
     if (isInSubmap) {
@@ -962,12 +1047,12 @@
     if (inventory.length > 0) {
     const randomItem = inventory[Math.floor(Math.random() * inventory.length)];
     resultsDiv.innerHTML += `
-                        <p>You won the duel and took ${randomItem.name} from ${loser}!</p>
+                        <p>You won the duel and took ${randomItem.name} from  ${loser} has fallen!</p>
                     `;
-    transferItem(randomItem.id, loser, winner);
+    //transferItem(randomItem.id, loser, winner);
 } else {
     resultsDiv.innerHTML += `
-                        <p>You won the duel, but ${loser} had no items to take.</p>
+                        <p>You won the duel, ${loser} has fallen</p>
                     `;
 }
 })
@@ -1024,27 +1109,61 @@
     // Duel functions
     function handlePlayerClick(player) {
     selectedPlayer = player;
+    updateTargetedPlayerInfo(player);
     let distance;
 
-    if (isInSubmap) {
-    distance = Math.sqrt(
-    Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
-    Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
-    );
-} else {
-    distance = Math.sqrt(
-    Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
-    Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
-    );
+//     if (isInSubmap) {
+//     distance = Math.sqrt(
+//     Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
+//     Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+//     );
+// } else {
+//     distance = Math.sqrt(
+//     Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
+//     Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+//     );
+// }
+//
+//     if (distance <= DUEL_RANGE) {
+//     showDuelButton();
+// } else {
+//     hideDuelButton();
+// }
 }
 
-    if (distance <= DUEL_RANGE) {
-    showDuelButton();
-} else {
-    hideDuelButton();
-}
-}
+    function updateTargetedPlayerInfo(player) {
+        const targetedPlayerInfo = document.getElementById('targeted-player-info');
+        const duelButton = document.getElementById('duelButton');
 
+        if (player) {
+            document.getElementById('targeted-player-name').textContent = player.username || 'Unknown';
+            document.getElementById('targeted-player-level').textContent = player.level || 'N/A';
+            const position = isInSubmap
+                ? `SubX: ${player.submapCoordinateX}, SubY: ${player.submapCoordinateY}`
+                : `X: ${player.worldPositionX}, Y: ${player.worldPositionY}`;
+            document.getElementById('targeted-player-position').textContent = position;
+            targetedPlayerInfo.style.display = 'block';
+
+            let distance;
+            if (isInSubmap) {
+                distance = Math.sqrt(
+                    Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
+                    Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+                );
+            } else {
+                distance = Math.sqrt(
+                    Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
+                    Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+                );
+            }
+
+            duelButton.style.display = distance <= DUEL_RANGE ? 'block' : 'none';
+        } else {
+            targetedPlayerInfo.style.display = 'none';
+            duelButton.style.display = 'none';
+        }
+    }
+    document.getElementById('duelButton').addEventListener('click', sendDuelRequest);
 
     function showDuelButton() {
     const duelButton = document.getElementById('duelButton');
@@ -1186,29 +1305,33 @@
 
 
 
-    function movePlayer(x, y) {
-    if (isInSubmap) {
-    movePlayerInSubmap(x, y);
-} else {
-    updatePlayerPosition(getCurrentPlayerId(), x, y);
-}
+    const debouncedWsTransmitPosition = debounce(wsTransmitPosition, 100);
 
-    checkAndReportPosition();
-}
+    function movePlayer(x, y) {
+        if (isInSubmap) {
+            movePlayerInSubmap(x, y);
+        } else {
+            updatePlayerPosition(getCurrentPlayerId(), x, y);
+        }
+        throttledWsTransmitPosition();
+    }
+
+    const throttledWsTransmitPosition = throttle(wsTransmitPosition, 200);
 
     function checkAndReportPosition() {
-    const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
-    const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+        const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
+        const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
 
-    const dx = currentX - lastReportedPosition.x;
-    const dy = currentY - lastReportedPosition.y;
-    const distanceMoved = Math.sqrt(dx * dx + dy * dy);
+        const dx = currentX - lastReportedPosition.x;
+        const dy = currentY - lastReportedPosition.y;
+        const distanceMoved = Math.sqrt(dx * dx + dy * dy);
 
-    if (distanceMoved >= REPORT_THRESHOLD) {
-    sendPositionToServer();
-    lastReportedPosition = { x: currentX, y: currentY };
-}
-}
+        if (distanceMoved >= REPORT_THRESHOLD) {
+            debouncedWsTransmitPosition();
+            lastReportedPosition = { x: currentX, y: currentY };
+        }
+    }
+
 
     function processKeyboardMovement() {
     if (movementVector.x !== 0 || movementVector.y !== 0) {
@@ -1303,7 +1426,8 @@
 
     socket.onmessage = function(event) {
     const data = JSON.parse(event.data);
-    switch(data.type) {
+        console.error('Received WebSocket message:', data);
+        switch(data.type) {
     case 'duelRequest':
     handleDuelRequest(data.challengerId);
     break;
@@ -1458,9 +1582,7 @@
     if (!moveInterval) {
     moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
 }
-    if (!sendInterval) {
-    sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
-}
+
 });
 
     // Handle keyup events
@@ -1523,6 +1645,21 @@
 }
 }
 
+//WEBSOCKET TRANSMIT
+
+    function wsTransmitPosition() {
+        console.log(socket.readyState);
+        console.log(Date.now())
+        if (socket.readyState === WebSocket.OPEN) {
+            const message = {
+                type: 'playerMove',
+                playerId: getCurrentPlayerId(),
+                x: Math.round(currentPlayer.worldPositionX),
+                y: Math.round(currentPlayer.worldPositionY)
+            };
+            socket.send(JSON.stringify(message));
+        }
+    }
 
     //
 
