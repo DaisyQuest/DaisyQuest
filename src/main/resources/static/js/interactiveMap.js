@@ -1648,6 +1648,8 @@
 //WEBSOCKET TRANSMIT
 
     function wsTransmitPosition() {
+        console.log(socket.readyState);
+        console.log(Date.now())
         if (socket.readyState === WebSocket.OPEN) {
             const message = {
                 type: 'playerMove',

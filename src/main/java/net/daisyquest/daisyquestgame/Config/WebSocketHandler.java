@@ -31,6 +31,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         try (JsonReader jsonReader = Json.createReader(new StringReader(message.getPayload()))) {
             JsonObject jsonMessage = jsonReader.readObject();
             String type = jsonMessage.getString("type");
+            System.err.println(jsonMessage);
             switch (type) {
                 case "register":
                     String playerId = jsonMessage.getString("playerId");
