@@ -1110,7 +1110,7 @@
         mp3Player.loadTrack('/audio/world.mp3');
         mp3Player.audio.play();
     document.getElementById('combatResults').style.display = 'none';
-    document.getElementById('worldMapContainer').style.display = 'block';
+    document.getElementById('worldMapContainer').style.display = 'flex';
     currentCombatId = null;
     selectedPlayer = null;
     hideDuelButton();
