@@ -5,6 +5,7 @@ import net.daisyquest.daisyquestgame.Model.Combat;
 import net.daisyquest.daisyquestgame.Model.CombatStatusContainer;
 import net.daisyquest.daisyquestgame.Model.StatusEffectInfo;
 import net.daisyquest.daisyquestgame.Repository.StatusEffectRepository;
+import net.daisyquest.daisyquestgame.Service.Interfaces.ICacheableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class StatusEffectService {
+public class StatusEffectService implements ICacheableService {
 
     @Autowired
     private StatusEffectRepository statusEffectRepository;
@@ -83,5 +84,15 @@ public class StatusEffectService {
 
     public StatusEffect getStatusEffectByShortDisplayNameNoCache(String searchDisplayName) {
     return statusEffectRepository.findStatusEffectByShortDisplayName(searchDisplayName);
+    }
+
+    @Override
+    public void clearCache() {
+        statusEffectCache.clear();
+    }
+
+    @Override
+    public String getServiceName() {
+        return "StatusEffectService";
     }
 }

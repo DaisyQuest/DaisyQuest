@@ -17,6 +17,8 @@ public class Spell {
     private SpellEffect effect;
     private List<StatusEffectApplication> statusEffects;
 
+    private String spellSpritePath;
+
     public Spell() {
         this.statusEffects = new ArrayList<>();
     }

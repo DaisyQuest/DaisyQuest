@@ -76,8 +76,8 @@ public class NPCSpawningService {
         npc.setLevel(x);
 
         npc.setAttributes(PlayerInitializer.getInitializedCombatMapForNPC(x, x));
-        npc.setCurrentMana(100);
-        npc.setMaxMana(100);
+        npc.setCurrentMana(1000);
+        npc.setMaxMana(1000);
         npc.setKnownSpells(List.of(spellService.getSpell("skeleton_rot")));
         // Set other NPC attributes (level, health, etc.)
 
