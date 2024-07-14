@@ -99,7 +99,7 @@ public class CombatService {
             if (playerEffects == null) continue;
 
             for (Map.Entry<String, CombatStatusContainer> entry : playerEffects.entrySet()) {
-                StatusEffect effect = statusEffectService.getStatusEffectByShortDisplayNameNoCache(entry.getKey());
+                StatusEffect effect = statusEffectService.getStatusEffect(entry.getKey());
                 CombatStatusContainer container = entry.getValue();
 
                 for (StatusEffectPropertyContainer property : effect.getProperties()) {
