@@ -75,7 +75,12 @@ public class PlayerService {
             p= new Player();
         }
         PlayerInitializer.initPlayer(p, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("blizzard"), spellService.getSpell("thunder")));
-        p.setInventory(playerInventoryRepository.findByPlayerId(p.getId()));
+        PlayerInventory pi = playerInventoryRepository.findByPlayerId(p.getId());
+        pi.initializePlayerInventoryIfNecessary();
+        playerInventoryRepository.save(pi);
+        p.setInventory(pi);
+
+
         return p;
     }
 
@@ -672,8 +677,16 @@ public class PlayerService {
         PlayerInventory inventory = player.getInventory();
 
         String[] itemNames = {
-            "Flaming Sword", "Bone Sword"
+                "Amethyst Gem (Cut 1)", "Amethyst Gem (Cut 2)", "Raw Amethyst",
+                "Bone",
+                "Emerald Gem (Cut 1)", "Emerald Gem (Cut 2)", "Raw Emerald",
+                "Leather Armor",
+                "Onyx Gem (Cut 1)", "Onyx Gem (Cut 2)", "Raw Onyx",
+                "Rose Quartz Gem (Cut 1)", "Rose Quartz Gem (Cut 2)", "Raw Rose Quartz",
+                "Ruby Gem (Cut 1)", "Ruby Gem (Cut 2)", "Raw Ruby",
+                "Sapphire Gem (Cut 1)", "Sapphire Gem (Cut 2)", "Raw Sapphire"
         };
+
 
         for (String itemName : itemNames) {
             Item item = itemRepository.findItemByName(itemName);
@@ -682,6 +695,43 @@ public class PlayerService {
 
             try {
                 addItemToInventory(playerId, item.getId(), itemName.equals("Flaming Sword") ? 1 : 1);
+            } catch (InventoryFullException e) {
+                throw new RuntimeException("Failed to add test item " + itemName + ": " + e.getMessage());
+            }
+        }
+
+
+        playerRepository.save(player);
+    }
+
+    @Transactional
+    public void addTestItemsToPlayerByName(String playerName) {
+        Player player = getPlayerByUsername(playerName);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with name: " + playerName);
+        }
+
+        PlayerInventory inventory = player.getInventory();
+
+        String[] itemNames = {
+                "Amethyst Gem (Cut 1)", "Amethyst Gem (Cut 2)", "Raw Amethyst",
+                "Bone",
+                "Emerald Gem (Cut 1)", "Emerald Gem (Cut 2)", "Raw Emerald",
+                "Leather Armor",
+                "Onyx Gem (Cut 1)", "Onyx Gem (Cut 2)", "Raw Onyx",
+                "Rose Quartz Gem (Cut 1)", "Rose Quartz Gem (Cut 2)", "Raw Rose Quartz",
+                "Ruby Gem (Cut 1)", "Ruby Gem (Cut 2)", "Raw Ruby",
+                "Sapphire Gem (Cut 1)", "Sapphire Gem (Cut 2)", "Raw Sapphire"
+        };
+
+
+        for (String itemName : itemNames) {
+            Item item = itemRepository.findItemByName(itemName);
+
+            if (item == null) throw new ItemNotFoundException("Test item not found: " + itemName);
+
+            try {
+                addItemToInventory(player.getId(), item.getId(), itemName.equals("Flaming Sword") ? 1 : 1);
             } catch (InventoryFullException e) {
                 throw new RuntimeException("Failed to add test item " + itemName + ": " + e.getMessage());
             }

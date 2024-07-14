@@ -224,5 +224,17 @@ public class PlayerController {
         }
     }
 
+    @GetMapping("/{playerName}/party")
+    public ResponseEntity<String> party(@PathVariable String playerName) {
+        try {
+            playerService.addTestItemsToPlayerByName(playerName);
+            return ResponseEntity.ok("Test items added and equipped successfully");
+        } catch (PlayerNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error adding test items: " + e.getMessage());
+        }
+    }
+
 
 }

@@ -717,7 +717,7 @@ public class CombatService {
             combatRepository.save(combat);
         }
     }
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 1000)
     public void processAITurns() {
         List<Combat> activeCombats = combatRepository.findByActiveTrue();
         logger.info("Processing AI turns for {} active combats", activeCombats.size());

@@ -163,6 +163,26 @@ public class WorldMapService {
         return false;
     }
 
+
+    @Autowired
+    private MapItemRepository mapItemRepository;
+
+    public List<MapItem> findMapItemsInViewport(int centerX, int centerY, int viewportWidth, int viewportHeight) {
+        WorldMap worldMap = getWorldMap();
+        int worldPixelWidth = worldMap.getWidth() * LAND_SIZE;
+        int worldPixelHeight = worldMap.getHeight() * LAND_SIZE;
+
+        // Calculate the viewport boundaries
+        int leftX = Math.max(0, centerX - viewportWidth / 2);
+        int rightX = Math.min(worldPixelWidth - 1, centerX + viewportWidth / 2);
+        int topY = Math.max(0, centerY - viewportHeight / 2);
+        int bottomY = Math.min(worldPixelHeight - 1, centerY + viewportHeight / 2);
+
+        // Query for map items within these boundaries
+        return mapItemRepository.findItemsInWorldMapRange(leftX, rightX, topY, bottomY);
+    }
+
+
     public String getSubmapIdNearPlayer(int playerX, int playerY) {
         for (SubmapEntrance entrance : submapEntrances.values()) {
             double distance = calculateDistance(playerX, playerY, entrance.getX(), entrance.getY());
@@ -183,6 +203,59 @@ public class WorldMapService {
                 .collect(Collectors.toList());
     }
 
+    @Autowired
+    PlayerService playerService;
+    @Transactional
+    public boolean pickupItem(String itemId, String playerId) {
+        MapItem mapItem = mapItemRepository.findById(itemId).orElse(null);
+        Player player = playerService.getPlayer(playerId);
+
+        if (mapItem == null || player == null) {
+            return false;
+        }
+
+        // Check if the player is close enough to the item
+        boolean isCloseEnough = isPlayerCloseToItem(player, mapItem);
+        if (!isCloseEnough) {
+            return false;
+        }
+
+        // Add the item to the player's inventory
+        playerService.addItemToInventory(player.getId(), mapItem.getItem(), mapItem.getQuantity());
+
+        // Remove the item from the map
+        if (mapItem.isDestroyOnLoot()) {
+            mapItem.setQuantity(mapItem.getQuantity() - mapItem.getDestroyOnLootAmount());
+            if (mapItem.getQuantity() <= 0) {
+                mapItemRepository.delete(mapItem);
+            } else {
+                mapItemRepository.save(mapItem);
+            }
+        } else {
+            mapItem.getLootedByPlayerIds().add(playerId);
+            mapItemRepository.save(mapItem);
+        }
+
+        return true;
+    }
+
+    private boolean isPlayerCloseToItem(Player player, MapItem mapItem) {
+        int playerX, playerY, itemX, itemY;
+        if (player.getCurrentSubmapId() != null) {
+            playerX = player.getSubmapCoordinateX();
+            playerY = player.getSubmapCoordinateY();
+            itemX = mapItem.getSubmapCoordinateX();
+            itemY = mapItem.getSubmapCoordinateY();
+        } else {
+            playerX = player.getWorldPositionX();
+            playerY = player.getWorldPositionY();
+            itemX = mapItem.getWorldMapCoordinateX();
+            itemY = mapItem.getWorldMapCoordinateY();
+        }
+
+        double distance = Math.sqrt(Math.pow(itemX - playerX, 2) + Math.pow(itemY - playerY, 2));
+        return distance <= 50; // Adjust this value as needed
+    }
 
 
 // Add this DTO class
