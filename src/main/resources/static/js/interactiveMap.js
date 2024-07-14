@@ -11,6 +11,24 @@
     if (!playerId) {
     window.location.href = '/';
 }
+
+    // Create a cache for item sprites
+    const itemSpriteCache = {};
+
+    // Pre-load item sprites
+    function preloadItemSprites(items) {
+        items.forEach(item => {
+            if (!itemSpriteCache[item.item.id]) {
+                const sprite = new Image();
+                sprite.src = `/sprites/items/${item.item.spriteName}.png`;
+                itemSpriteCache[item.item.id] = sprite;
+            }
+        });
+    }
+
+
+
+
     const LAND_SIZE = 10000;
     const VIEWPORT_WIDTH = 1240;
     const VIEWPORT_HEIGHT = 720;
@@ -64,7 +82,8 @@
     Promise.all([
     fetch('/api/world-map'),
     fetch(`/api/players/${playerId}`),
-    fetch('/api/world-map/submap-entrances')
+    fetch('/api/world-map/submap-entrances'),
+    fetchMapItemsInViewport()
     ])
     .then(([worldMapResponse, playerResponse, submapEntrancesResponse]) =>
     Promise.all([worldMapResponse.json(), playerResponse.json(), submapEntrancesResponse.json()])
@@ -323,6 +342,29 @@
     .catch(error => console.error('Error fetching players in overworld:', error));
 }
 }
+
+    let mapItems = [];
+
+    function fetchMapItemsInViewport() {
+        const centerX = getCurrentPlayerX();
+        const centerY = getCurrentPlayerY();
+
+        fetch(`/api/world-map/items?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
+            .then(response => response.json())
+            .then(data => {
+                mapItems = data;
+                preloadItemSprites(mapItems); // Pre-load sprites for new items
+                if (isInSubmap) {
+                    drawSubmap();
+                } else {
+                    drawWorldMap();
+                }
+            })
+            .catch(error => console.error('Error fetching map items:', error));
+    }
+
+
+
     function checkSubmapEntrance(worldX, worldY) {
     fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
         .then(response => response.json())
@@ -399,6 +441,13 @@
             }
         }
 
+        mapItems.forEach(item => {
+            console.log(item)
+            const x = item.worldMapCoordinateX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = item.worldMapCoordinateY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            drawMapItem(x, y, item, offscreenCtx);
+        });
+
         submapEntrances.forEach(entrance => {
             const x = entrance.x - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
             const y = entrance.y - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
@@ -417,7 +466,31 @@
     const terrainType = ['PLAINS', 'FOREST', 'MOUNTAIN', 'WATER', 'DESERT'][Math.floor(Math.random() * 5)];
     return terrainColors['PLAINS'];
 }
+    function drawMapItem(x, y, item, ctxToDraw) {
+        const spriteSize = 32; // Adjust this size as needed
 
+        if (itemSpriteCache[item.item.id] && itemSpriteCache[item.item.id].complete) {
+            // Sprite is loaded, draw it
+            ctxToDraw.drawImage(itemSpriteCache[item.item.id], x - spriteSize / 2, y - spriteSize / 2, spriteSize, spriteSize);
+        } else {
+            // Sprite is not loaded, draw fallback
+            ctxToDraw.fillStyle = 'yellow';
+            ctxToDraw.beginPath();
+            ctxToDraw.arc(x, y, 5, 0, 2 * Math.PI);
+            ctxToDraw.fill();
+        }
+
+        // Draw item name
+        ctxToDraw.fillStyle = 'white';
+        ctxToDraw.font = '12px Arial';
+        ctxToDraw.fillText(item.item.name, x, y - spriteSize / 2 - 5);
+    }
+
+    function getItemSprite(itemId) {
+        const sprite = new Image();
+        sprite.src = `/sprites/items/${itemId}.png`;
+        return sprite;
+    }
 
     async function drawPlayer(x, y, player, isCurrentPlayer) {
     const layers = [
@@ -1008,7 +1081,11 @@
     document.getElementById('spellInfoDescription').textContent = selectedSpell.description;
     document.getElementById('spellInfoManaCost').textContent = `Mana Cost: ${selectedSpell.manaCost}`;
     document.getElementById('spellInfoCooldown').textContent = `Cooldown: ${selectedSpell.cooldown} turns`;
-}
+
+        const spriteImg = document.getElementById('spellSprite');
+        spriteImg.src = `/sprites/spells/${selectedSpell.spellSpritePath}.png`;
+        spriteImg.alt = `${selectedSpell.name} Sprite`;
+    }
 }
 
     function updateTargetSelection() {
@@ -1656,6 +1733,86 @@
 }
 }
 
+
+
+//ITEM PICKUP
+    function attemptItemPickup() {
+        const playerX = isInSubmap ? currentPlayer.submapCoordinateX : currentPlayer.worldPositionX;
+        const playerY = isInSubmap ? currentPlayer.submapCoordinateY : currentPlayer.worldPositionY;
+        const pickupRadius = 50; // Adjust this value as needed
+
+        const nearbyItems = mapItems.filter(item => {
+            const itemX = isInSubmap ? item.submapCoordinateX : item.worldMapCoordinateX;
+            const itemY = isInSubmap ? item.submapCoordinateY : item.worldMapCoordinateY;
+            const distance = Math.sqrt(Math.pow(itemX - playerX, 2) + Math.pow(itemY - playerY, 2));
+            return distance <= pickupRadius;
+        });
+
+        if (nearbyItems.length > 0) {
+            // If multiple items are nearby, pick up the first one
+            pickUpItem(nearbyItems[0]);
+         //   initializeInventory();
+        } else {
+            console.log("No items nearby to pick up.");
+        }
+    }
+
+    function pickUpItem(item) {
+        fetch(`/api/world-map/items/${item.id}/pickup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                playerId: currentPlayer.id
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`Picked up ${item.item.name}`);
+                    // Remove the item from the map
+                    mapItems = mapItems.filter(i => i.id !== item.id);
+                    // Redraw the map
+                    PlayerInventory.init();
+                    if (isInSubmap) {
+                        drawSubmap();
+                    } else {
+                        drawWorldMap();
+                    }
+                    // You might want to update the player's inventory here
+
+                } else {
+                    console.log(`Failed to pick up item: ${data.message}`);
+                }
+            })
+            .catch(error => console.error('Error picking up item:', error));
+    }
+
+
+    const PlayerInventory = {
+        addItem: function(item, quantity) {
+            window.parent.postMessage({ action: 'addItem', data: { item, quantity } }, '*');
+        },
+        removeItem: function(itemId, quantity) {
+            window.parent.postMessage({ action: 'removeItem', data: { itemId, quantity } }, '*');
+        },
+        init: function (){
+            console.log("Sending Inventory Init Method To Main Window")
+            window.parent.postMessage({action:'init', data: { }},'*');
+        }
+        // Add other proxy functions as needed
+    };
+
+
+    // Add this event listener to handle item pickup
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'e' || event.key === 'E') {
+            attemptItemPickup();
+        }
+    });
+
+
 //WEBSOCKET TRANSMIT
 
     function wsTransmitPosition() {
@@ -1676,8 +1833,8 @@
 
 
     initWorldMap();
-    setInterval(fetchPlayersInViewport, 5000);
-
+    setInterval(fetchPlayersInViewport, 3000);
+    setInterval(fetchMapItemsInViewport, 3000);
 
 
 

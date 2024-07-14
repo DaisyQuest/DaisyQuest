@@ -17,6 +17,8 @@ public class Item {
     private Map<String, Integer> attributeRequirements;
     private Map<String, Integer> equipmentPropertyModifiers;
 
+    private String spriteName;
+
     private int sellPrice;
     private boolean isChest;
     private boolean retainOnDeath;

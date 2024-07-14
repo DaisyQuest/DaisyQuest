@@ -1,10 +1,7 @@
 package net.daisyquest.daisyquestgame.Controller;
 
 import lombok.Data;
-import net.daisyquest.daisyquestgame.Model.Land;
-import net.daisyquest.daisyquestgame.Model.Player;
-import net.daisyquest.daisyquestgame.Model.SubmapEntranceDTO;
-import net.daisyquest.daisyquestgame.Model.WorldMap;
+import net.daisyquest.daisyquestgame.Model.*;
 import net.daisyquest.daisyquestgame.Service.WorldMapService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -64,6 +61,28 @@ public class WorldMapController {
             return ResponseEntity.ok(Map.of("nearEntrance", false));
         }
     }
+
+    @GetMapping("/items")
+    public ResponseEntity<List<MapItem>> getMapItemsInViewport(
+            @RequestParam int centerX,
+            @RequestParam int centerY,
+            @RequestParam int viewportWidth,
+            @RequestParam int viewportHeight) {
+        List<MapItem> items = worldMapService.findMapItemsInViewport(centerX, centerY, viewportWidth, viewportHeight);
+        return ResponseEntity.ok(items);
+    }
+
+    @PostMapping("/items/{itemId}/pickup")
+    public ResponseEntity<Map<String, Object>> pickupItem(@PathVariable String itemId, @RequestBody Map<String, String> body) {
+        String playerId = body.get("playerId");
+        boolean success = worldMapService.pickupItem(itemId, playerId);
+        if (success) {
+            return ResponseEntity.ok(Map.of("success", true));
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Failed to pick up item"));
+        }
+    }
+
     @Data
     static
     class MoveRequest {

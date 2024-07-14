@@ -7,6 +7,7 @@
     <link th:href="@{/css/inventory.css}" rel = "stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <style>
         body {
             background-color: #f8f9fa;
@@ -713,6 +714,15 @@
                         </div>
                     </div>
                 </div>
+                <script th:src="@{/js/playerInventory.js}"></script>
+                <script>window.PlayerInventory = {
+                    initializeInventory: function() {
+                        console.log('Initializing inventory...');
+                        fetchPlayerInventory();
+                    },
+                    // Add other functions as needed
+                };</script>
+
                 <div class="tab-pane fade" id="inventory-management" role="tabpanel" aria-labelledby="inventory-management-tab">
                     <div class="card">
                         <div class="card-body">
@@ -846,6 +856,7 @@
 <!--                    </div>-->
 
 <!--                </div>-->
+
                 <div class="tab-pane fade" id="worldMapH" role="tabpanel" aria-labelledby="world-tab">
                     <div class="card">
                         <div class="card-body">
@@ -1087,6 +1098,8 @@
         </div>
     </div>
 </div>
+
+
 <script>
 
     (function() {
@@ -1194,6 +1207,9 @@
             iframe.className = 'html-viewer-embed';
             iframe.src = url;
 
+            // Allow the iframe to access the parent window
+            iframe.setAttribute('allow', 'scripts');
+
             targetDiv.appendChild(iframe);
         }
 
@@ -1220,7 +1236,7 @@
 </script>
 
 <script th:src="@{/js/game.js}"></script>
-<script th:src="@{/js/playerInventory.js}"></script>
+
 <script th:src="@{/js/talentTrees.js}"></script>
 <script th:src="@{/js/interactiveMap.js}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>

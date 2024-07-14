@@ -32,6 +32,43 @@ public class PlayerInventory {
         initializeEquipmentSlots();
     }
 
+    public void initializePlayerInventoryIfNecessary() {
+        logger.info("Initializing player inventory if necessary for player: {}", playerId);
+
+        if (inventorySlots == null || inventorySlots.isEmpty()) {
+            logger.warn("Inventory slots were null or empty for player: {}. Initializing...", playerId);
+            inventorySlots = new ArrayList<>(maxInventorySize);
+            initializeInventorySlots();
+        }
+
+        if (equipmentSlots == null || equipmentSlots.isEmpty()) {
+            logger.warn("Equipment slots were null or empty for player: {}. Initializing...", playerId);
+            equipmentSlots = new ArrayList<>();
+            initializeEquipmentSlots();
+        }
+
+        // Ensure all inventory slots are properly initialized
+        for (int i = inventorySlots.size(); i < maxInventorySize; i++) {
+            logger.info("Adding missing inventory slot at index {} for player: {}", i, playerId);
+            inventorySlots.add(new InventorySlot(i));
+        }
+
+        // Ensure all equipment slots are properly initialized
+        Set<String> existingSlotTypes = equipmentSlots.stream()
+                .map(EquipmentSlot::getType)
+                .collect(Collectors.toSet());
+
+        for (String slotType : EQUIPMENT_SLOT_TYPES) {
+            if (!existingSlotTypes.contains(slotType)) {
+                logger.info("Adding missing equipment slot of type {} for player: {}", slotType, playerId);
+                equipmentSlots.add(new EquipmentSlot(slotType));
+            }
+        }
+
+        logger.info("Inventory initialization complete for player: {}", playerId);
+    }
+
+
     private void initializeInventorySlots() {
         for (int i = 0; i < maxInventorySize; i++) {
             inventorySlots.add(new InventorySlot(i));
