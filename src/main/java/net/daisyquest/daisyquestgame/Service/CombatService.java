@@ -329,6 +329,8 @@ public class CombatService {
                 // If no spells are available, default to ATTACK
                 actionType = Action.ActionType.ATTACK;
             }
+        }else if(actionType == Action.ActionType.NONE){
+            actionType = Action.ActionType.ATTACK;
         }
 
         logger.info("AI action generated. Type: {}, Target: {}, Spell: {}", actionType, targetId, spellId);
@@ -354,7 +356,7 @@ public class CombatService {
     private void performSpecialAttack(Combat combat, Action action) {
         int damage = calculateDamage(action.getPlayerId(), 5, 10, getMeleeBonusOfAttackingPlayer(combat, action), 1);
         applyDamage(combat, action.getTargetPlayerId(), damage);
-        statusEffectService.applyStatusEffect(combat, action.getTargetPlayerId(), statusEffectService.getStatusEffectByDisplayNameNoCache("Poison"), 10);
+        statusEffectService.applyStatusEffect(combat, action.getTargetPlayerId(), statusEffectService.getStatusEffectByShortDisplayNameNoCache("PSN"), 10);
     }
 
     private void performSpell(Combat combat, Action action) {
