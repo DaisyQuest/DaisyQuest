@@ -84,6 +84,27 @@ public class CraftingService {
             throw new InventoryFullException("Crafting failed. Player's inventory is full.");
         }
 
+        for (String a : matchingRecipe.getAttributeExperienceRewardAmounts().keySet()) {
+            // Convert attribute key to lowercase
+            String attributeKey = a.toLowerCase();
+
+            // Get the reward amount for this attribute
+            Integer rewardAmount = matchingRecipe.getAttributeExperienceRewardAmounts().get(a);
+
+            // Check if the player already has this attribute
+            if (player.getAttributes().containsKey(attributeKey)) {
+                // If the attribute exists, add the reward amount to the existing amount
+                Attribute currentAttribute = player.getAttributes().get(attributeKey);
+                currentAttribute.setExperience(currentAttribute.getExperience() + rewardAmount);
+            } else {
+                // If the attribute does not exist, create a new one and add it to the map
+                Attribute newAttribute = new Attribute();
+                newAttribute.setExperience(rewardAmount);
+                player.getAttributes().put(attributeKey, newAttribute);
+            }
+        }
+
+
         playerService.updatePlayer(player);
         logger.info("Player {} successfully crafted: {}", playerId, resultItem.getName());
         return "Successfully crafted: " + resultItem.getName();
@@ -108,7 +129,7 @@ public class CraftingService {
 
     private boolean playerMeetsAttributeRequirements(Player player, Map<String, Integer> attributeRequirements) {
         for (Map.Entry<String, Integer> entry : attributeRequirements.entrySet()) {
-            String attributeName = entry.getKey();
+            String attributeName = entry.getKey().toLowerCase();
             Integer requiredLevel = entry.getValue();
             Attribute playerAttribute = player.getAttributes().get(attributeName);
 

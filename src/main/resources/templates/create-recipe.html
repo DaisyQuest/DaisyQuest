@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Recipe</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<div class="container mt-5">
+    <h2>Create New Recipe</h2>
+    <form id="recipeForm">
+        <div class="form-group">
+            <label for="name">Recipe Name:</label>
+            <input type="text" class="form-control" id="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="resultItemId">Result Item:</label>
+            <select class="form-control" id="resultItemId" required>
+                <option value="">Select Result Item</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="discoveredBy">Discovered By:</label>
+            <input type="text" class="form-control" id="discoveredBy" required>
+        </div>
+
+        <h4>Required Items</h4>
+        <div id="requiredItems">
+            <div class="form-row mb-2">
+                <div class="col">
+                    <select class="form-control required-item">
+                        <option value="">Select Item</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <input type="number" class="form-control required-amount" placeholder="Amount" min="1">
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-secondary mb-3" id="addRequiredItem">Add Required Item</button>
+
+        <h4>Attribute Requirements</h4>
+        <div id="attributeRequirements">
+            <div class="form-row mb-2">
+                <div class="col">
+                    <select class="form-control attr-name">
+                        <option value="">Select Attribute</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <input type="number" class="form-control attr-value" placeholder="Required Value" min="1">
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-secondary mb-3" id="addAttributeRequirement">Add Attribute Requirement</button>
+
+        <h4>Attribute Experience Rewards</h4>
+        <div id="attributeExperienceRewards">
+            <div class="form-row mb-2">
+                <div class="col">
+                    <select class="form-control exp-attr-name">
+                        <option value="">Select Attribute</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <input type="number" class="form-control exp-amount" placeholder="Experience Amount" min="1">
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn btn-secondary mb-3" id="addAttributeExperienceReward">Add Attribute Experience Reward</button>
+
+        <div>
+            <button type="submit" class="btn btn-primary">Create Recipe</button>
+        </div>
+    </form>
+</div>
+
+<script>
+        // Fetch all items
+        $(document).ready(function() {
+            let attributes = [];
+
+            // Fetch all items
+            $.get('/api/items', function(items) {
+                const itemOptions = items.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+                $('#resultItemId').append(itemOptions);
+                $('.required-item').append(itemOptions);
+            });
+
+            // Fetch all attribute templates
+            $.get('/api/attributes/all', function(attributeTemplates) {
+                attributes = attributeTemplates;
+                const attributeOptions = attributes.map(attr => `<option value="${attr.name}">${attr.name}</option>`).join('');
+                $('.attr-name, .exp-attr-name').append(attributeOptions);
+            });
+
+            // Add required item
+        $('#addRequiredItem').click(function() {
+            const newRow = `
+                    <div class="form-row mb-2">
+                        <div class="col">
+                            <select class="form-control required-item">
+                                <option value="">Select Item</option>
+                                ${$('.required-item').first().html()}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <input type="number" class="form-control required-amount" placeholder="Amount" min="1">
+                        </div>
+                    </div>
+                `;
+            $('#requiredItems').append(newRow);
+        });
+
+        // Add attribute requirement
+            $('#addAttributeRequirement').click(function() {
+                const newRow = `
+                <div class="form-row mb-2">
+                    <div class="col">
+                        <select class="form-control attr-name">
+                            <option value="">Select Attribute</option>
+                            ${$('.attr-name').first().html()}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <input type="number" class="form-control attr-value" placeholder="Required Value" min="1">
+                    </div>
+                </div>
+            `;
+                $('#attributeRequirements').append(newRow);
+            });
+
+            // Add attribute experience reward
+            $('#addAttributeExperienceReward').click(function() {
+                const newRow = `
+                <div class="form-row mb-2">
+                    <div class="col">
+                        <select class="form-control exp-attr-name">
+                            <option value="">Select Attribute</option>
+                            ${$('.exp-attr-name').first().html()}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <input type="number" class="form-control exp-amount" placeholder="Experience Amount" min="1">
+                    </div>
+                </div>
+            `;
+                $('#attributeExperienceRewards').append(newRow);
+            });
+
+            // Form submission
+            $('#recipeForm').submit(function(e) {
+                e.preventDefault();
+
+                const requiredItems = {};
+                $('.required-item').each(function(index) {
+                    const itemId = $(this).val();
+                    const amount = $('.required-amount').eq(index).val();
+                    if (itemId && amount) {
+                        requiredItems[itemId] = parseInt(amount);
+                    }
+                });
+
+                const attributeRequirements = {};
+                $('.attr-name').each(function(index) {
+                    const attrName = $(this).val();
+                    const attrValue = $('.attr-value').eq(index).val();
+                    if (attrName && attrValue) {
+                        attributeRequirements[attrName] = parseInt(attrValue);
+                    }
+                });
+
+                const attributeExperienceRewardAmounts = {};
+                $('.exp-attr-name').each(function(index) {
+                    const attrName = $(this).val();
+                    const expAmount = $('.exp-amount').eq(index).val();
+                    if (attrName && expAmount) {
+                        attributeExperienceRewardAmounts[attrName] = parseInt(expAmount);
+                    }
+                });
+
+                const recipe = {
+                    name: $('#name').val(),
+                    resultItemId: $('#resultItemId').val(),
+                    discoveredBy: $('#discoveredBy').val(),
+                    requiredItemIdsAndAmounts: requiredItems,
+                    attributeRequirements: attributeRequirements,
+                    attributeExperienceRewardAmounts: attributeExperienceRewardAmounts,
+                    discoveryDateTime: new Date().getTime()
+                };
+
+                $.ajax({
+                    url: '/api/recipes',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(recipe),
+                    success: function(response) {
+                        alert('Recipe created successfully!');
+                        $('#recipeForm')[0].reset();
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Error creating recipe: ' + error);
+                    }
+                });
+            });
+        });
+</script>
+</body>
+</html>

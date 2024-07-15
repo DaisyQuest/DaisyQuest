@@ -29,4 +29,9 @@ public class GameController {
     public String worldMap(){
         return "worldMap";
     }
+
+    @GetMapping("/create-recipes")
+    public String createRecipes(){
+        return "create-recipe";
+    }
 }

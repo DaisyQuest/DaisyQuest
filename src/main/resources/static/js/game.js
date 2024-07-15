@@ -462,22 +462,30 @@ function displayRecipes(recipes, itemDetails) {
         return;
     }
 
-    const recipeHtml = recipes.map(recipe => `
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">${recipe.name}</h5>
-                <p class="card-text">
-                    <strong>Ingredients:</strong> ${formatIngredients(recipe.requiredItemIdsAndAmounts, itemDetails)}
-                </p>
-                <p class="card-text">
-                    <strong>Result:</strong> ${itemDetails[recipe.resultItemId]?.name || 'Unknown Item'}
-                </p>
-                <p class="card-text">
-                    <small class="text-muted">Discovered by: ${recipe.discoveredBy}</small>
-                </p>
+    const recipeHtml = recipes.map(recipe => {
+        const resultItem = itemDetails[recipe.resultItemId];
+        const spriteUrl = resultItem ? `/sprites/items/${resultItem.spriteName}.png` : '/sprites/items/unknown_item.png';
+
+        return `
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex align-items-center">
+                <img src="${spriteUrl}" alt="${resultItem?.name || 'Unknown Item'}" class="recipe-result-sprite me-3" style="width: 64px; height: 64px; object-fit: contain;">
+                <h5 class="card-title mb-0">${recipe.name}</h5>
             </div>
+            <p class="card-text mt-3">
+                <strong>Ingredients:</strong> ${formatIngredients(recipe.requiredItemIdsAndAmounts, itemDetails)}
+            </p>
+            <p class="card-text">
+                <strong>Result:</strong> ${resultItem?.name || 'Unknown Item'}
+            </p>
+            <p class="card-text">
+                <small class="text-muted">Discovered by: ${recipe.discoveredBy}</small>
+            </p>
         </div>
-    `).join('');
+    </div>
+    `;
+    }).join('');
 
     recipeBookContent.innerHTML = recipeHtml;
 }
@@ -524,7 +532,7 @@ function updateCraftingUI() {
             const itemElement = document.createElement('div');
             itemElement.className = 'crafting-item';
             itemElement.innerHTML = `
-                <img src="/images/items/${slot.item.id}.png" alt="${slot.item.name}">
+                <img src="/sprites/items/${slot.item.spriteName}.png" alt="${slot.item.name}">
                 <span>${slot.item.name} (x${slot.quantity})</span>
                 <button onclick="addToCraftingIngredients('${slot.item.id}')">Add</button>
             `;
@@ -651,7 +659,7 @@ function updateCraftingIngredientsUI() {
         const ingredientElement = document.createElement('div');
         ingredientElement.className = 'crafting-ingredient';
         ingredientElement.innerHTML = `
-            <img src="/images/items/${ingredient.id}.png" alt="${ingredient.name}">
+            <img src="/sprites/items/${ingredient.id}.png" alt="${ingredient.name}">
             <span>${ingredient.name} (x${ingredient.quantity})</span>
             <button onclick="removeFromCraftingIngredients('${ingredient.id}')">Remove</button>
         `;
@@ -1713,7 +1721,7 @@ function showRewardAnimation(rewards) {
             const rewardElement = document.createElement('div');
             rewardElement.className = 'reward-item';
             rewardElement.innerHTML = `
-                <img src="/images/${reward.type.toLowerCase()}.png" alt="${reward.type}">
+                <img src="/sprites/${reward.type.toLowerCase()}.png" alt="${reward.type}">
                 <p>${reward.quantity} ${reward.rewardId}</p>
             `;
             rewardItems.appendChild(rewardElement);
