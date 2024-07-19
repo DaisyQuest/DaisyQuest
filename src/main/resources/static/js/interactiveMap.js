@@ -412,6 +412,9 @@
     offscreenCanvas.width = VIEWPORT_WIDTH;
     offscreenCanvas.height = VIEWPORT_HEIGHT;
     function drawWorldMap() {
+        if (currentCombatId){
+            return;
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
@@ -798,6 +801,7 @@
         .then(combat => {
             updateCombatUI(combat);
             fetchPlayerSpells();
+            fetchPlayerSpecialAttacks();
             fetchStatusEffects(combatId);
             pollCombatStatus();
         })
@@ -890,67 +894,77 @@
     function performAction(actionType) {
         selectedAction = actionType;
         const spellSelection = document.getElementById('spellSelection');
-        const spellSelectionBar = document.getElementById('spellSelectionBar');
-        const spellInfoContainer = document.getElementById('spellInfoContainer');
+        const specialAttackSelection = document.getElementById('specialAttackSelection');
         const targetSelection = document.getElementById('targetSelection');
 
         spellSelection.style.display = 'none';
+        specialAttackSelection.style.display = 'none';
         targetSelection.style.display = 'none';
 
         if (actionType === 'SPELL') {
             spellSelection.style.display = 'block';
-            spellSelectionBar.style.display = 'flex';
-            spellInfoContainer.style.display = 'block';
             updateSpellSelection();
+        } else if (actionType === 'SPECIAL_ATTACK') {
+            specialAttackSelection.style.display = 'block';
+            updateSpecialAttackSelection();
         } else {
             updateTargetSelection();
             targetSelection.style.display = 'block';
         }
     }
     function confirmAction() {
-    const targetPlayerId = document.getElementById('targetSelect').value;
-    if (!targetPlayerId) {
-    alert('Please select a target.');
-    return;
-}
+        const targetPlayerId = document.getElementById('targetSelect').value;
+        if (!targetPlayerId) {
+            alert('Please select a target.');
+            return;
+        }
 
-    let actionData = {
-    playerId: playerId,
-    type: selectedAction,
-    targetPlayerId: targetPlayerId,
-    actionPoints: 1
-};
+        let actionData = {
+            playerId: playerId,
+            type: selectedAction,
+            targetPlayerId: targetPlayerId,
+            actionPoints: 1
+        };
 
-    if (selectedAction === 'SPELL') {
-    if (!selectedSpell) {
-    alert('Please select a spell.');
-    return;
-}
-    actionData.spellId = selectedSpell.id;
-}
+        if (selectedAction === 'SPELL') {
+            if (!selectedSpell) {
+                alert('Please select a spell.');
+                return;
+            }
+            actionData.spellId = selectedSpell.id;
+        } else if (selectedAction === 'SPECIAL_ATTACK') {
+            if (!selectedSpecialAttack) {
+                alert('Please select a special attack.');
+                return;
+            }
+            actionData.specialAttackId = selectedSpecialAttack.id;
+        }
 
-    fetch(`/api/combat/${currentCombatId}/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(actionData)
-})
-    .then(response => response.json())
-    .then(updatedCombat => {
-    updateCombatUI(updatedCombat);
-    document.getElementById('spellSelection').style.display = 'none';
-    document.getElementById('targetSelection').style.display = 'none';
-    fetchStatusEffects(currentCombatId); // This will now handle cases with no status effects
-    if (!updatedCombat.active) {
-    showCombatResults(updatedCombat);
-}
-})
-    .catch(error => {
-    console.error('Error performing action:', error);
-    alert('An error occurred while performing the action. Please try again.');
-});
+        fetch(`/api/combat/${currentCombatId}/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(actionData)
+        })
+            .then(response => response.json())
+            .then(updatedCombat => {
+                updateCombatUI(updatedCombat);
+                document.getElementById('spellSelection').style.display = 'none';
+                document.getElementById('specialAttackSelection').style.display = 'none';
+                document.getElementById('targetSelection').style.display = 'none';
+                fetchStatusEffects(currentCombatId);
+                if (!updatedCombat.active) {
+                    showCombatResults(updatedCombat);
+                }
+            })
+            .catch(error => {
+                console.error('Error performing action:', error);
+                alert('An error occurred while performing the action. Please try again.');
+            });
 
-    selectedSpell = null;
-}
+        selectedSpell = null;
+        selectedSpecialAttack = null;
+    }
+
 
     function fetchPlayerSpells() {
     fetch(`/api/players/${playerId}/spells`)
@@ -1913,6 +1927,86 @@
 
 
     //TEMP
+//SPECIAL ATTACKS:
+
+    let playerSpecialAttacks = [];
+    let selectedSpecialAttack = null;
+
+    function fetchPlayerSpecialAttacks() {
+        fetch(`/api/special-attacks/player/${playerId}`)
+            .then(response => response.json())
+            .then(specialAttacks => {
+                playerSpecialAttacks = specialAttacks;
+                updateSpecialAttackSelection();
+                preloadSpecialAttackIcons(); // Preload icons after fetching
+            })
+            .catch(error => console.error('Error fetching player special attacks:', error));
+    }
+    function updateSpecialAttackSelection() {
+        const specialAttackSelectionBar = document.getElementById('specialAttackSelectionBar');
+        specialAttackSelectionBar.innerHTML = '';
+
+        playerSpecialAttacks.forEach(specialAttack => {
+            const specialAttackIcon = document.createElement('img');
+            specialAttackIcon.src = `/sprites/special-attacks/${specialAttack.specialAttackSpritePath}.png`;
+            specialAttackIcon.alt = specialAttack.name;
+            specialAttackIcon.className = 'special-attack-icon';
+            specialAttackIcon.dataset.specialAttackId = specialAttack.id;
+            specialAttackIcon.addEventListener('click', () => handleSpecialAttackSelection(specialAttack.id));
+
+            // Add error handling for image loading
+            specialAttackIcon.onerror = function() {
+                this.onerror = null; // Prevent infinite loop if fallback image also fails
+                this.src = '/sprites/special-attacks/default-special-attack.png'; // Path to a default icon
+                console.warn(`Failed to load special attack icon for ${specialAttack.name}`);
+            };
+
+            specialAttackSelectionBar.appendChild(specialAttackIcon);
+        });
+
+        if (playerSpecialAttacks.length > 0) {
+            handleSpecialAttackSelection(playerSpecialAttacks[0].id);
+        }
+    }
+
+    function preloadSpecialAttackIcons() {
+        playerSpecialAttacks.forEach(specialAttack => {
+            const img = new Image();
+            img.src = `/sprites/special-attacks/${specialAttack.specialAttackSpritePath}.png`;
+        });
+    }
+
+
+    function handleSpecialAttackSelection(specialAttackId) {
+        selectedSpecialAttack = playerSpecialAttacks.find(sa => sa.id === specialAttackId);
+        updateSpecialAttackInfo();
+
+        // Update visual selection
+        document.querySelectorAll('.special-attack-icon').forEach(icon => {
+            icon.classList.toggle('selected', icon.dataset.specialAttackId === specialAttackId);
+        });
+
+        // Show target selection after special attack is chosen
+        updateTargetSelection();
+        document.getElementById('targetSelection').style.display = 'block';
+    }
+
+    function updateSpecialAttackInfo() {
+        if (selectedSpecialAttack) {
+            document.getElementById('specialAttackInfoName').textContent = selectedSpecialAttack.name;
+            document.getElementById('specialAttackInfoDescription').textContent = selectedSpecialAttack.description;
+            document.getElementById('specialAttackInfoCooldown').textContent = `Cooldown: ${selectedSpecialAttack.cooldown} turns`;
+            document.getElementById('specialAttackInfoAttackQuantity').textContent = `Attacks: ${selectedSpecialAttack.attackQuantity}`;
+
+            const spriteImg = document.getElementById('specialAttackSprite');
+            spriteImg.src = `/sprites/special-attacks/${selectedSpecialAttack.specialAttackSpritePath}.png`;
+            spriteImg.alt = `${selectedSpecialAttack.name} Sprite`;
+        }
+    }
+    ///f
+
+
+
 
 
 //
@@ -1965,7 +2059,7 @@
     }
 
     // Call this function periodically or when the player moves significantly
-    setInterval(fetchEncampmentsInViewport, 5000); // Fetch every 5 seconds, for example
+    setInterval(fetchEncampmentsInViewport, 30000); // Fetch every 5 seconds, for example
 
     loadEncampmentSprites();
 

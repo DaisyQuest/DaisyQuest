@@ -67,8 +67,23 @@ public class PlayerService {
         p.setUsername(username);
         return createPlayer(p);
     }
+    @Transactional
+    public void checkAndFixDataIntegrity() {
+        List<Player> allPlayers = playerRepository.findAll();
+        for (Player player : allPlayers) {
+            PlayerInventory inventory = playerInventoryRepository.findByPlayerId(player.getId());
+            if (inventory == null) {
+                inventory = new PlayerInventory(player.getId(), 16);
+                inventory.setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
+                inventory = playerInventoryRepository.save(inventory);
+                player.setInventory(inventory);
+                playerRepository.save(player);
+            }
+        }
+        System.out.println("Data integrity check completed.");
+    }
 
-
+    @Transactional
     public Player getPlayer(String id) {
         Player p =  playerRepository.findById(id).orElse(null);
         if(p == null){

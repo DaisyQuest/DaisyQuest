@@ -43,6 +43,8 @@ public class CombatService {
     private static final int INITIAL_ACTION_POINTS = 1;
     private static final int MAX_TURNS = 100;
     private static final int HP_COEFFICIENT = 15;
+    @Autowired
+    private SpecialAttackService specialAttackService;
 
     public Combat startCombat(List<String> playerIds, Map<String, String> playerTeams) {
         logger.info("Starting new combat with players: {}", playerIds);
@@ -347,6 +349,9 @@ public class CombatService {
     private static Integer getMeleeBonusOfAttackingPlayer(Combat combat, Action action) {
         return combat.getPlayerEquipmentBonuses().get(action.getPlayerId()).get("Melee Bonus");
     }
+    private static Integer getMeleeBonusOfPlayerById(Combat c, String playerId) {
+        return c.getPlayerEquipmentBonuses().get(playerId).get("Melee Bonus");
+    }
 
     private static Integer getSpellBonusOfAttackingPlayer(Combat combat, Action action) {
         return combat.getPlayerEquipmentBonuses().get(action.getPlayerId()).get("Spell Bonus");
@@ -354,10 +359,47 @@ public class CombatService {
 
 
     private void performSpecialAttack(Combat combat, Action action) {
-        int damage = calculateDamage(action.getPlayerId(), 5, 10, getMeleeBonusOfAttackingPlayer(combat, action), 1);
-        applyDamage(combat, action.getTargetPlayerId(), damage);
-        statusEffectService.applyStatusEffect(combat, action.getTargetPlayerId(), statusEffectService.getStatusEffectByShortDisplayNameNoCache("PSN"), 10);
+        Player attacker = playerService.getPlayer(action.getPlayerId());
+        SpecialAttack specialAttack = specialAttackService.getSpecialAttack(action.getSpecialAttackId());
+
+        if (!canPerformSpecialAttack(combat, attacker, specialAttack)) {
+            return;
+        }
+
+        applySpecialAttackEffect(combat, attacker, action.getTargetPlayerId(), specialAttack);
+        updateSpecialAttackCooldown(combat, attacker.getId(), specialAttack);
     }
+
+    private boolean canPerformSpecialAttack(Combat combat, Player attacker, SpecialAttack specialAttack) {
+        if (specialAttack == null) return false;
+
+        Map<String, Integer> playerCooldowns = combat.getSpellCooldowns().get(attacker.getId());
+        if (playerCooldowns != null && playerCooldowns.containsKey(specialAttack.getId())) {
+            return playerCooldowns.get(specialAttack.getId()) <= 0;
+        }
+
+        return true;
+    }
+
+    private void applySpecialAttackEffect(Combat combat, Player attacker, String targetPlayerId, SpecialAttack specialAttack) {
+        for (int i = 0; i < specialAttack.getAttackQuantity(); i++) {
+            int damage = calculateDamage(attacker.getId(), 5, 10, getMeleeBonusOfPlayerById(combat, attacker.getId()), 1);
+            applyDamage(combat, targetPlayerId, damage);
+            createCombatLog(combat, attacker.getId(), "SPECIAL_ATTACK", targetPlayerId,
+                    String.format("%s deals %d damage to %s with %s (Hit %d/%d)",
+                            attacker.getUsername(), damage, targetPlayerId, specialAttack.getName(), i + 1, specialAttack.getAttackQuantity()));
+        }
+
+        for (SpecialAttack.StatusEffectApplication sEA : specialAttack.getStatusEffects()) {
+            statusEffectService.applyStatusEffect(combat, targetPlayerId, sEA.getStatusEffect(), sEA.getDuration());
+        }
+    }
+
+    private void updateSpecialAttackCooldown(Combat combat, String playerId, SpecialAttack specialAttack) {
+        combat.getSpellCooldowns().computeIfAbsent(playerId, k -> new HashMap<>())
+                .put(specialAttack.getId(), specialAttack.getCooldown());
+    }
+
 
     private void performSpell(Combat combat, Action action) {
         Player caster = playerService.getPlayer(action.getPlayerId());

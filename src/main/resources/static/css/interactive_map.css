@@ -425,3 +425,33 @@ li{
         width: 100%;
     }
 }
+
+.special-attack-selection-bar {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+}
+
+.special-attack-icon {
+    width: 64px;  /* Set a fixed width */
+    height: 64px; /* Set a fixed height */
+    margin-right: 10px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    transition: border-color 0.3s ease;
+    object-fit: cover; /* This will ensure the image covers the area without distortion */
+    background-color: #2c3e50; /* A dark background color for icons */
+}
+
+#specialAttackInfoName {
+    color:black;
+}
+#specialAttackInfoDescription {
+    color: black;
+}
+.special-attack-icon:hover, .special-attack-icon.selected {
+    border-color: #ffcc00;
+}
