@@ -25,6 +25,18 @@ function fetchPlayerInventory() {
         })
         .catch(error => console.error('Error fetching inventory:', error));
 }
+function getRarityColor(rarity) {
+    switch (rarity) {
+        case 'JUNK': return '#7F7F7F';
+        case 'COMMON': return '#FFFFFF';
+        case 'UNCOMMON': return '#1EFF00';
+        case 'RARE': return '#0070DD';
+        case 'EPIC': return '#A335EE';
+        case 'LEGENDARY': return '#FF8000';
+        case 'SUPERLATIVE': return '#00FFFF';
+        default: return '#FFFFFF';
+    }
+}
 
 function renderInventory() {
     const container = document.getElementById('inventoryContainer');
@@ -47,6 +59,8 @@ function renderInventory() {
     container.appendChild(currenciesSection);
 
     // Render inventory slots
+
+    // Render inventory slots
     const slotsContainer = document.createElement('div');
     slotsContainer.className = 'inventory-slots-container';
 
@@ -57,10 +71,13 @@ function renderInventory() {
         slotElement.setAttribute('data-slot-index', i);
 
         if (slot.item) {
+            const rarityColor = getRarityColor(slot.item.rarity);
             slotElement.innerHTML = `
-                <img src="/sprites/items/${slot.item.spriteName}.png" alt="${slot.item.name}" 
-                     class="item-sprite" data-item-id="${slot.item.id}" draggable="true">
-                <span class="item-quantity">${slot.quantity}</span>
+                <div class="item-container" style="border: 3px solid ${rarityColor};">
+                    <img src="/sprites/items/${slot.item.spriteName}.png" alt="${slot.item.name}" 
+                         class="item-sprite" data-item-id="${slot.item.id}" draggable="true">
+                    <span class="item-quantity">${slot.quantity}</span>
+                </div>
             `;
             slotElement.addEventListener('click', () => selectItem(slot.item));
 
@@ -77,7 +94,6 @@ function renderInventory() {
 
     container.appendChild(slotsContainer);
 }
-
 
 
 
@@ -247,8 +263,14 @@ function renderSelectedItemInfo() {
         const equipSlotIcon = selectedItem.equippable ?
             `<img src="/sprites/slots/${selectedItem.equipmentSlotTypeString.toLowerCase()}.png" alt="${selectedItem.equipmentSlotTypeString}" class="equipment-slot-icon">` : '';
 
+        const rarityColor = getRarityColor(selectedItem.rarity);
+        const rarityDisplay = selectedItem.rarity ? toTitleCase(selectedItem.rarity) : 'Common';
+
         container.innerHTML = `
-            <h3>${selectedItem.name} ${equipSlotIcon}</h3>
+            <h3>
+                ${selectedItem.name} ${equipSlotIcon} 
+                <span style="color: ${rarityColor};">(${rarityDisplay})</span>
+            </h3>
             <img src="/sprites/items/${selectedItem.spriteName}.png" style="width: 64px; height: 64px;" alt="${selectedItem.name}" 
                  class="item-sprite-small" data-item-id="${selectedItem.id}">
             <p>${selectedItem.description}</p>
@@ -278,6 +300,13 @@ function renderSelectedItemInfo() {
     } else {
         container.innerHTML = '<p>No item selected</p>';
     }
+}
+
+// Helper function to convert a string to Title Case
+function toTitleCase(str) {
+    return str.toLowerCase().split('_').map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
 }
 
 function unequipSelectedItem() {

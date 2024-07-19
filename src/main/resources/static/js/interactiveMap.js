@@ -20,6 +20,11 @@
         items.forEach(item => {
             if (!itemSpriteCache[item.item.id]) {
                 const sprite = new Image();
+                sprite.onload = () => console.log(`Loaded ${item.item.spriteName}`);
+                sprite.onerror = () => {
+                    console.error(`Failed to load sprite: ${item.item.spriteName}`);
+                    sprite.error = true; // Mark this sprite as error
+                };
                 sprite.src = `/sprites/items/${item.item.spriteName}.png`;
                 itemSpriteCache[item.item.id] = sprite;
             }
@@ -36,7 +41,7 @@
     let mp3Player;
     document.addEventListener('DOMContentLoaded', function() {
         mp3Player = new MP3Player('audio-player-container');
-        mp3Player.loadTrack('/audio/world.mp3');
+        mp3Player.loadTrack('/audio/world2.mp3');
         mp3Player.audio.loop = true;
         mp3Player.togglePlayPause();
     });
@@ -455,6 +460,13 @@
             offscreenCtx.fillRect(x - 5, y - 5, 10, 10);
         });
 
+        encampments.forEach(encampment => {
+            const x = encampment.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = encampment.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            drawEncampment(x, y, encampment);
+        });
+
+
         drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
 
         coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
@@ -468,24 +480,39 @@
 }
     function drawMapItem(x, y, item, ctxToDraw) {
         const spriteSize = 32; // Adjust this size as needed
+        const sprite = itemSpriteCache[item.item.id];
 
-        if (itemSpriteCache[item.item.id] && itemSpriteCache[item.item.id].complete) {
-            // Sprite is loaded, draw it
-            ctxToDraw.drawImage(itemSpriteCache[item.item.id], x - spriteSize / 2, y - spriteSize / 2, spriteSize, spriteSize);
+        if (sprite && sprite.complete && !sprite.error) {
+            // Sprite is loaded and has no errors, draw it
+            ctxToDraw.drawImage(sprite, x - spriteSize / 2, y - spriteSize / 2, spriteSize, spriteSize);
         } else {
-            // Sprite is not loaded, draw fallback
+            // Sprite is not loaded or has errors, draw fallback
             ctxToDraw.fillStyle = 'yellow';
             ctxToDraw.beginPath();
             ctxToDraw.arc(x, y, 5, 0, 2 * Math.PI);
             ctxToDraw.fill();
         }
 
-        // Draw item name
-        ctxToDraw.fillStyle = 'white';
-        ctxToDraw.font = '12px Arial';
-        ctxToDraw.fillText(item.item.name, x, y - spriteSize / 2 - 5);
+        // Draw item name with color based on rarity
+        const rarityColor = getRarityColor(item.item.rarity);
+        ctxToDraw.fillStyle = rarityColor;
+        ctxToDraw.font = 'bold 12px Arial';
+        ctxToDraw.textAlign = 'center';
+        ctxToDraw.fillText(item.item.name, x, y + spriteSize / 2 + 15);
     }
 
+    function getRarityColor(rarity) {
+        switch (rarity) {
+            case 'JUNK': return '#7F7F7F';
+            case 'COMMON': return '#FFFFFF';
+            case 'UNCOMMON': return '#1EFF00';
+            case 'RARE': return '#0070DD';
+            case 'EPIC': return '#A335EE';
+            case 'LEGENDARY': return '#FF8000';
+            case 'SUPERLATIVE': return '#00FFFF';
+            default: return '#FFFFFF';
+        }
+    }
     function getItemSprite(itemId) {
         const sprite = new Image();
         sprite.src = `/sprites/items/${itemId}.png`;
@@ -1184,7 +1211,7 @@
 
     function returnToWorldMap() {
         mp3Player.audio.loop = true;
-        mp3Player.loadTrack('/audio/world.mp3');
+        mp3Player.loadTrack('/audio/world2.mp3');
         mp3Player.audio.play();
     document.getElementById('combatResults').style.display = 'none';
     document.getElementById('worldMapContainer').style.display = 'flex';
@@ -1843,5 +1870,56 @@
 
 //
 
+    function drawEncampment(x, y, encampment) {
+        const sprite = encampmentSprites[encampment.sprite];
+        if (sprite) {
+            ctx.drawImage(sprite, x - sprite.width / 2, y - sprite.height / 2);
+        } else {
+            // Fallback if sprite is not loaded
+            ctx.fillStyle = '#800000';
+            ctx.beginPath();
+            ctx.arc(x, y, 10, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // Draw encampment name
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(encampment.name, x, y + 20);
+    }
+
+    // Make sure to load encampment sprites
+    const encampmentSprites = {};
+    function loadEncampmentSprites() {
+        const spriteNames = ['encampment_sprite']; // Add all your encampment sprite names here
+        spriteNames.forEach(name => {
+            const img = new Image();
+            img.onload = () => console.log(`Loaded ${name}`);
+            img.onerror = () => console.error(`Failed to load sprite: ${name}`);
+            img.src = `/sprites/encampments/${name}.png`;
+            encampmentSprites[name] = img;
+        });
+    }
+
+    let encampments = [];
+
+    function fetchEncampmentsInViewport() {
+        const centerX = getCurrentPlayerX();
+        const centerY = getCurrentPlayerY();
+
+        fetch(`/api/npc-encampments/viewport?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
+            .then(response => response.json())
+            .then(data => {
+                encampments = data;
+                drawWorldMap(); // Redraw the map to show the encampments
+            })
+            .catch(error => console.error('Error fetching encampments:', error));
+    }
+
+    // Call this function periodically or when the player moves significantly
+    setInterval(fetchEncampmentsInViewport, 5000); // Fetch every 5 seconds, for example
+
+    loadEncampmentSprites();
 
 // Update every 5 seconds

@@ -546,10 +546,14 @@ public class CombatService {
             return aliveTeams.size() <= 1;
         }
     }
+
+    @Autowired
+    private NPCEncampmentService npcEncampmentService;
+
+
     private void endCombat(Combat combat) {
         logger.info("Ending combat: {}", combat.getId());
         combat.setActive(false);
-
         // Determine winners and losers
         List<String> winners;
         List<String> losers;
@@ -575,6 +579,8 @@ public class CombatService {
                     .collect(Collectors.toList());
         }
 
+        Set<String> encampmentsToCheck = new HashSet<>();
+
         // Handle winners
         for (String winnerId : winners) {
             if (winnerId.startsWith("AI")) continue; // Skip AI winners
@@ -586,30 +592,44 @@ public class CombatService {
 
         // Handle losers
         for (String loserId : losers) {
-            //todo: remove this check
             if (loserId.startsWith("AI")) {
                 handleNPCDefeat(combat, loserId);
+                checkForEncampmentBoss(loserId, encampmentsToCheck);
             } else {
                 Player loser = playerService.getPlayer(loserId);
-                if(loser.isNPC()){
+                if (loser.isNPC()) {
                     loser.setWorldPositionX(-10000);
                     loser.setWorldPositionY(-10000);
                     loser.setSubmapCoordinateX(-10000);
                     loser.setSubmapCoordinateY(-10000);
                     loser.setCurrentSubmapId(null);
                     handleNPCDefeat(combat, loserId);
-                }
-                else {
+                    checkForEncampmentBoss(loserId, encampmentsToCheck);
+                } else {
                     applyLossPenalty(loser);
                 }
                 loser.setDuelable(true);
                 playerService.updatePlayer(loser);
             }
-
         }
 
         // Distribute NPC drops to winners
         distributeNPCDrops(combat, winners, losers);
+
+        // Check and remove encampments if all bosses are defeated
+        for (String encampmentId : encampmentsToCheck) {
+            npcEncampmentService.checkAndRemoveEncampment(encampmentId);
+        }
+    }
+
+    private void checkForEncampmentBoss(String npcId, Set<String> encampmentsToCheck) {
+        List<NPCEncampment> encampments = npcEncampmentService.getAllEncampments();
+        for (NPCEncampment encampment : encampments) {
+            if (encampment.getBossPlayerIds().contains(npcId)) {
+                encampmentsToCheck.add(encampment.getId());
+                break;
+            }
+        }
     }
 
     private int calculateExperienceGain(Combat combat, Player winner) {

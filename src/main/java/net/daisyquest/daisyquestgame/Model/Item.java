@@ -36,6 +36,8 @@ public class Item {
     private String equipmentSlotTypeString;
     private boolean equippableInStacks = false;
 
+    private Rarity rarity;
+
     public boolean meetsRequirements(Map<String, Attribute> playerAttributes) {
         if (attributeRequirements == null) return true;
         for (Map.Entry<String, Integer> requirement : attributeRequirements.entrySet()) {

@@ -23,11 +23,12 @@ public class Player {
     private String username;
     private String emailAddress;
     private Map<String, Attribute> attributes;
+    private PlayerLifeForces lifeForces;
 
     @DBRef
     private PlayerInventory inventory;
 
-   private Set<String> completedQuests;
+    private Set<String> completedQuests;
     private Set<String> achievements;
     private int totalExperience;
     private int level = 1;
@@ -60,6 +61,8 @@ public class Player {
     //Duel
     private boolean duelable = true;
     private boolean isNPC = false;
+    private boolean isAlive = true;
+
     private boolean markedForDeletion = false;
     private int talentPointsAvailable = 0;
 
