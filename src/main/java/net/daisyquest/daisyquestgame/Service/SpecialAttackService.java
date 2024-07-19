@@ -3,8 +3,10 @@ package net.daisyquest.daisyquestgame.Service;
 import jakarta.annotation.PostConstruct;
 import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.SpecialAttack;
+import net.daisyquest.daisyquestgame.Repository.SpecialAttackRepository;
 import net.daisyquest.daisyquestgame.Service.Interfaces.ICacheableService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.stereotype.Service;
 
 
@@ -23,6 +25,8 @@ public class SpecialAttackService implements ICacheableService {
 
     @Autowired
     private PlayerService playerService;
+    @Autowired
+    private SpecialAttackRepository specialAttackRepository;
 
     public SpecialAttackService() {
         // Constructor is empty, initialization is done in setup()
@@ -30,49 +34,36 @@ public class SpecialAttackService implements ICacheableService {
 
     @PostConstruct
     public void setup() {
-        SpecialAttack doubleSlash = new SpecialAttack();
-        doubleSlash.setId("double_slash");
-        doubleSlash.setName("Double Slash");
-        doubleSlash.setDescription("Performs two quick slashes on the target");
-        doubleSlash.setCooldown(5);
-        doubleSlash.setAttackQuantity(2);
-        doubleSlash.setSpecialAttackSpritePath("double_slash");
-        doubleSlash.setStatusEffects(new ArrayList<>());
-        specialAttacks.put(doubleSlash.getId(), doubleSlash);
+        List<SpecialAttack> specialAttacksToSave = new ArrayList<>();
 
-        SpecialAttack powerfulBlow = new SpecialAttack();
-        powerfulBlow.setId("powerful_blow");
-        powerfulBlow.setName("Powerful Blow");
-        powerfulBlow.setDescription("Delivers a single, powerful strike");
-        powerfulBlow.setCooldown(8);
-        powerfulBlow.setAttackQuantity(1);
-        powerfulBlow.setSpecialAttackSpritePath("powerful_blow");
-        powerfulBlow.setStatusEffects(new ArrayList<>());
+        SpecialAttack doubleSlash = createSpecialAttack("double_slash", "Double Slash",
+                "Performs two quick slashes on the target", 5, 2, "double_slash", new ArrayList<>());
+        specialAttacksToSave.add(doubleSlash);
+
+        SpecialAttack powerfulBlow = createSpecialAttack("powerful_blow", "Powerful Blow",
+                "Delivers a single, powerful strike", 8, 1, "powerful_blow", new ArrayList<>());
         powerfulBlow.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("STN"), 2);
-        specialAttacks.put(powerfulBlow.getId(), powerfulBlow);
+        specialAttacksToSave.add(powerfulBlow);
 
-        SpecialAttack whirlwind = new SpecialAttack();
-        whirlwind.setId("whirlwind");
-        whirlwind.setName("Whirlwind");
-        whirlwind.setDescription("Spins rapidly, striking all nearby enemies");
-        whirlwind.setCooldown(12);
-        whirlwind.setAttackQuantity(3);
-        whirlwind.setSpecialAttackSpritePath("whirlwind");
-        whirlwind.setStatusEffects(new ArrayList<>());
+        SpecialAttack whirlwind = createSpecialAttack("whirlwind", "Whirlwind",
+                "Spins rapidly, striking all nearby enemies", 12, 3, "whirlwind", new ArrayList<>());
         whirlwind.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("FRZ"), 3);
-        specialAttacks.put(whirlwind.getId(), whirlwind);
+        specialAttacksToSave.add(whirlwind);
 
-        SpecialAttack venomStrike = new SpecialAttack();
-        venomStrike.setId("venom_strike");
-        venomStrike.setName("Venom Strike");
-        venomStrike.setDescription("A poisonous attack that damages over time");
-        venomStrike.setCooldown(10);
-        venomStrike.setAttackQuantity(1);
-        venomStrike.setSpecialAttackSpritePath("venom_strike");
-        venomStrike.setStatusEffects(new ArrayList<>());
+        SpecialAttack venomStrike = createSpecialAttack("venom_strike", "Venom Strike",
+                "A poisonous attack that damages over time", 10, 1, "venom_strike", new ArrayList<>());
         venomStrike.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("PSN"), 5);
-        specialAttacks.put(venomStrike.getId(), venomStrike);
+        specialAttacksToSave.add(venomStrike);
+
+        for (SpecialAttack attack : specialAttacksToSave) {
+            SpecialAttack existingAttack = specialAttackRepository.findSpecialAttackBySpecialAttackId(attack.getSpecialAttackId());
+            if (existingAttack == null) {
+                specialAttackRepository.save(attack);
+            }
+            specialAttacks.put(attack.getSpecialAttackId(), attack);
+        }
     }
+
 
     public SpecialAttack getSpecialAttack(String specialAttackId) {
         return specialAttacks.get(specialAttackId);
@@ -112,11 +103,12 @@ public class SpecialAttackService implements ICacheableService {
             throw new IllegalArgumentException("Special attack with ID " + updatedSpecialAttack.getId() + " does not exist.");
         }
     }
+
     public List<SpecialAttack> getSpecialAttacksForPlayer(String playerId) {
         Player player = playerService.getPlayer(playerId);
         List<SpecialAttack> retList = new ArrayList<>();
-        if(player.getInventory() != null) {
-            player.getInventory().getEquipmentSlots().stream().filter(o-> o.getItem() != null && o.getItem().getSpecialAttacks() != null)
+        if (player.getInventory() != null) {
+            player.getInventory().getEquipmentSlots().stream().filter(o -> o.getItem() != null && o.getItem().getSpecialAttacks() != null)
                     .map(o -> o.getItem().getSpecialAttacks()).distinct().forEach(retList::addAll);
         }
 
@@ -130,4 +122,31 @@ public class SpecialAttackService implements ICacheableService {
     public SpecialAttack getSpecialAttackByName(String specialAttackName) {
         return specialAttacks.keySet().stream().filter(o -> specialAttacks.get(o).getName().equals(specialAttackName)).map(specialAttacks::get).findFirst().orElse(null);
     }
+
+    public SpecialAttack saveSpecialAttack(SpecialAttack specialAttack) {
+        return specialAttackRepository.save(specialAttack);
+    }
+
+    public List<SpecialAttack> getAll() {
+        return specialAttackRepository.findAll();
+    }
+
+    public SpecialAttack getSpecialAttackById(String id) {
+        return specialAttackRepository.findById(id).orElse(null);
+    }
+
+
+    private SpecialAttack createSpecialAttack(String id, String name, String description, int cooldown,
+                                              int attackQuantity, String spritePath, List<SpecialAttack.StatusEffectApplication> statusEffects) {
+        SpecialAttack attack = new SpecialAttack();
+        attack.setSpecialAttackId(id);
+        attack.setName(name);
+        attack.setDescription(description);
+        attack.setCooldown(cooldown);
+        attack.setAttackQuantity(attackQuantity);
+        attack.setSpecialAttackSpritePath(spritePath);
+        attack.setStatusEffects(statusEffects);
+        return attack;
+    }
+
 }

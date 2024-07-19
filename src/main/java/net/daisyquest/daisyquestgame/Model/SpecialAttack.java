@@ -12,6 +12,7 @@ import java.util.List;
 public class SpecialAttack {
     @Id
     private String id;
+    private String specialAttackId;
     private String name;
     private String description;
     private int cooldown;

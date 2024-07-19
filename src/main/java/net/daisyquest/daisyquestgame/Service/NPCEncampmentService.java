@@ -54,7 +54,7 @@ public class NPCEncampmentService {
         encampment.setName("Skeleton Encampment"); // You can randomize this
 
         // Set position within MIN_DISTANCE_FROM_CENTER and MAX_DISTANCE_FROM_CENTER of the world center
-        Random random = new Random();
+        Random random = new Random(System.currentTimeMillis());
         int distance = random.nextInt(MAX_DISTANCE_FROM_CENTER - MIN_DISTANCE_FROM_CENTER) + MIN_DISTANCE_FROM_CENTER;
         double angle = random.nextDouble() * 2 * Math.PI;
 
@@ -108,7 +108,7 @@ public class NPCEncampmentService {
 
     private List<Point> generateNPCPositions(int count, int radius, int minDistance) {
         List<Point> positions = new ArrayList<>();
-        Random random = new Random();
+        Random random = new Random(System.currentTimeMillis());
 
         for (int i = 0; i < count; i++) {
             Point newPosition;
@@ -142,10 +142,10 @@ public class NPCEncampmentService {
         npc.setWorldPositionX(x);
         npc.setWorldPositionY(y);
 
-        npc.setSubspriteFace("enemy_skeleton");
-        npc.setSubspriteEyes("enemy_skeleton");
-        npc.setSubspriteBackground("enemy_skeleton");
-        npc.setSubspriteHairHat(isBoss ? "enemy_skeleton_boss" : "enemy_skeleton");
+        npc.setSubspriteFace(isBoss ? "otherworldly_beast" : "enemy_skeleton");
+        npc.setSubspriteEyes(isBoss ? "otherworldly_beast" : "enemy_skeleton");
+        npc.setSubspriteBackground(isBoss ? "otherworldly_beast" : "enemy_skeleton");
+        npc.setSubspriteHairHat(isBoss ? "otherworldly_beast" : "enemy_skeleton");
 
         int baseLevel = isBoss ? 20 : 10;
         int level = baseLevel + new Random().nextInt(6); // 20-25 for boss, 10-15 for regular
@@ -160,7 +160,7 @@ public class NPCEncampmentService {
         // Set inventory and equipment
         npc.setInventory(new PlayerInventory(npc.getId(), 10));
         npc.getInventory().setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
-        npc.getInventory().addItem(itemService.getItemByName("Bone Sword"), 2);
+        npc.getInventory().addItem(isBoss? itemService.getItemByName("Otherworldly Mace") : itemService.getItemByName("Bone Sword"), 1);
         playerInventoryRepository.save(npc.getInventory());
 
         return npc;
