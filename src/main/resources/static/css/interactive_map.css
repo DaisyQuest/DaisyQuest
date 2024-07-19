@@ -43,6 +43,13 @@ body {
     border-radius: 10px;
 }
 
+#spellInfoName{
+    color: black;
+}
+#spellSelection{
+    color: black;
+}
+
 #coordinates {
     position: absolute;
     top: 20px;
@@ -51,7 +58,7 @@ body {
     color: #1a1a2e;
     padding: 10px 15px;
     border-radius: 25px;
-    font-size: 14px;
+    font-size: 16px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
@@ -144,6 +151,27 @@ body {
 .player-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 12px rgba(0,0,0,0.2);
+}
+.spell-selection-bar {
+    display: flex;
+    overflow-x: auto;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+}
+
+.spell-icon {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    transition: border-color 0.3s ease;
+}
+
+.spell-icon:hover, .spell-icon.selected {
+    border-color: #ffcc00;
 }
 
 .player-sprite {

@@ -176,22 +176,24 @@
                         <button class="btn btn-primary action-button" onclick="performAction('TACTICS')">Tactics</button>
                     </div>
                     <div id="spellSelection" class="mt-3" style="display: none;">
-                        <select id="spellSelect" class="form-select mb-2" onchange="handleSpellSelection()"></select>
-                        <div id="spellInfo" class="card">
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div id="spellSpriteContainer" class="mb-3">
-                                            <img id="spellSprite" src="" alt="Spell Sprite" class="img-fluid">
+                        <div id="spellSelectionBar" class="spell-selection-bar"></div>
+                        <div id="spellInfoContainer">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div id="spellSpriteContainer" class="mb-3">
+                                                <img id="spellSprite" src="" alt="Spell Sprite" class="img-fluid">
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <h5 class="card-title" id="spellInfoName"></h5>
-                                        <p class="card-text" id="spellInfoDescription"></p>
-                                        <ul class="list-group list-group-flush">
-                                            <li class="list-group-item" id="spellInfoManaCost"></li>
-                                            <li class="list-group-item" id="spellInfoCooldown"></li>
-                                        </ul>
+                                        <div class="col-md-8">
+                                            <h5 class="card-title" id="spellInfoName"></h5>
+                                            <p class="card-text" id="spellInfoDescription"></p>
+                                            <ul class="list-group list-group-flush">
+                                                <li class="list-group-item" id="spellInfoManaCost"></li>
+                                                <li class="list-group-item" id="spellInfoCooldown"></li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

@@ -851,25 +851,27 @@
 });
 }
 
+
     function performAction(actionType) {
-    selectedAction = actionType;
-    const spellSelection = document.getElementById('spellSelection');
-    const targetSelection = document.getElementById('targetSelection');
+        selectedAction = actionType;
+        const spellSelection = document.getElementById('spellSelection');
+        const spellSelectionBar = document.getElementById('spellSelectionBar');
+        const spellInfoContainer = document.getElementById('spellInfoContainer');
+        const targetSelection = document.getElementById('targetSelection');
 
-    spellSelection.style.display = 'none';
-    targetSelection.style.display = 'none';
+        spellSelection.style.display = 'none';
+        targetSelection.style.display = 'none';
 
-    if (actionType === 'SPELL') {
-    spellSelection.style.display = 'block';
-    updateSpellSelection();
-    updateSpellInfo();
-} else {
-    updateTargetSelection();
-    targetSelection.style.display = 'block';
-}
-}
-
-
+        if (actionType === 'SPELL') {
+            spellSelection.style.display = 'block';
+            spellSelectionBar.style.display = 'flex';
+            spellInfoContainer.style.display = 'block';
+            updateSpellSelection();
+        } else {
+            updateTargetSelection();
+            targetSelection.style.display = 'block';
+        }
+    }
     function confirmAction() {
     const targetPlayerId = document.getElementById('targetSelect').value;
     if (!targetPlayerId) {
@@ -1040,80 +1042,90 @@
 
 
 
-    function handleSpellSelection() {
-    const spellId = document.getElementById('spellSelect').value;
-    selectedSpell = playerSpells.find(spell => spell.id === spellId);
-    updateSpellInfo();
+    // We should also update the handleSpellSelection function to show the target selection
+    function handleSpellSelection(spellId) {
+        selectedSpell = playerSpells.find(spell => spell.id === spellId);
+        updateSpellInfo();
 
-    // Keep spell selection visible
-    document.getElementById('spellSelection').style.display = 'block';
+        // Update visual selection
+        document.querySelectorAll('.spell-icon').forEach(icon => {
+            icon.classList.toggle('selected', icon.dataset.spellId === spellId);
+        });
 
-    // Show target selection after spell is chosen
-    updateTargetSelection();
-    document.getElementById('targetSelection').style.display = 'block';
-}
+        // Show target selection after spell is chosen
+        updateTargetSelection();
+        document.getElementById('targetSelection').style.display = 'block';
+    }
+
 
     function updateSelectionVisibility(combat) {
-    const isPlayerTurn = combat.currentTurnPlayerId === playerId;
-    const spellSelection = document.getElementById('spellSelection');
-    const targetSelection = document.getElementById('targetSelection');
+        const isPlayerTurn = combat.currentTurnPlayerId === playerId;
+        const spellSelection = document.getElementById('spellSelection');
+        const spellSelectionBar = document.getElementById('spellSelectionBar');
+        const spellInfoContainer = document.getElementById('spellInfoContainer');
+        const targetSelection = document.getElementById('targetSelection');
 
-    if (isPlayerTurn) {
-    // If it's the player's turn, show action buttons
-    document.getElementById('actionButtons').style.display = 'block';
+        if (isPlayerTurn) {
+            document.getElementById('actionButtons').style.display = 'block';
 
-    // If a spell is selected, show both spell and target selection
-    if (selectedAction === 'SPELL' && selectedSpell) {
-    spellSelection.style.display = 'block';
-    targetSelection.style.display = 'block';
-} else if (selectedAction === 'SPELL') {
-    // If SPELL is selected but no spell chosen yet, only show spell selection
-    spellSelection.style.display = 'block';
-    targetSelection.style.display = 'none';
-} else if (selectedAction) {
-    // For other actions, hide spell selection and show target selection
-    spellSelection.style.display = 'none';
-    targetSelection.style.display = 'block';
-} else {
-    // If no action is selected yet, hide both
-    spellSelection.style.display = 'none';
-    targetSelection.style.display = 'none';
-}
-} else {
-    // If it's not the player's turn, hide everything
-    document.getElementById('actionButtons').style.display = 'none';
-    spellSelection.style.display = 'none';
-    targetSelection.style.display = 'none';
-}
-}
+            if (selectedAction === 'SPELL') {
+                spellSelection.style.display = 'block';
+                spellSelectionBar.style.display = 'flex';
+                spellInfoContainer.style.display = 'block';
+                if (selectedSpell) {
+                    targetSelection.style.display = 'block';
+                } else {
+                    targetSelection.style.display = 'none';
+                }
+            } else if (selectedAction) {
+                spellSelection.style.display = 'none';
+                targetSelection.style.display = 'block';
+            } else {
+                spellSelection.style.display = 'none';
+                targetSelection.style.display = 'none';
+            }
+        } else {
+            document.getElementById('actionButtons').style.display = 'none';
+            spellSelection.style.display = 'none';
+            targetSelection.style.display = 'none';
+        }
+    }
+
 
     function updateSpellSelection() {
-    const spellSelect = document.getElementById('spellSelect');
-    spellSelect.innerHTML = '';
-    playerSpells.forEach(spell => {
-    const option = document.createElement('option');
-    option.value = spell.id;
-    option.textContent = spell.name;
-    spellSelect.appendChild(option);
-});
-    updateSpellInfo();
-}
+        const spellSelectionBar = document.getElementById('spellSelectionBar');
+        spellSelectionBar.innerHTML = '';
+
+        playerSpells.forEach(spell => {
+            const spellIcon = document.createElement('img');
+            spellIcon.src = `/sprites/spells/${spell.spellSpritePath}.png`;
+            spellIcon.alt = spell.name;
+            spellIcon.className = 'spell-icon';
+            spellIcon.dataset.spellId = spell.id;
+            spellIcon.addEventListener('click', () => handleSpellSelection(spell.id));
+            spellSelectionBar.appendChild(spellIcon);
+        });
+
+        if (playerSpells.length > 0) {
+            handleSpellSelection(playerSpells[0].id);
+        }
+    }
+
 
     function updateSpellInfo() {
-    const spellId = document.getElementById('spellSelect').value;
-    selectedSpell = playerSpells.find(spell => spell.id === spellId);
+        if (selectedSpell) {
+            document.getElementById('spellInfoName').textContent = selectedSpell.name;
+            document.getElementById('spellInfoDescription').textContent = selectedSpell.description;
+            document.getElementById('spellInfoManaCost').textContent = `Mana Cost: ${selectedSpell.manaCost}`;
+            document.getElementById('spellInfoCooldown').textContent = `Cooldown: ${selectedSpell.cooldown} turns`;
 
-    if (selectedSpell) {
-    document.getElementById('spellInfoName').textContent = selectedSpell.name;
-    document.getElementById('spellInfoDescription').textContent = selectedSpell.description;
-    document.getElementById('spellInfoManaCost').textContent = `Mana Cost: ${selectedSpell.manaCost}`;
-    document.getElementById('spellInfoCooldown').textContent = `Cooldown: ${selectedSpell.cooldown} turns`;
-
-        const spriteImg = document.getElementById('spellSprite');
-        spriteImg.src = `/sprites/spells/${selectedSpell.spellSpritePath}.png`;
-        spriteImg.alt = `${selectedSpell.name} Sprite`;
+            const spriteImg = document.getElementById('spellSprite');
+            spriteImg.src = `/sprites/spells/${selectedSpell.spellSpritePath}.png`;
+            spriteImg.alt = `${selectedSpell.name} Sprite`;
+        }
     }
-}
+
+
 
     function updateTargetSelection() {
     const targetSelect = document.getElementById('targetSelect');
