@@ -7,6 +7,7 @@
     let worldMap;
     let players = [];
     let currentPlayer;
+    const playerSpriteCache = new Map();
     const playerId = localStorage.getItem('playerId');
     if (!playerId) {
     window.location.href = '/';
@@ -519,30 +520,64 @@
         return sprite;
     }
 
+    // Function to create and cache player sprite
+    async function createPlayerSprite(player) {
+        const cacheKey = `${player.id}-${player.subspriteBackground}-${player.subspriteFace}-${player.subspriteEyes}-${player.subspriteHairHat}`;
+
+        if (playerSpriteCache.has(cacheKey)) {
+            return playerSpriteCache.get(cacheKey);
+        }
+
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = SPRITE_SIZE;
+        offscreenCanvas.height = SPRITE_SIZE;
+        const offscreenCtx = offscreenCanvas.getContext('2d');
+
+        const layers = [
+            player.subspriteBackground || 'background_1',
+            player.subspriteFace || 'face_1',
+            player.subspriteEyes || 'eyes_1',
+            player.subspriteHairHat || 'hairhat_1'
+        ];
+
+        try {
+            for (const layer of layers) {
+                const sprite = await loadSprite(layer);
+                offscreenCtx.drawImage(sprite, 0, 0, SPRITE_SIZE, SPRITE_SIZE);
+            }
+            playerSpriteCache.set(cacheKey, offscreenCanvas);
+            return offscreenCanvas;
+        } catch (error) {
+            console.error('Error creating player sprite:', error);
+            return null;
+        }
+    }
+
+    // Updated drawPlayer function
     async function drawPlayer(x, y, player, isCurrentPlayer) {
-    const layers = [
-    player.subspriteBackground || 'background_1',
-    player.subspriteFace || 'face_1',
-    player.subspriteEyes || 'eyes_1',
-    player.subspriteHairHat || 'hairhat_1'
-    ];
-    try {
-    for (const layer of layers) {
-    const sprite = await loadSprite(layer);
-    ctx.drawImage(sprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
-}
-    ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(player.username, x, y + SPRITE_SIZE / 2 + 15);
-} catch (error) {
-    console.error('Error loading sprite:', error);
-    ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
-    ctx.beginPath();
-    ctx.arc(x, y, SPRITE_SIZE / 2, 0, 2 * Math.PI);
-    ctx.fill();
-}
-}
+        let playerSprite = await createPlayerSprite(player);
+
+        if (playerSprite) {
+            ctx.drawImage(playerSprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+        } else {
+            // Fallback if sprite creation failed
+            ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
+            ctx.beginPath();
+            ctx.arc(x, y, SPRITE_SIZE / 2, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // Draw player name
+        ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(player.username, x, y + SPRITE_SIZE / 2 + 15);
+    }
+
+    // You might want to add a function to clear the cache when necessary
+    function clearPlayerSpriteCache() {
+        playerSpriteCache.clear();
+    }
 
 
     function loadSprite(spriteName) {
