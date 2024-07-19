@@ -31,7 +31,7 @@ public class NPCEncampmentService {
     @Autowired
     private SpellService spellService;
 
-    @Scheduled(fixedRate = 300000) // Run every 5 minutes
+    @Scheduled(fixedRate = 600000) // Run every 5 minutes
     public void spawnEncampments() {
         WorldMap worldMap = worldMapService.getWorldMap();
         int worldCenterX = worldMap.getWidth() * WorldMapService.LAND_SIZE / 2;
@@ -75,42 +75,72 @@ public class NPCEncampmentService {
     }
 
 
+    private static final int NPC_SPACING = 125;
+    private static final int ENCAMPMENT_RADIUS = 400;
+
     private void spawnNPCsForEncampment(NPCEncampment encampment) {
         List<Player> npcs = new ArrayList<>();
         List<Player> bosses = new ArrayList<>();
 
-        // Spawn regular NPCs
-        for (int i = 0; i < 3; i++) {
-            Player npc = createNPC(encampment.getCoordinateX(), encampment.getCoordinateY(), false);
-            npcs.add(npc);
-        }
-
-        // Spawn boss NPC
+        // Spawn boss NPC near the center
         Player boss = createNPC(encampment.getCoordinateX(), encampment.getCoordinateY(), true);
         bosses.add(boss);
+
+        // Spawn regular NPCs
+        List<Point> npcPositions = generateNPCPositions(3, ENCAMPMENT_RADIUS, NPC_SPACING);
+        for (Point position : npcPositions) {
+            Player npc = createNPC(
+                    encampment.getCoordinateX() + position.x,
+                    encampment.getCoordinateY() + position.y,
+                    false
+            );
+            npcs.add(npc);
+        }
 
         encampment.setNpcsToSpawn(npcs);
         encampment.setBossNPCs(bosses);
         // Save all NPCs
         playerRepository.saveAll(npcs);
-        bosses =  playerRepository.saveAll(bosses);
+        bosses = playerRepository.saveAll(bosses);
         encampment.setBossPlayerIds(bosses.stream().map(Player::getId).collect(Collectors.toList()));
         encampmentRepository.save(encampment);
-
     }
 
-    private Player createNPC(int encampmentX, int encampmentY, boolean isBoss) {
+    private List<Point> generateNPCPositions(int count, int radius, int minDistance) {
+        List<Point> positions = new ArrayList<>();
+        Random random = new Random();
+
+        for (int i = 0; i < count; i++) {
+            Point newPosition;
+            do {
+                double angle = random.nextDouble() * 2 * Math.PI;
+                int distance = random.nextInt(radius);
+                int x = (int) (Math.cos(angle) * distance);
+                int y = (int) (Math.sin(angle) * distance);
+                newPosition = new Point(x, y);
+            } while (!isValidPosition(newPosition, positions, minDistance));
+
+            positions.add(newPosition);
+        }
+
+        return positions;
+    }
+
+    private boolean isValidPosition(Point newPosition, List<Point> existingPositions, int minDistance) {
+        return existingPositions.stream().allMatch(p ->
+                Math.hypot(p.x - newPosition.x, p.y - newPosition.y) >= minDistance
+        );
+    }
+
+    private Player createNPC(int x, int y, boolean isBoss) {
         Player npc = new Player();
         npc.setNPC(true);
         npc.setDuelable(true);
         npc.setUsername(isBoss ? "Skeleton Lord" : "Skeleton");
 
-        // Set position within a small radius of the encampment
-        Random random = new Random();
-        int offsetX = random.nextInt(21) - 10; // -10 to 10
-        int offsetY = random.nextInt(21) - 10; // -10 to 10
-        npc.setWorldPositionX(encampmentX + offsetX);
-        npc.setWorldPositionY(encampmentY + offsetY);
+        // Set position
+        npc.setWorldPositionX(x);
+        npc.setWorldPositionY(y);
 
         npc.setSubspriteFace("enemy_skeleton");
         npc.setSubspriteEyes("enemy_skeleton");
@@ -118,13 +148,13 @@ public class NPCEncampmentService {
         npc.setSubspriteHairHat(isBoss ? "enemy_skeleton_boss" : "enemy_skeleton");
 
         int baseLevel = isBoss ? 20 : 10;
-        int level = baseLevel + random.nextInt(6); // 20-25 for boss, 10-15 for regular
+        int level = baseLevel + new Random().nextInt(6); // 20-25 for boss, 10-15 for regular
         npc.setLevel(level);
         npc.setAttributes(PlayerInitializer.getInitializedCombatMapForNPC(level, level));
         npc.setCurrentMana(1000);
         npc.setMaxMana(1000);
         npc.setKnownSpells(List.of(spellService.getSpell("skeleton_rot")));
-        //todo: untangle this
+
         npc = playerRepository.save(npc);
 
         // Set inventory and equipment
@@ -135,6 +165,7 @@ public class NPCEncampmentService {
 
         return npc;
     }
+
 
     public void checkAndRemoveEncampment(String encampmentId) {
         NPCEncampment encampment = encampmentRepository.findById(encampmentId).orElse(null);
@@ -164,7 +195,17 @@ public class NPCEncampmentService {
                 .collect(Collectors.toList());
     }
 
-    public NPCEncampment getEncampmentById(String id) {
-        return encampmentRepository.findById(id).orElse(null);
+    class Point {
+        int x, y;
+
+        Point(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
     }
-}
+        public NPCEncampment getEncampmentById(String id) {
+            return encampmentRepository.findById(id).orElse(null);
+        }
+    }
+
+
