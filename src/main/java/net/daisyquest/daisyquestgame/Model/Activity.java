@@ -16,6 +16,8 @@ public class Activity {
     private String description;
     private int duration;
     private Map<String, Integer> requirements;
+    private Map<String, Integer> itemRequirements;
+    private Map<String, Integer> equipmentRequirements;
     private int experienceReward;
     private Map<String, Integer> attributeRewards;
     private Map<String, Integer> itemRewards;

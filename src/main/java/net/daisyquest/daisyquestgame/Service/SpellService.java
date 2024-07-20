@@ -1,6 +1,7 @@
 package net.daisyquest.daisyquestgame.Service;
 
 import jakarta.annotation.PostConstruct;
+import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Spell;
 import net.daisyquest.daisyquestgame.Service.Interfaces.ICacheableService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,8 @@ public class SpellService implements ICacheableService {
 
     @Autowired
     private StatusEffectService statusEffectService;
+
+
     public SpellService() {
         // Initialize with some default spells
 
@@ -92,6 +95,8 @@ public class SpellService implements ICacheableService {
     public String getServiceName() {
         return "SpellService";
     }
+
+
 
     // Add methods for learning spells, etc.
 }

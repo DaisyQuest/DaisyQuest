@@ -62,7 +62,12 @@ public class PlayerService {
 
     }
 
+    public Player learnSpell(Player p, Spell s){
 
+        p.getKnownSpells().add(s);
+
+        return updatePlayer(p);
+    }
     @Transactional
     public Player createPlayer(String username) throws UsernameAlreadyExistsException {
         Player p = new Player();
