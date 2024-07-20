@@ -979,6 +979,7 @@ function performAction(actionType) {
     if (actionType === 'SPELL') {
         spellSelection.style.display = 'block';
         updateSpellSelection();
+        updateTargetSelection();
         updateSpellInfo();
     } else {
         updateTargetSelection();

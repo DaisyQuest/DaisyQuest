@@ -23,15 +23,15 @@ public class Player {
     private String username;
     private String emailAddress;
     private Map<String, Attribute> attributes;
+    private PlayerLifeForces lifeForces;
 
     @DBRef
     private PlayerInventory inventory;
 
-   private Set<String> completedQuests;
+    private Set<String> completedQuests;
     private Set<String> achievements;
     private int totalExperience;
     private int level = 1;
-    private Map<String, Integer> currencies;
     private List<Spell> knownSpells; // New field for spells
     private int currentMana = 1000; // New field for current mana
     private int maxMana = 1000; // New field for maximum mana
@@ -60,6 +60,8 @@ public class Player {
     //Duel
     private boolean duelable = true;
     private boolean isNPC = false;
+    private boolean isAlive = true;
+
     private boolean markedForDeletion = false;
     private int talentPointsAvailable = 0;
 
