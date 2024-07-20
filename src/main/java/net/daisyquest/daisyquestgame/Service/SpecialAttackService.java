@@ -66,7 +66,7 @@ public class SpecialAttackService implements ICacheableService {
 
 
     public SpecialAttack getSpecialAttack(String specialAttackId) {
-        return specialAttacks.get(specialAttackId);
+        return specialAttackRepository.findSpecialAttackBySpecialAttackId(specialAttackId);
     }
 
     @Override

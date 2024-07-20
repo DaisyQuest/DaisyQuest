@@ -30,7 +30,6 @@ public class PlayerInitializer {
         initializeTalents(p1);
 
         initializeQuests(p1);
-        initializeCurrency(p1, p_cur);
 
         initalizeSpells(p1, p_spells);
         initializeSocial(p1);
@@ -68,7 +67,7 @@ public class PlayerInitializer {
 
     }
 
-    private static void initializeCurrency(Player p1, List<Currency> p_cur) {
+    public static void initializeCurrency(PlayerInventory p1, List<Currency> p_cur) {
         if(p1.getCurrencies() == null){
             Map<String, Integer> newMap = new HashMap<>();
             List<Currency> currencyList = p_cur;

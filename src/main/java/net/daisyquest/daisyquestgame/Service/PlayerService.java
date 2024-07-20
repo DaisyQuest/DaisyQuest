@@ -46,11 +46,13 @@ public class PlayerService {
         if (playerRepository.existsByUsername(player.getUsername())) {
             throw new UsernameAlreadyExistsException("Username already exists: " + player.getUsername());
         }
-        PlayerInitializer.initPlayer(player, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("blizzard"), spellService.getSpell("thunder")));
+        List<Currency> currencies = currencyService.getAllCurrencies();
+        PlayerInitializer.initPlayer(player,currencies , List.of(spellService.getSpell("fireball"), spellService.getSpell("blizzard"), spellService.getSpell("thunder")));
         Player playerWithId = playerRepository.save(player);
 
         PlayerInventory inventory = new PlayerInventory(playerWithId.getId(), 16); // or whatever initial size
         inventory.setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
+        PlayerInitializer.initializeCurrency(inventory, currencies);
 
         inventory = playerInventoryRepository.save(inventory);
         playerWithId.setInventory(inventory);
@@ -211,7 +213,7 @@ public class PlayerService {
         if (currency == null) {
             throw new IllegalArgumentException("Invalid currency ID: " + currencyName);
         }
-        Integer amount = buyer.getCurrencies().get(currency.getId());
+        Integer amount = buyer.getInventory().getCurrencies().get(currency.getId());
         return amount != null && amount >= price;
     }
 
@@ -219,7 +221,7 @@ public class PlayerService {
     public void deductCurrencyByName(Player buyer, String currencyName, int price) {
         Currency currency = currencyService.getCurrencyByName(currencyName);
         if (hasSufficientCurrencyByCurrencyName(buyer, currencyName, price)) {
-            Map<String, Integer> currencies = buyer.getCurrencies();
+            Map<String, Integer> currencies = buyer.getInventory().getCurrencies();;
             int newAmount = currencies.get(currency.getId()) - price;
             currencies.put(currencyName, newAmount);
             updatePlayer(buyer);
@@ -239,7 +241,7 @@ public class PlayerService {
             throw new IllegalArgumentException("Invalid currency ID: " + currencyName);
         }
 
-        Map<String, Integer> currencies = owner.getCurrencies();
+        Map<String, Integer> currencies = owner.getInventory().getCurrencies();
         currencies.merge(currency.getId(), amount, Integer::sum);
         updatePlayer(owner);
     }
@@ -255,7 +257,7 @@ public class PlayerService {
             throw new IllegalArgumentException("Invalid currency name: " + currencyName);
         }
 
-        Map<String, Integer> currencies = owner.getCurrencies();
+        Map<String, Integer> currencies = owner.getInventory().getCurrencies();
         currencies.merge(currency.getId(), amount, Integer::sum);
         updatePlayer(owner);
     }

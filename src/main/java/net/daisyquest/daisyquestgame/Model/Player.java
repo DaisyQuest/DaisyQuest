@@ -32,7 +32,6 @@ public class Player {
     private Set<String> achievements;
     private int totalExperience;
     private int level = 1;
-    private Map<String, Integer> currencies;
     private List<Spell> knownSpells; // New field for spells
     private int currentMana = 1000; // New field for current mana
     private int maxMana = 1000; // New field for maximum mana

@@ -20,6 +20,9 @@ function fetchPlayerInventory() {
         .then(response => response.json())
         .then(data => {
             playerInventory = data;
+            if (!playerInventory.currencies) {
+                playerInventory.currencies = {}; // Initialize currencies if not present
+            }
             renderInventory();
             renderEquipment();
         })
@@ -50,8 +53,9 @@ function renderInventory() {
         <ul class="list-group">
             ${Object.entries(playerInventory.currencies || {}).map(([currencyId, amount]) => {
         const details = currencyDetails[currencyId] || { name: currencyId, symbol: '' };
-        return `<li class="list-group-item">
-                    ${details.name}: ${details.symbol}${amount}
+        return `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>${details.name}</span>
+                    <span class="badge bg-primary rounded-pill">${details.symbol}${amount}</span>
                 </li>`;
     }).join('')}
         </ul>
@@ -113,10 +117,13 @@ function renderEquipment() {
 
             const equippedItem = playerInventory.equipmentSlots.find(slot => slot.type === slotType);
             if (equippedItem && equippedItem.item) {
+                const rarityColor = getRarityColor(equippedItem.item.rarity);
                 slotElement.innerHTML = `
-                    <img src="/sprites/items/${equippedItem.item.spriteName}.png" alt="${equippedItem.item.name}" 
-                         class="item-sprite" data-item-id="${equippedItem.item.id}" draggable="true">
-                    ${equippedItem.item.equippableInStacks ? `<span class="item-quantity">${equippedItem.quantity}</span>` : ''}
+                    <div class="item-container" style="border: 3px solid ${rarityColor};">
+                        <img src="/sprites/items/${equippedItem.item.spriteName}.png" alt="${equippedItem.item.name}" 
+                             class="item-sprite" data-item-id="${equippedItem.item.id}" draggable="true">
+                        ${equippedItem.item.equippableInStacks ? `<span class="item-quantity">${equippedItem.quantity}</span>` : ''}
+                    </div>
                 `;
                 slotElement.addEventListener('click', () => selectItem(equippedItem.item));
                 const imgElement = slotElement.querySelector('.item-sprite');
@@ -275,10 +282,20 @@ function renderSelectedItemInfo() {
                  class="item-sprite-small" data-item-id="${selectedItem.id}">
             <p>${selectedItem.description}</p>
             <p>Sell Price: ${selectedItem.sellPrice}</p>
+            <p>Weight: ${selectedItem.weight || 'N/A'}</p>
+            <p>Durability: ${selectedItem.durability || 'N/A'} / ${selectedItem.maxDurability || 'N/A'}</p>
+            ${selectedItem.equippable ? `<p>Equipment Slot: ${selectedItem.equipmentSlotTypeString}</p>` : ''}
+            ${selectedItem.containerSize ? `<p>Container Size: ${selectedItem.containerSize}</p>` : ''}
             <h4>Attribute Modifiers:</h4>
             <ul>
                 ${Object.entries(selectedItem.attributeModifiers || {}).map(([attr, value]) =>
-            `<li>${attr}: ${value}</li>`
+            `<li>${attr}: ${value > 0 ? '+' : ''}${value}</li>`
+        ).join('')}
+            </ul>
+            <h4>Equipment Property Modifiers:</h4>
+            <ul>
+                ${Object.entries(selectedItem.equipmentPropertyModifiers || {}).map(([prop, value]) =>
+            `<li>${prop}: ${value > 0 ? '+' : ''}${value}</li>`
         ).join('')}
             </ul>
             <h4>Requirements:</h4>

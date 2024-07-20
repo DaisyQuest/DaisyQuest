@@ -187,7 +187,7 @@ public class RewardService {
             case CURRENCY:
                 Currency currency = currencyRepository.findById(reward.getRewardId())
                         .orElseThrow(() -> new InvalidCurrencyException("Currency not found with id: " + reward.getRewardId()));
-                player.getCurrencies().merge(currency.getId(), reward.getQuantity(), Integer::sum);
+                player.getInventory().getCurrencies().merge(currency.getId(), reward.getQuantity(), Integer::sum);
                 break;
             case RESOURCE:
                 player.setResources(player.getResources() + reward.getQuantity());

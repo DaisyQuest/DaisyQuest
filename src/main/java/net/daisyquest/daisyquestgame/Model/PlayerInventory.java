@@ -22,6 +22,7 @@ public class PlayerInventory {
     private int maxInventorySize;
     List<EquipmentProperty> equipmentProperties = new ArrayList<>();
     Map<String, Integer> effectivePropertyAmounts = new HashMap<>();
+    private Map<String, Integer> currencies;
 
     public PlayerInventory(String playerId, int maxInventorySize) {
         this.playerId = playerId;

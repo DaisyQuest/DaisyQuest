@@ -688,8 +688,8 @@ public class CombatService {
     }
 
     private void applyLossPenalty(Player loser) {
-        int currentGold = loser.getCurrencies().getOrDefault("Shadow Essence", 0);
-        loser.getCurrencies().put("Shadow Essence", currentGold / 2);
+        int currentGold = loser.getInventory().getCurrencies().getOrDefault("Shadow Essence", 0);
+        loser.getInventory().getCurrencies().put("Shadow Essence", currentGold / 2);
         // You can add more penalties here if needed
     }
 

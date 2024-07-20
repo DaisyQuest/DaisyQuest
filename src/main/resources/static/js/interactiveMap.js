@@ -937,7 +937,10 @@
                 alert('Please select a special attack.');
                 return;
             }
-            actionData.specialAttackId = selectedSpecialAttack.id;
+            actionData.specialAttackId = selectedSpecialAttack.specialAttackId;
+            if(selectedSpecialAttack.id) {
+                actionData.id = selectedSpecialAttack.id;
+            }
         }
 
         fetch(`/api/combat/${currentCombatId}/action`, {

@@ -75,7 +75,7 @@ public class ShopService {
                 .orElseThrow(() -> new ItemNotFoundException("Item not found in shop: " + itemId));
 
         String currencyName = shopItem.getCurrencyUsed().getName();
-        int playerCurrency = player.getCurrencies().getOrDefault(currencyName, 0);
+        int playerCurrency = player.getInventory().getCurrencies().getOrDefault(currencyName, 0);
 
         if (playerCurrency < shopItem.getPrice()) {
             throw new InsufficientFundsException("Not enough " + currencyName + " to purchase item");
@@ -93,7 +93,7 @@ public class ShopService {
         }
 
         // Deduct currency from player
-        player.getCurrencies().put(currencyName, playerCurrency - shopItem.getPrice());
+        player.getInventory().getCurrencies().put(currencyName, playerCurrency - shopItem.getPrice());
 
         // Update shop item quantity
         updateShopItemQuantity(shop, shopItem);
