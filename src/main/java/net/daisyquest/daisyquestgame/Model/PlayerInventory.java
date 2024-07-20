@@ -34,7 +34,7 @@ public class PlayerInventory {
     }
 
     public void initializePlayerInventoryIfNecessary() {
-        logger.info("Initializing player inventory if necessary for player: {}", playerId);
+     //   logger.info("Initializing player inventory if necessary for player: {}", playerId);
 
         if (inventorySlots == null || inventorySlots.isEmpty()) {
             logger.warn("Inventory slots were null or empty for player: {}. Initializing...", playerId);
@@ -66,7 +66,7 @@ public class PlayerInventory {
             }
         }
 
-        logger.info("Inventory initialization complete for player: {}", playerId);
+     //   logger.info("Inventory initialization complete for player: {}", playerId);
     }
 
 
