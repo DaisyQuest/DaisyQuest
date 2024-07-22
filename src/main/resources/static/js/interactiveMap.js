@@ -993,7 +993,7 @@
     if (combat.active) {
     updateCombatUI(combat);
     setTimeout(pollCombatStatus, 2000);
-} else {
+    } else {
     console.log('Combat ended');
     showCombatResults(combat);
 }

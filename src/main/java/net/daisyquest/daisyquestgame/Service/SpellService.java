@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -96,6 +97,13 @@ public class SpellService implements ICacheableService {
         return "SpellService";
     }
 
+    public List<Spell> getAllSpells() {
+        return spells.values().stream().toList();
+    }
+
+    public Spell getSpellByName(String spellName) {
+        return spells.values().stream().filter(o-> o.getName().equals(spellName)).findFirst().orElse(null);
+    }
 
 
     // Add methods for learning spells, etc.
