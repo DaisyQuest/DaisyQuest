@@ -1,4 +1,4 @@
-package net.daisyquest.daisyquestgame.Controller;
+package net.daisyquest.daisyquestgame.Controller.Activity;
 
 
 import net.daisyquest.daisyquestgame.Model.Activity;

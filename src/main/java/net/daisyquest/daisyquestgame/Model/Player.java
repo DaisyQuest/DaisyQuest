@@ -72,6 +72,11 @@ public class Player {
     private int submapCoordinateY;
     private int submapCoordinateZ;
 
+    //New field 1
+    String controllerPlayerID;
+
+    //New field 2
+    private List<String> playerControlledEntityIds;
 
 
 }

@@ -834,21 +834,37 @@
 }
 
 
-    function updatePlayerCards(combat) {
-    const playerCardsContainer = document.getElementById('playerCards');
-    playerCardsContainer.innerHTML = '';
+    function updatePlayerCards(combat, currentPlayerId) {
+        const playerCardsContainer = document.getElementById('playerCards');
+        playerCardsContainer.innerHTML = '';
+        const playerCount = combat.playerIds.length;
+        const spriteSize = playerCount < 5 ? 128 : 64;
 
-    const playerCount = combat.playerIds.length;
-    const spriteSize = playerCount < 5 ? 128 : 64;
+        // Determine the current player's team
+        const currentPlayerTeam = combat.playerTeams[currentPlayerId];
 
-    combat.playerIds.forEach(id => {
-    const health = combat.playerHealth[id];
-    const maxHealth = combat.playerHealthStarting[id];
-    const healthPercentage = (health / maxHealth) * 100;
+        // Separate players into teams
+        const teams = {
+            allied: [],
+            enemy: []
+        };
 
-    const playerCard = document.createElement('div');
-    playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
-    playerCard.innerHTML = `
+        combat.playerIds.forEach(id => {
+            if (combat.playerTeams[id] === currentPlayerTeam) {
+                teams.allied.push(id);
+            } else {
+                teams.enemy.push(id);
+            }
+        });
+
+        // Function to create a player card
+        const createPlayerCard = (id) => {
+            const health = combat.playerHealth[id];
+            const maxHealth = combat.playerHealthStarting[id];
+            const healthPercentage = (health / maxHealth) * 100;
+            const playerCard = document.createElement('div');
+            playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
+            playerCard.innerHTML = `
             <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
                 ${getPlayerSprite(id, spriteSize)}
             </div>
@@ -860,10 +876,25 @@
             <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
             <div class="status-effects" id="status-effects-${id}"></div>
         `;
-    playerCardsContainer.appendChild(playerCard);
-});
-}
+            return playerCard;
+        };
 
+        // Create and append allied team cards
+        const alliedTeamContainer = document.createElement('div');
+        alliedTeamContainer.className = 'row allied-team';
+        teams.allied.forEach(id => {
+            alliedTeamContainer.appendChild(createPlayerCard(id));
+        });
+        playerCardsContainer.appendChild(alliedTeamContainer);
+
+        // Create and append enemy team cards
+        const enemyTeamContainer = document.createElement('div');
+        enemyTeamContainer.className = 'row enemy-team';
+        teams.enemy.forEach(id => {
+            enemyTeamContainer.appendChild(createPlayerCard(id));
+        });
+        playerCardsContainer.appendChild(enemyTeamContainer);
+    }
     function updateStatusEffectsDisplay() {
     if (!statusEffects || Object.keys(statusEffects).length === 0) {
     console.log('No status effects to display');

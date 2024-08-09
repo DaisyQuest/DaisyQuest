@@ -1,4 +1,4 @@
-package net.daisyquest.daisyquestgame.Controller;
+package net.daisyquest.daisyquestgame.Controller.NPC;
 
 import net.daisyquest.daisyquestgame.Model.NPCTemplate;
 import net.daisyquest.daisyquestgame.Service.ItemService;
