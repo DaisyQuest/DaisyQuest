@@ -41,14 +41,14 @@ public class NPCSpawningService {
 
     private Random random = new Random();
 
-    @Scheduled(fixedRate = 300000) // Run every 5 minutes
+    @Scheduled(fixedRate = 600000) // Run every 5 minutes
     public void spawnNPCs() {
         WorldMap worldMap = worldMapService.getWorldMap();
         int worldWidth = worldMap.getWidth() * WorldMapService.LAND_SIZE;
         int worldHeight = worldMap.getHeight() * WorldMapService.LAND_SIZE;
 
         // Spawn 1-3 NPCs each time
-        int npcCount = random.nextInt(3) + 1;
+        int npcCount = random.nextInt(2) + 1;
         List<NPCTemplate> availableTemplates = npcTemplateService.getAllTemplates();
 
         for (int i = 0; i < npcCount; i++) {

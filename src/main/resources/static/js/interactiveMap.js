@@ -823,7 +823,7 @@
 
 
     function updateCombatUI(combat) {
-    updatePlayerCards(combat);
+    updatePlayerCards(combat, currentPlayer.id);
     updateTurnIndicator(combat);
     updateCombatInfo(combat);
     updateSpellCooldowns(combat);
@@ -835,6 +835,9 @@
 
 
     function updatePlayerCards(combat, currentPlayerId) {
+        console.log("Current Player ID:", currentPlayerId);
+        console.log("Player Teams:", combat.playerTeams);
+
         const playerCardsContainer = document.getElementById('playerCards');
         playerCardsContainer.innerHTML = '';
         const playerCount = combat.playerIds.length;
@@ -842,20 +845,24 @@
 
         // Determine the current player's team
         const currentPlayerTeam = combat.playerTeams[currentPlayerId];
+        console.log("Current Player Team:", currentPlayerTeam);
 
-        // Separate players into teams
-        const teams = {
-            allied: [],
-            enemy: []
-        };
-
+        // Group players into allied and enemy teams
+        const alliedTeam = [];
+        const enemyTeams = {};
         combat.playerIds.forEach(id => {
-            if (combat.playerTeams[id] === currentPlayerTeam) {
-                teams.allied.push(id);
+            const team = combat.playerTeams[id];
+            if (team === currentPlayerTeam) {
+                alliedTeam.push(id);
             } else {
-                teams.enemy.push(id);
+                if (!enemyTeams[team]) {
+                    enemyTeams[team] = [];
+                }
+                enemyTeams[team].push(id);
             }
         });
+        console.log("Allied Team:", alliedTeam);
+        console.log("Enemy Teams:", enemyTeams);
 
         // Function to create a player card
         const createPlayerCard = (id) => {
@@ -879,21 +886,23 @@
             return playerCard;
         };
 
-        // Create and append allied team cards
-        const alliedTeamContainer = document.createElement('div');
-        alliedTeamContainer.className = 'row allied-team';
-        teams.allied.forEach(id => {
-            alliedTeamContainer.appendChild(createPlayerCard(id));
+        // Create allied team container
+        const alliedContainer = document.createElement('div');
+        alliedContainer.className = 'row allied-team';
+        alliedTeam.forEach(id => {
+            alliedContainer.appendChild(createPlayerCard(id));
         });
-        playerCardsContainer.appendChild(alliedTeamContainer);
+        playerCardsContainer.appendChild(alliedContainer);
 
-        // Create and append enemy team cards
-        const enemyTeamContainer = document.createElement('div');
-        enemyTeamContainer.className = 'row enemy-team';
-        teams.enemy.forEach(id => {
-            enemyTeamContainer.appendChild(createPlayerCard(id));
+        // Create enemy team containers
+        Object.values(enemyTeams).forEach((team, index) => {
+            const enemyContainer = document.createElement('div');
+            enemyContainer.className = 'row enemy-team';
+            team.forEach(id => {
+                enemyContainer.appendChild(createPlayerCard(id));
+            });
+            playerCardsContainer.appendChild(enemyContainer);
         });
-        playerCardsContainer.appendChild(enemyTeamContainer);
     }
     function updateStatusEffectsDisplay() {
     if (!statusEffects || Object.keys(statusEffects).length === 0) {

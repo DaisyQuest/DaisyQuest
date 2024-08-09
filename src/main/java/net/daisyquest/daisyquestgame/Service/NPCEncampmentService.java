@@ -31,7 +31,7 @@ public class NPCEncampmentService {
     @Autowired
     private SpellService spellService;
 
-    @Scheduled(fixedRate = 600000) // Run every 5 minutes
+    @Scheduled(fixedRate = 12000000)
     public void spawnEncampments() {
         WorldMap worldMap = worldMapService.getWorldMap();
         int worldCenterX = worldMap.getWidth() * WorldMapService.LAND_SIZE / 2;

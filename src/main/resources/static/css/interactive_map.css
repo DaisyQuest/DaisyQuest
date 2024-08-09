@@ -459,15 +459,46 @@ li{
 .allied-team, .enemy-team {
     display: flex;
     justify-content: flex-start;
+    border-style: solid;
+    border-width: 3px;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 10px 0;
+    position: relative;
 }
 
-.allied-team{
-    border-color: #2ecc71;
+.allied-team {
+    border-image: linear-gradient(to right, #2ecc71, #27ae60) 1;
+}
 
+.allied-team::before {
+    content: '';
+    position: absolute;
+    top: -3px; right: -3px; bottom: -3px; left: -3px;
+    background: linear-gradient(to right, #2ecc71, #27ae60);
+    border-radius: 12px;
+    z-index: -1;
 }
 
 .enemy-team {
-    border-color: #da190b;
-
     justify-content: flex-end;
+    border-image: linear-gradient(to left, #da190b, #e74c3c) 1;
+}
+
+.enemy-team::before {
+    content: '';
+    position: absolute;
+    top: -3px; right: -3px; bottom: -3px; left: -3px;
+    background: linear-gradient(to left, #da190b, #e74c3c);
+    border-radius: 12px;
+    z-index: -1;
+}
+
+.allied-team::after, .enemy-team::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: white;
+    border-radius: 8px;
+    z-index: -1;
 }

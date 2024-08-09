@@ -365,8 +365,12 @@ public class CombatService {
     }
 
     private static Integer getMeleeBonusOfAttackingPlayer(Combat combat, Action action) {
-        return combat.getPlayerEquipmentBonuses().get(action.getPlayerId()).get("Melee Bonus");
-    }
+        try {
+            return combat.getPlayerEquipmentBonuses().get(action.getPlayerId()).get("Melee Bonus");
+        }catch(Exception e){
+            return 0;
+            }
+        }
     private static Integer getMeleeBonusOfPlayerById(Combat c, String playerId) {
         return c.getPlayerEquipmentBonuses().get(playerId).get("Melee Bonus");
     }
