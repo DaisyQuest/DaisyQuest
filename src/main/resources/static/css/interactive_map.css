@@ -455,3 +455,19 @@ li{
 .special-attack-icon:hover, .special-attack-icon.selected {
     border-color: #ffcc00;
 }
+
+.allied-team, .enemy-team {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.allied-team{
+    border-color: #2ecc71;
+
+}
+
+.enemy-team {
+    border-color: #da190b;
+
+    justify-content: flex-end;
+}
