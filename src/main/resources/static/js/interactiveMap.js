@@ -184,13 +184,201 @@
 }
 
     // Add a new function to handle map clicks
+    let worldObjects = [];
+
+    // Add this function to fetch world objects
+    function fetchWorldObjectsInViewport() {
+        const centerX = getCurrentPlayerX();
+        const centerY = getCurrentPlayerY();
+
+        console.log('Fetching world objects for viewport:', {
+            centerX,
+            centerY,
+            viewportWidth: VIEWPORT_WIDTH,
+            viewportHeight: VIEWPORT_HEIGHT
+        });
+
+        fetch(`/api/world-map/world-objects?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('Server response:', text);
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received world objects:', data);
+                worldObjects = data || [];
+                if (!isInSubmap) {
+                    drawWorldMap();
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching world objects:', error);
+                worldObjects = []; // Reset to empty array on error
+                if (!isInSubmap) {
+                    drawWorldMap(); // Still draw the map even if object fetch failed
+                }
+            });
+    }
+
+    // Modify the existing handleTerrainClick function
     function handleTerrainClick(clickX, clickY) {
-    if (isInSubmap) {
-    handleSubmapTerrainClick(clickX, clickY);
-} else {
-    handleOverworldTerrainClick(clickX, clickY);
-}
-}
+        if (isInSubmap) {
+            handleSubmapTerrainClick(clickX, clickY);
+            return;
+        }
+
+        // Convert click coordinates to world coordinates
+        const worldX = getCurrentPlayerX() + Math.round(clickX - VIEWPORT_WIDTH / 2);
+        const worldY = getCurrentPlayerY() + Math.round(clickY - VIEWPORT_HEIGHT / 2);
+
+        // Check for world objects first
+        const clickedObject = findClickedWorldObject(clickX, clickY);
+        if (clickedObject) {
+            handleWorldObjectInteraction(clickedObject);
+            return;
+        }
+
+        // Check for submap entrance if no object was clicked
+        fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.nearEntrance) {
+                    enterSubmap(data.submapId);
+                } else {
+                    setupMovementPath(worldX, worldY);
+                }
+            })
+            .catch(error => console.error('Error checking submap entrance:', error));
+    }
+
+    // Add this function to find clicked world objects
+    function findClickedWorldObject(clickX, clickY) {
+        const worldX = getCurrentPlayerX() + (clickX - VIEWPORT_WIDTH / 2);
+        const worldY = getCurrentPlayerY() + (clickY - VIEWPORT_HEIGHT / 2);
+
+        return worldObjects.find(object => {
+            const screenX = object.xPos - getCurrentPlayerX() + VIEWPORT_WIDTH / 2;
+            const screenY = object.yPos - getCurrentPlayerY() + VIEWPORT_HEIGHT / 2;
+
+            // Assuming objects have a standard interaction radius of 32 pixels
+            const distance = Math.sqrt(
+                Math.pow(clickX - screenX, 2) +
+                Math.pow(clickY - screenY, 2)
+            );
+
+            return distance <= 32; // Adjust this radius as needed
+        });
+    }
+
+    // Add this function to handle world object interactions
+    function handleWorldObjectInteraction(worldObject) {
+        // Calculate distance to ensure player is close enough
+        const distance = Math.sqrt(
+            Math.pow(worldObject.xPos - getCurrentPlayerX(), 2) +
+            Math.pow(worldObject.yPos - getCurrentPlayerY(), 2)
+        );
+
+        if (distance > 64) { // Interaction range - adjust as needed
+            // If too far, move closer first
+            setupMovementPath(worldObject.xPos, worldObject.yPos);
+            return;
+        }
+
+        // Send interaction request to server
+        fetch(`/api/world-map/world-objects/${worldObject.id}/interact`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                playerId: getCurrentPlayerId(),
+                interactionType: worldObject.worldObjectType.interactionType
+            })
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    handleInteractionResult(result);
+                } else {
+                    if (result.message.includes("cooldown")) {
+                        const remainingTime = Math.ceil(result.remainingCooldownMs / 1000);
+                        alert(`This object is on cooldown for ${remainingTime} seconds`);
+                    } else {
+                        alert(result.message);
+                    }
+                }
+            })
+            .catch(error => console.error('Error interacting with object:', error));
+    }
+
+    // Add this function to handle interaction results
+    function handleInteractionResult(result) {
+        // Handle different interaction types
+        if (result.interactionType === 'SKILL') {
+            // Start skill interaction progress tracking
+            startSkillProgress(result);
+        } else if (result.interactionType === 'CONTAINER') {
+            // Open container interface
+          //  openContainer(result);
+        } else if (result.interactionType === 'TRAVEL') {
+            // Handle travel interaction
+            handleTravel(result);
+        } else {
+            // Handle other interaction types
+            console.log('Interaction successful:', result);
+        }
+    }
+
+    // Add these supporting functions
+    function startSkillProgress(result) {
+        // Create progress UI
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'skill-progress';
+        progressDiv.innerHTML = `
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        <button class="cancel-button">Cancel</button>
+    `;
+        document.body.appendChild(progressDiv);
+
+        // Update progress periodically
+        const interval = setInterval(() => {
+            fetch(`/api/world-map/world-objects/${result.activeInteractionId}/progress`)
+                .then(response => response.json())
+                .then(progress => {
+                    if (progress.completed) {
+                        clearInterval(interval);
+                        progressDiv.remove();
+                        alert('Skill interaction completed!');
+                    } else {
+                        const fillElement = progressDiv.querySelector('.progress-fill');
+                        fillElement.style.width = `${progress.percent}%`;
+                    }
+                });
+        }, 1000);
+
+        // Handle cancel button
+        progressDiv.querySelector('.cancel-button').onclick = () => {
+            clearInterval(interval);
+            progressDiv.remove();
+            fetch(`/api/world-map/world-objects/${result.activeInteractionId}/cancel`, {
+                method: 'POST'
+            });
+        };
+    }
+
+    // Add to your initialization code
+    setInterval(fetchWorldObjectsInViewport, 3000);
     function handleSubmapTerrainClick(clickX, clickY) {
     // Convert click coordinates to submap coordinates
     const submapX = currentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
@@ -780,11 +968,6 @@
     timeout = setTimeout(later, wait);
 };
 }
-
-
-
-
-
 
     function startCombat(combatId) {
     mp3Player.loadTrack('/audio/battle.mp3');

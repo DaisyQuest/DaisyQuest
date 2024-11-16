@@ -1,0 +1,522 @@
+html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Object Type Editor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .message {
+            font-weight: bold;
+            font-size: 1.5em;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .requirement-row, .reward-row {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">World Object Type Editor</h1>
+    <div id="message" class="message" style="display: none;"></div>
+
+    <form id="worldObjectTypeForm">
+        <div class="mb-3">
+            <label for="existingTypeSelect" class="form-label">Copy from Existing Type</label>
+            <select id="existingTypeSelect" class="form-select">
+                <option value="">Select a type to copy...</option>
+                <option th:each="type : ${worldObjectTypes}"
+                        th:value="${type.id}"
+                        th:text="${type.name}"></option>
+            </select>
+            <button type="button" id="copyTypeBtn" class="btn btn-secondary mt-2">Copy Selected Type</button>
+        </div>
+
+        <div class="mb-3">
+            <label for="id" class="form-label">ID</label>
+            <input type="text" id="id" name="id" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" id="name" name="name" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="spriteName" class="form-label">Sprite Name</label>
+            <input type="text" id="spriteName" name="spriteName" class="form-control" required>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col">
+                <label for="length" class="form-label">Length</label>
+                <input type="number" id="length" name="length" class="form-control" required>
+            </div>
+            <div class="col">
+                <label for="width" class="form-label">Width</label>
+                <input type="number" id="width" name="width" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                <input type="checkbox" id="visible" name="visible" class="form-check-input">
+                <label for="visible" class="form-check-label">Visible</label>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <div class="form-check">
+                <input type="checkbox" id="interactable" name="interactable" class="form-check-input">
+                <label for="interactable" class="form-check-label">Interactable</label>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="traversalType" class="form-label">Traversal Type</label>
+            <select id="traversalType" name="traversalType" class="form-select" required>
+                <option th:each="type : ${traversalTypes}"
+                        th:value="${type}"
+                        th:text="${type}"></option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="interactionType" class="form-label">Interaction Type</label>
+            <select id="interactionType" name="interactionType" class="form-select" required>
+                <option th:each="type : ${interactionTypes}"
+                        th:value="${type}"
+                        th:text="${type}"></option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="cooldownMs" class="form-label">Cooldown (milliseconds)</label>
+            <input type="number" id="cooldownMs" name="cooldownMs" class="form-control" required>
+        </div>
+
+        <div id="requirementsContainer">
+            <h3>Requirements</h3>
+            <button type="button" id="addSkillReqBtn" class="btn btn-secondary mb-2">Add Skill Requirement</button>
+            <button type="button" id="addItemReqBtn" class="btn btn-secondary mb-2">Add Item Requirement</button>
+            <button type="button" id="addSpellReqBtn" class="btn btn-secondary mb-2">Add Spell Requirement</button>
+        </div>
+
+        <div id="rewardsContainer" class="mt-4">
+            <h3>Rewards</h3>
+            <button type="button" id="addExpRewardBtn" class="btn btn-secondary mb-2">Add Experience Reward</button>
+            <button type="button" id="addItemRewardBtn" class="btn btn-secondary mb-2">Add Item Reward</button>
+        </div>
+
+        <button type="submit" class="btn btn-success mt-4">Save World Object Type</button>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('worldObjectTypeForm');
+        const copyTypeBtn = document.getElementById('copyTypeBtn');
+
+        setupRequirementButtons();
+        setupRewardButtons();
+
+        copyTypeBtn.addEventListener('click', copyExistingType);
+        form.addEventListener('submit', submitForm);
+    });
+
+    function setupRequirementButtons() {
+        document.getElementById('addSkillReqBtn').addEventListener('click', () => {
+            addRequirementRow('skill');
+        });
+        document.getElementById('addItemReqBtn').addEventListener('click', () => {
+            addRequirementRow('item');
+        });
+        document.getElementById('addSpellReqBtn').addEventListener('click', () => {
+            addRequirementRow('spell');
+        });
+    }
+
+    function setupRewardButtons() {
+        document.getElementById('addExpRewardBtn').addEventListener('click', () => {
+            addRewardRow('experience');
+        });
+        document.getElementById('addItemRewardBtn').addEventListener('click', () => {
+            addRewardRow('item');
+        });
+    }
+
+    function addRequirementRow(type) {
+        const container = document.getElementById('requirementsContainer');
+        const row = document.createElement('div');
+        row.className = 'requirement-row';
+
+        switch(type) {
+            case 'skill':
+                row.innerHTML = createSkillRequirementHTML();
+                break;
+            case 'item':
+                row.innerHTML = createItemRequirementHTML();
+                break;
+            case 'spell':
+                row.innerHTML = createSpellRequirementHTML();
+                break;
+        }
+
+        container.appendChild(row);
+        setupRemoveButton(row);
+    }
+
+    function addRewardRow(type) {
+        const container = document.getElementById('rewardsContainer');
+        const row = document.createElement('div');
+        row.className = 'reward-row';
+
+        switch(type) {
+            case 'experience':
+                row.innerHTML = createExperienceRewardHTML();
+                break;
+            case 'item':
+                row.innerHTML = createItemRewardHTML();
+                break;
+        }
+
+        container.appendChild(row);
+        setupRemoveButton(row);
+    }
+
+    function createSkillRequirementHTML() {
+        return `
+            <div class="mb-2">
+                <label>Skill Requirement</label>
+                <input type="text" class="form-control" placeholder="Skill name" required>
+                <input type="number" class="form-control mt-2" placeholder="Required level" required>
+                <button type="button" class="btn btn-danger remove-row mt-2">Remove</button>
+            </div>
+        `;
+    }
+
+    function createItemRequirementHTML() {
+        const items = /*[[${items}]]*/ [];
+        return `
+            <div class="mb-2">
+                <label>Item Requirement</label>
+                <select class="form-select">
+                    ${items.map(item => `<option value="${item.id}">${item.name}</option>`).join('')}
+                </select>
+                <input type="number" class="form-control mt-2" placeholder="Quantity" required>
+                <div class="form-check mt-2">
+                    <input type="checkbox" class="form-check-input">
+                    <label class="form-check-label">Consume on use</label>
+                </div>
+                <button type="button" class="btn btn-danger remove-row mt-2">Remove</button>
+            </div>
+        `;
+    }
+
+    // ... Add other create*HTML functions for requirements and rewards ...
+
+    function copyExistingType() {
+        const selectedTypeId = document.getElementById('existingTypeSelect').value;
+        if (selectedTypeId) {
+            fetch(`/world-object-editor/get/${selectedTypeId}`)
+                .then(response => response.json())
+                .then(type => {
+                    populateForm(type);
+                })
+                .catch(error => console.error('Error copying type:', error));
+        }
+    }
+
+
+
+
+    function createExperienceRewardHTML() {
+        return `
+            <div class="mb-2">
+                <label>Experience Reward</label>
+                <div class="row">
+                    <div class="col">
+                        <input type="text" class="form-control" placeholder="Skill name" required>
+                    </div>
+                    <div class="col">
+                        <input type="number" class="form-control" placeholder="Experience amount" required>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-danger remove-row mt-2">Remove</button>
+            </div>
+        `;
+    }
+
+    function createItemRewardHTML() {
+        const items = /*[[${items}]]*/ [];
+        return `
+            <div class="mb-2">
+                <label>Item Reward</label>
+                <div class="row">
+                    <div class="col">
+                        <select class="form-select item-select" required>
+                            <option value="">Select item...</option>
+                            ${items.map(item => `<option value="${item.id}">${item.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <input type="number" class="form-control" placeholder="Quantity" required min="1">
+                    </div>
+                </div>
+                <div class="form-check mt-2">
+                    <input type="checkbox" class="form-check-input chance-toggle">
+                    <label class="form-check-label">Set drop chance</label>
+                </div>
+                <div class="chance-input mt-2" style="display: none;">
+                    <input type="number" class="form-control" placeholder="Drop chance (%)" min="0" max="100">
+                </div>
+                <button type="button" class="btn btn-danger remove-row mt-2">Remove</button>
+            </div>
+        `;
+    }
+
+    function createSpellRequirementHTML() {
+        return `
+            <div class="mb-2">
+                <label>Spell Requirement</label>
+                <input type="text" class="form-control" placeholder="Spell ID" required>
+                <button type="button" class="btn btn-danger remove-row mt-2">Remove</button>
+            </div>
+        `;
+    }
+
+    function setupRemoveButton(row) {
+        const removeButton = row.querySelector('.remove-row');
+        removeButton.addEventListener('click', () => {
+            row.remove();
+        });
+
+        // Setup chance toggle if it exists
+        const chanceToggle = row.querySelector('.chance-toggle');
+        const chanceInput = row.querySelector('.chance-input');
+        if (chanceToggle && chanceInput) {
+            chanceToggle.addEventListener('change', () => {
+                chanceInput.style.display = chanceToggle.checked ? 'block' : 'none';
+                const input = chanceInput.querySelector('input');
+                input.required = chanceToggle.checked;
+            });
+        }
+    }
+    function submitForm(event) {
+        event.preventDefault();
+        console.log('Submitting form...');
+
+        // Convert requirements to a map structure
+        const requirementsMap = {};
+        gatherRequirements().forEach((req, index) => {
+            requirementsMap[`requirement${index}`] = req;
+        });
+
+        const formData = {
+            worldObjectType: {
+                id: document.getElementById('id').value,
+                name: document.getElementById('name').value,
+                spriteName: document.getElementById('spriteName').value,
+                length: parseInt(document.getElementById('length').value) || 1,
+                width: parseInt(document.getElementById('width').value) || 1,
+                visible: document.getElementById('visible').checked,
+                traversalType: document.getElementById('traversalType').value,
+                interactable: document.getElementById('interactable').checked,
+                interactionType: document.getElementById('interactionType').value,
+                cooldownMs: parseInt(document.getElementById('cooldownMs').value) || 0,
+                interactionDurationMs: 0,
+                interactionOption: {
+                    requirements: requirementsMap,  // Send as map instead of array
+                    rewards: {}  // Empty map for now
+                }
+            }
+        };
+
+        console.log('Request payload:', JSON.stringify(formData, null, 2));
+
+        fetch('/world-object-editor/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+            .then(async response => {
+                const text = await response.text();
+                console.log('Raw server response:', text);
+
+                try {
+                    const data = JSON.parse(text);
+                    if (!response.ok) {
+                        throw new Error(data.message || data.error || 'Unknown error occurred');
+                    }
+                    return data;
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    throw new Error('Invalid server response');
+                }
+            })
+            .then(data => {
+                console.log('Save successful:', data);
+                showMessage('World object type saved successfully!', 'success');
+            })
+            .catch(error => {
+                console.error('Save error:', error);
+                showMessage('Error saving world object type: ' + error.message, 'error');
+            });
+    }
+
+    function gatherRequirements() {
+        const requirements = [];
+        const reqContainer = document.getElementById('requirementsContainer');
+
+        reqContainer.querySelectorAll('.requirement-row').forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            if (inputs[0] && inputs[0].placeholder === "Skill name") {
+                requirements.push({
+                    type: "SKILL",
+                    skillName: inputs[0].value,
+                    requiredLevel: parseInt(inputs[1].value)
+                });
+            } else if (row.querySelector('.item-select')) {
+                requirements.push({
+                    type: "ITEM",
+                    itemId: row.querySelector('.item-select').value,
+                    quantity: parseInt(row.querySelector('input[type="number"]').value),
+                    consume: row.querySelector('input[type="checkbox"]').checked
+                });
+            } else if (inputs[0] && inputs[0].placeholder === "Spell ID") {
+                requirements.push({
+                    type: "SPELL",
+                    spellId: inputs[0].value
+                });
+            }
+        });
+
+        return requirements;
+    }
+    function gatherRewards() {
+        const rewards = [];
+        const rewardContainer = document.getElementById('rewardsContainer');
+
+        rewardContainer.querySelectorAll('.reward-row').forEach(row => {
+            if (row.querySelector('input[placeholder="Skill name"]')) {
+                rewards.push({
+                    type: 'EXPERIENCE',
+                    skillName: row.querySelector('input[placeholder="Skill name"]').value,
+                    amount: parseInt(row.querySelector('input[placeholder="Experience amount"]').value)
+                });
+            } else if (row.querySelector('.item-select')) {
+                const reward = {
+                    type: 'ITEM',
+                    itemId: row.querySelector('.item-select').value,
+                    quantity: parseInt(row.querySelector('input[placeholder="Quantity"]').value)
+                };
+
+                const chanceToggle = row.querySelector('.chance-toggle');
+                if (chanceToggle && chanceToggle.checked) {
+                    reward.dropChance = parseFloat(row.querySelector('.chance-input input').value) / 100;
+                }
+
+                rewards.push(reward);
+            }
+        });
+
+        return rewards;
+    }
+
+    function populateForm(type) {
+        document.getElementById('id').value = '';  // Clear ID for new object
+        document.getElementById('name').value = type.name;
+        document.getElementById('spriteName').value = type.spriteName;
+        document.getElementById('length').value = type.length;
+        document.getElementById('width').value = type.width;
+        document.getElementById('visible').checked = type.visible;
+        document.getElementById('traversalType').value = type.traversalType;
+        document.getElementById('interactable').checked = type.interactable;
+        document.getElementById('interactionType').value = type.interactionType;
+        document.getElementById('cooldownMs').value = type.cooldownMs;
+
+        // Clear existing requirements and rewards
+        const reqContainer = document.getElementById('requirementsContainer');
+        const rewardContainer = document.getElementById('rewardsContainer');
+
+        // Keep the buttons but remove all rows
+        Array.from(reqContainer.getElementsByClassName('requirement-row')).forEach(row => row.remove());
+        Array.from(rewardContainer.getElementsByClassName('reward-row')).forEach(row => row.remove());
+
+        // Add requirements
+        if (type.interactionOption && type.interactionOption.requirements) {
+            type.interactionOption.requirements.forEach(req => {
+                switch (req.type) {
+                    case 'SKILL':
+                        addRequirementRow('skill');
+                        const skillRow = reqContainer.lastElementChild;
+                        skillRow.querySelector('input[placeholder="Skill name"]').value = req.skillName;
+                        skillRow.querySelector('input[placeholder="Required level"]').value = req.level;
+                        break;
+                    case 'ITEM':
+                        addRequirementRow('item');
+                        const itemRow = reqContainer.lastElementChild;
+                        itemRow.querySelector('.item-select').value = req.itemId;
+                        itemRow.querySelector('input[type="number"]').value = req.quantity;
+                        itemRow.querySelector('input[type="checkbox"]').checked = req.consume;
+                        break;
+                    case 'SPELL':
+                        addRequirementRow('spell');
+                        reqContainer.lastElementChild.querySelector('input').value = req.spellId;
+                        break;
+                }
+            });
+        }
+
+        // Add rewards
+        if (type.interactionOption && type.interactionOption.rewards) {
+            type.interactionOption.rewards.forEach(reward => {
+                switch (reward.type) {
+                    case 'EXPERIENCE':
+                        addRewardRow('experience');
+                        const expRow = rewardContainer.lastElementChild;
+                        expRow.querySelector('input[placeholder="Skill name"]').value = reward.skillName;
+                        expRow.querySelector('input[placeholder="Experience amount"]').value = reward.amount;
+                        break;
+                    case 'ITEM':
+                        addRewardRow('item');
+                        const itemRow = rewardContainer.lastElementChild;
+                        itemRow.querySelector('.item-select').value = reward.itemId;
+                        itemRow.querySelector('input[placeholder="Quantity"]').value = reward.quantity;
+                        if (reward.dropChance !== undefined) {
+                            const chanceToggle = itemRow.querySelector('.chance-toggle');
+                            chanceToggle.checked = true;
+                            const chanceInput = itemRow.querySelector('.chance-input');
+                            chanceInput.style.display = 'block';
+                            chanceInput.querySelector('input').value = reward.dropChance * 100;
+                        }
+                        break;
+                }
+            });
+        }
+    }
+
+    function showMessage(message, type) {
+        const messageElement = document.getElementById('message');
+        messageElement.textContent = message;
+        messageElement.className = 'message ' + type;
+        messageElement.style.display = 'block';
+        setTimeout(() => {
+            messageElement.style.display = 'none';
+        }, 5000);
+    }
+</script>
+</body>
+</html>
