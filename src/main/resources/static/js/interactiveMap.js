@@ -658,6 +658,13 @@
             drawEncampment(x, y, encampment);
         });
 
+        worldObjects.forEach(obj => {
+
+                const x = obj.posX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+                const y = obj.posY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+                drawWorldObject(x,y, obj)
+        })
+
 
         drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
 
@@ -665,6 +672,48 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(offscreenCanvas, 0, 0);
     }
+    const objSpriteCache = {};
+    const spriteNames = worldObjects
+        .map(obj => obj.spriteName || (obj.worldObjectType && obj.worldObjectType.spriteName))
+        .filter(name => name);
+
+    preloadSprites(spriteNames);
+
+    function preloadSprites(spriteNames) {
+        spriteNames.forEach(name => {
+            if (!objSpriteCache[name]) {
+                const image = new Image();
+                image.src = `/images/world_objects/${name}.png`;
+                objSpriteCache[name] = image;
+            }
+        });
+    }
+    function createObjectSprite(obj) {
+        const spriteName = obj.worldObjectType.spriteName;
+        if (!spriteName) {
+            console.warn('No sprite name found for object:', obj);
+            return null;
+        }
+
+        return objSpriteCache[spriteName] || null;
+    }
+    function drawWorldObject(x, y, obj) {
+        let objectSprite = createObjectSprite(obj);
+
+        if (objectSprite) {
+            ctx.drawImage(objectSprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+        } else {
+            ctx.fillStyle = '#95a5a6';
+            ctx.fillRect(x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+        }
+
+        // Draw object name or type
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(obj.name || obj.worldObjectType.name, x, y + SPRITE_SIZE / 2 + 15);
+    }
+
     function getTileColor(x, y) {
     // In a real implementation, you would fetch the actual terrain type for these coordinates
     const terrainType = ['PLAINS', 'FOREST', 'MOUNTAIN', 'WATER', 'DESERT'][Math.floor(Math.random() * 5)];
