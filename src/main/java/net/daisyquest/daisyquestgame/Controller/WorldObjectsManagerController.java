@@ -63,7 +63,7 @@ public class WorldObjectsManagerController {
             @RequestParam(required = false) String submapId,
             @RequestParam(required = false) Boolean used,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "5000") int size) {
 
         Query query = new Query();
 

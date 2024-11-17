@@ -89,6 +89,53 @@
             </div>
         </form>
     </div>
+    <div class="mb-3">
+        <button class="btn btn-primary" onclick="toggleEditorMode()">
+            <i class="fas fa-map"></i> Toggle Visual Editor
+        </button>
+    </div>
+
+    <div id="visualEditor" style="display: none;" class="mb-4">
+        <div class="row">
+            <div class="col-md-9">
+                <div class="position-relative">
+                    <canvas id="editorCanvas" style="border: 1px solid #ccc; cursor: crosshair;"></canvas>
+                    <div id="coordinates" class="position-absolute bottom-0 right-0 bg-dark text-white p-2" style="font-family: monospace;"></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Editor Tools</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Object Type to Place</label>
+                            <select id="editorObjectType" class="form-select">
+                                <option value="">Select Type...</option>
+                                <option th:each="type : ${worldObjectTypes}"
+                                        th:value="${type.id}"
+                                        th:text="${type.name}"
+                                        th:data-sprite="${type.spriteName}"></option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">View Controls</label>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="resetView()">Reset View</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="zoomIn()">Zoom In</button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="zoomOut()">Zoom Out</button>
+                            </div>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="showGrid">
+                            <label class="form-check-label" for="showGrid">Show Grid</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Results -->
     <div id="results" class="row">
@@ -112,7 +159,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let currentPage = 0;
-    const pageSize = 20;
+    const pageSize = 1000;
 
     document.getElementById('searchForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -304,6 +351,192 @@
         <i class="fas fa-th"></i> Create Grid
     </button>
 `);
+
+    let editorMode = false;
+    let editorCanvas, editorCtx;
+    let worldObjects = [];
+    let sprites = new Map();
+    let viewX = 0, viewY = 0;
+    let zoom = 1;
+    let isDragging = false;
+    let lastMouseX, lastMouseY;
+    const GRID_SIZE = 32;
+
+    function toggleEditorMode() {
+        editorMode = !editorMode;
+        document.getElementById('visualEditor').style.display = editorMode ? 'block' : 'none';
+        document.getElementById('results').style.display = editorMode ? 'none' : 'block';
+
+        if (editorMode) {
+            initializeEditor();
+            fetchWorldObjects();
+        }
+    }
+
+    function initializeEditor() {
+        if (!editorCanvas) {
+            editorCanvas = document.getElementById('editorCanvas');
+            editorCtx = editorCanvas.getContext('2d');
+
+            // Set canvas size
+            editorCanvas.width = 800;
+            editorCanvas.height = 600;
+
+            // Add event listeners
+            editorCanvas.addEventListener('mousedown', handleMouseDown);
+            editorCanvas.addEventListener('mousemove', handleMouseMove);
+            editorCanvas.addEventListener('mouseup', handleMouseUp);
+            editorCanvas.addEventListener('wheel', handleWheel);
+
+            // Load sprites
+            preloadSprites();
+        }
+
+        drawEditor();
+    }
+
+    function preloadSprites() {
+        const spriteNames = Array.from(document.getElementById('editorObjectType').options)
+            .map(option => option.dataset.sprite)
+            .filter(name => name);
+
+        spriteNames.forEach(name => {
+            const img = new Image();
+            img.onload = () => sprites.set(name, img);
+            img.src = `/sprites/world-objects/${name}.png`;
+        });
+    }
+
+    function fetchWorldObjects() {
+        fetch('/world-objects-manager/search')
+            .then(response => response.json())
+            .then(data => {
+                worldObjects = data;
+                drawEditor();
+            });
+    }
+
+    function drawEditor() {
+        editorCtx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
+
+        // Draw grid if enabled
+        if (document.getElementById('showGrid').checked) {
+            drawGrid();
+        }
+
+        // Draw world objects
+        worldObjects.forEach(obj => {
+            const sprite = sprites.get(obj.worldObjectType.spriteName);
+            if (sprite) {
+                const screenX = (obj.xPos - viewX) * zoom + editorCanvas.width/2;
+                const screenY = (obj.yPos - viewY) * zoom + editorCanvas.height/2;
+                editorCtx.drawImage(sprite, screenX - GRID_SIZE/2, screenY - GRID_SIZE/2, GRID_SIZE, GRID_SIZE);
+            }
+        });
+    }
+
+    function drawGrid() {
+        editorCtx.strokeStyle = '#ddd';
+        editorCtx.lineWidth = 1;
+
+        const offsetX = (-viewX * zoom + editorCanvas.width/2) % (GRID_SIZE * zoom);
+        const offsetY = (-viewY * zoom + editorCanvas.height/2) % (GRID_SIZE * zoom);
+
+        for (let x = offsetX; x < editorCanvas.width; x += GRID_SIZE * zoom) {
+            editorCtx.beginPath();
+            editorCtx.moveTo(x, 0);
+            editorCtx.lineTo(x, editorCanvas.height);
+            editorCtx.stroke();
+        }
+
+        for (let y = offsetY; y < editorCanvas.height; y += GRID_SIZE * zoom) {
+            editorCtx.beginPath();
+            editorCtx.moveTo(0, y);
+            editorCtx.lineTo(editorCanvas.width, y);
+            editorCtx.stroke();
+        }
+    }
+
+    function handleMouseDown(e) {
+        const rect = editorCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (e.button === 0) { // Left click
+            placeObject(x, y);
+        } else if (e.button === 2) { // Right click
+            isDragging = true;
+            lastMouseX = x;
+            lastMouseY = y;
+        }
+    }
+
+    function handleMouseMove(e) {
+        const rect = editorCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Update coordinates display
+        const worldX = Math.round((x - editorCanvas.width/2) / zoom + viewX);
+        const worldY = Math.round((y - editorCanvas.height/2) / zoom + viewY);
+        document.getElementById('coordinates').textContent = `X: ${worldX}, Y: ${worldY}`;
+
+        if (isDragging) {
+            viewX -= (x - lastMouseX) / zoom;
+            viewY -= (y - lastMouseY) / zoom;
+            lastMouseX = x;
+            lastMouseY = y;
+            drawEditor();
+        }
+    }
+
+    function handleMouseUp() {
+        isDragging = false;
+    }
+
+    function handleWheel(e) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        zoom *= delta;
+        zoom = Math.max(0.1, Math.min(zoom, 5));
+        drawEditor();
+    }
+
+    function placeObject(screenX, screenY) {
+        const typeId = document.getElementById('editorObjectType').value;
+        if (!typeId) {
+            alert('Please select an object type to place');
+            return;
+        }
+
+        const worldX = Math.round((screenX - editorCanvas.width/2) / zoom + viewX);
+        const worldY = Math.round((screenY - editorCanvas.height/2) / zoom + viewY);
+
+        createObjectAtPosition(typeId, worldX, worldY, 0)
+            .then(() => fetchWorldObjects());
+    }
+
+    function resetView() {
+        viewX = 0;
+        viewY = 0;
+        zoom = 1;
+        drawEditor();
+    }
+
+    function zoomIn() {
+        zoom *= 1.2;
+        zoom = Math.min(zoom, 5);
+        drawEditor();
+    }
+
+    function zoomOut() {
+        zoom *= 0.8;
+        zoom = Math.max(zoom, 0.1);
+        drawEditor();
+    }
+
+    // Prevent right-click menu on canvas
+    editorCanvas.addEventListener('contextmenu', e => e.preventDefault());
 
 </script>
 <div class="modal fade" id="createObjectModal" tabindex="-1">
