@@ -16,6 +16,7 @@ public class Recipe {
     private String name;
     private Map<String, Integer> requiredItemIdsAndAmounts;
     private Map<String, Integer> attributeRequirements;
+    private Map<String, Integer> attributeExperienceRewardAmounts; //ATTRIBUTE_NAME -> AMOUNT
     private String resultItemId;
     private String discoveredBy;
     private long discoveryDateTime;

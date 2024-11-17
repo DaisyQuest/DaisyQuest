@@ -1,7 +1,9 @@
 package net.daisyquest.daisyquestgame.Service.Initializer;
 
+import jakarta.annotation.PostConstruct;
 import net.daisyquest.daisyquestgame.Model.*;
 import net.daisyquest.daisyquestgame.Model.Currency;
+import net.daisyquest.daisyquestgame.Repository.AttributeTemplateRepository;
 import net.daisyquest.daisyquestgame.Service.CurrencyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -11,6 +13,12 @@ import java.util.*;
 
 @Component
 public class PlayerInitializer {
+   static List<AttributeTemplate> templates;
+   @PostConstruct
+   void init(){
+        templates = attributeTemplateRepository.findAll();
+   }
+
     private static final int INITIAL_INVENTORY_SIZE = 16; // You can adjust this value as needed
     public static void initPlayer(Player p1, List<Currency> p_cur, List<Spell> p_spells){
         if(p1 == null){
@@ -22,7 +30,6 @@ public class PlayerInitializer {
         initializeTalents(p1);
 
         initializeQuests(p1);
-        initializeCurrency(p1, p_cur);
 
         initalizeSpells(p1, p_spells);
         initializeSocial(p1);
@@ -61,7 +68,7 @@ public class PlayerInitializer {
 
     }
 
-    private static void initializeCurrency(Player p1, List<Currency> p_cur) {
+    public static void initializeCurrency(PlayerInventory p1, List<Currency> p_cur) {
         if(p1.getCurrencies() == null){
             Map<String, Integer> newMap = new HashMap<>();
             List<Currency> currencyList = p_cur;
@@ -82,26 +89,38 @@ public class PlayerInitializer {
         }
     }
 
+    @Autowired
+    AttributeTemplateRepository attributeTemplateRepository;
+
     private static void initializeAttributes(Player p1) {
-        if(p1.getAttributes() == null){
+        if (p1.getAttributes() == null) {
             p1.setAttributes(new HashMap<>());
         }
 
 
-        Attribute hp = getHitpointsAttribute(10, 1000);
-        Attribute combat = getCombatAttribute(1, 1000);
 
+        for (AttributeTemplate template : templates) {
+            String attributeName = template.getName().toLowerCase();
+            if (!p1.getAttributes().containsKey(attributeName)) {
+                Attribute attribute = new Attribute();
+                attribute.setName(template.getName());
 
-        if(!p1.getAttributes().containsKey("hitpoints")) {
-            p1.getAttributes().put("hitpoints", hp);
+                if (attributeName.equals("hitpoints")) {
+                    attribute.setLevel(10);
+                } else {
+                    attribute.setLevel(1);
+                }
+
+                attribute.setExperience(0);
+                attribute.setSprite(template.getSpriteName());
+
+                p1.getAttributes().put(attributeName, attribute);
+            }
         }
-        if(!p1.getAttributes().containsKey("combat")) {
-            p1.getAttributes().put("combat", combat);
-        }
+    }
 
-        //todo, make this nicer
-        p1.getAttributes().forEach((k, v) -> v.setSprite(v.getSpriteFileNameWithoutExtension(v)));
-
+    private static Attribute getLapidiaryAttribute(int level, int xp) {
+        return new Attribute("Lapidiary", level, xp);
     }
 
     public static Attribute getHitpointsAttribute(int level, int xp){

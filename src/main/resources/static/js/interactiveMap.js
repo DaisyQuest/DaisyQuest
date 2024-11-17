@@ -7,18 +7,42 @@
     let worldMap;
     let players = [];
     let currentPlayer;
+    const playerSpriteCache = new Map();
     const playerId = localStorage.getItem('playerId');
     if (!playerId) {
     window.location.href = '/';
 }
+
+    // Create a cache for item sprites
+    const itemSpriteCache = {};
+
+    // Pre-load item sprites
+    function preloadItemSprites(items) {
+        items.forEach(item => {
+            if (!itemSpriteCache[item.item.id]) {
+                const sprite = new Image();
+                sprite.onload = () => console.log(`Loaded ${item.item.spriteName}`);
+                sprite.onerror = () => {
+                    console.error(`Failed to load sprite: ${item.item.spriteName}`);
+                    sprite.error = true; // Mark this sprite as error
+                };
+                sprite.src = `/sprites/items/${item.item.spriteName}.png`;
+                itemSpriteCache[item.item.id] = sprite;
+            }
+        });
+    }
+
+
+
+
     const LAND_SIZE = 10000;
-    const VIEWPORT_WIDTH = 1000;
-    const VIEWPORT_HEIGHT = 800;
-    const SPRITE_SIZE = 32;
+    const VIEWPORT_WIDTH = 1240;
+    const VIEWPORT_HEIGHT = 720;
+    const SPRITE_SIZE = 64;
     let mp3Player;
     document.addEventListener('DOMContentLoaded', function() {
         mp3Player = new MP3Player('audio-player-container');
-        mp3Player.loadTrack('/audio/world.mp3');
+        mp3Player.loadTrack('/audio/world2.mp3');
         mp3Player.audio.loop = true;
         mp3Player.togglePlayPause();
     });
@@ -64,7 +88,8 @@
     Promise.all([
     fetch('/api/world-map'),
     fetch(`/api/players/${playerId}`),
-    fetch('/api/world-map/submap-entrances')
+    fetch('/api/world-map/submap-entrances'),
+    fetchMapItemsInViewport()
     ])
     .then(([worldMapResponse, playerResponse, submapEntrancesResponse]) =>
     Promise.all([worldMapResponse.json(), playerResponse.json(), submapEntrancesResponse.json()])
@@ -84,6 +109,10 @@
     submapCoordinateX: playerData.player.submapCoordinateX,
     submapCoordinateY: playerData.player.submapCoordinateY,
     submapCoordinateZ: playerData.player.submapCoordinateZ,
+    subspriteBackground: playerData.player.subspriteBackground,
+    subspriteFace:playerData.player.subspriteFace,
+    subspriteEyes:playerData.player.subspriteEyes,
+    subspriteHairHat:playerData.player.subspriteHairHat
     // Add other relevant player properties here
 };
     isInSubmap = currentPlayer.currentSubmapId != null;
@@ -112,6 +141,32 @@
     initGameData();
 }
 
+    // Add this function at the top of your script
+    function throttle(func, limit) {
+        let lastFunc;
+        let lastRan;
+        return function() {
+            const context = this;
+            const args = arguments;
+            if (!lastRan) {
+                func.apply(context, args);
+                lastRan = Date.now();
+            } else {
+                clearTimeout(lastFunc);
+                lastFunc = setTimeout(function() {
+                    if ((Date.now() - lastRan) >= limit) {
+                        func.apply(context, args);
+                        lastRan = Date.now();
+                    }
+                }, limit - (Date.now() - lastRan));
+            }
+        }
+    }
+
+    // Throttle the drawWorldMap function
+    const throttledDrawWorldMap = throttle(drawWorldMap, 1000 / 240); //60fps
+
+
 
     function handleMapClick(event) {
     const rect = canvas.getBoundingClientRect();
@@ -129,13 +184,201 @@
 }
 
     // Add a new function to handle map clicks
+    let worldObjects = [];
+
+    // Add this function to fetch world objects
+    function fetchWorldObjectsInViewport() {
+        const centerX = getCurrentPlayerX();
+        const centerY = getCurrentPlayerY();
+
+        console.log('Fetching world objects for viewport:', {
+            centerX,
+            centerY,
+            viewportWidth: VIEWPORT_WIDTH,
+            viewportHeight: VIEWPORT_HEIGHT
+        });
+
+        fetch(`/api/world-map/world-objects?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        console.error('Server response:', text);
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received world objects:', data);
+                worldObjects = data || [];
+                if (!isInSubmap) {
+                    drawWorldMap();
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching world objects:', error);
+                worldObjects = []; // Reset to empty array on error
+                if (!isInSubmap) {
+                    drawWorldMap(); // Still draw the map even if object fetch failed
+                }
+            });
+    }
+
+    // Modify the existing handleTerrainClick function
     function handleTerrainClick(clickX, clickY) {
-    if (isInSubmap) {
-    handleSubmapTerrainClick(clickX, clickY);
-} else {
-    handleOverworldTerrainClick(clickX, clickY);
-}
-}
+        if (isInSubmap) {
+            handleSubmapTerrainClick(clickX, clickY);
+            return;
+        }
+
+        // Convert click coordinates to world coordinates
+        const worldX = getCurrentPlayerX() + Math.round(clickX - VIEWPORT_WIDTH / 2);
+        const worldY = getCurrentPlayerY() + Math.round(clickY - VIEWPORT_HEIGHT / 2);
+
+        // Check for world objects first
+        const clickedObject = findClickedWorldObject(clickX, clickY);
+        if (clickedObject) {
+            handleWorldObjectInteraction(clickedObject);
+            return;
+        }
+
+        // Check for submap entrance if no object was clicked
+        fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.nearEntrance) {
+                    enterSubmap(data.submapId);
+                } else {
+                    setupMovementPath(worldX, worldY);
+                }
+            })
+            .catch(error => console.error('Error checking submap entrance:', error));
+    }
+
+    // Add this function to find clicked world objects
+    function findClickedWorldObject(clickX, clickY) {
+        const worldX = getCurrentPlayerX() + (clickX - VIEWPORT_WIDTH / 2);
+        const worldY = getCurrentPlayerY() + (clickY - VIEWPORT_HEIGHT / 2);
+
+        return worldObjects.find(object => {
+            const screenX = object.xPos - getCurrentPlayerX() + VIEWPORT_WIDTH / 2;
+            const screenY = object.yPos - getCurrentPlayerY() + VIEWPORT_HEIGHT / 2;
+
+            // Assuming objects have a standard interaction radius of 32 pixels
+            const distance = Math.sqrt(
+                Math.pow(clickX - screenX, 2) +
+                Math.pow(clickY - screenY, 2)
+            );
+
+            return distance <= 32; // Adjust this radius as needed
+        });
+    }
+
+    // Add this function to handle world object interactions
+    function handleWorldObjectInteraction(worldObject) {
+        // Calculate distance to ensure player is close enough
+        const distance = Math.sqrt(
+            Math.pow(worldObject.xPos - getCurrentPlayerX(), 2) +
+            Math.pow(worldObject.yPos - getCurrentPlayerY(), 2)
+        );
+
+        if (distance > 64) { // Interaction range - adjust as needed
+            // If too far, move closer first
+            setupMovementPath(worldObject.xPos, worldObject.yPos);
+            return;
+        }
+
+        // Send interaction request to server
+        fetch(`/api/world-map/world-objects/${worldObject.id}/interact`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                playerId: getCurrentPlayerId(),
+                interactionType: worldObject.worldObjectType.interactionType
+            })
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    handleInteractionResult(result);
+                } else {
+                    if (result.message.includes("cooldown")) {
+                        const remainingTime = Math.ceil(result.remainingCooldownMs / 1000);
+                        alert(`This object is on cooldown for ${remainingTime} seconds`);
+                    } else {
+                        alert(result.message);
+                    }
+                }
+            })
+            .catch(error => console.error('Error interacting with object:', error));
+    }
+
+    // Add this function to handle interaction results
+    function handleInteractionResult(result) {
+        // Handle different interaction types
+        if (result.interactionType === 'SKILL') {
+            // Start skill interaction progress tracking
+            startSkillProgress(result);
+        } else if (result.interactionType === 'CONTAINER') {
+            // Open container interface
+          //  openContainer(result);
+        } else if (result.interactionType === 'TRAVEL') {
+            // Handle travel interaction
+            handleTravel(result);
+        } else {
+            // Handle other interaction types
+            console.log('Interaction successful:', result);
+        }
+    }
+
+    // Add these supporting functions
+    function startSkillProgress(result) {
+        // Create progress UI
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'skill-progress';
+        progressDiv.innerHTML = `
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        <button class="cancel-button">Cancel</button>
+    `;
+        document.body.appendChild(progressDiv);
+
+        // Update progress periodically
+        const interval = setInterval(() => {
+            fetch(`/api/world-map/world-objects/${result.activeInteractionId}/progress`)
+                .then(response => response.json())
+                .then(progress => {
+                    if (progress.completed) {
+                        clearInterval(interval);
+                        progressDiv.remove();
+                        alert('Skill interaction completed!');
+                    } else {
+                        const fillElement = progressDiv.querySelector('.progress-fill');
+                        fillElement.style.width = `${progress.percent}%`;
+                    }
+                });
+        }, 1000);
+
+        // Handle cancel button
+        progressDiv.querySelector('.cancel-button').onclick = () => {
+            clearInterval(interval);
+            progressDiv.remove();
+            fetch(`/api/world-map/world-objects/${result.activeInteractionId}/cancel`, {
+                method: 'POST'
+            });
+        };
+    }
+
+    // Add to your initialization code
+    setInterval(fetchWorldObjectsInViewport, 3000);
     function handleSubmapTerrainClick(clickX, clickY) {
     // Convert click coordinates to submap coordinates
     const submapX = currentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
@@ -230,7 +473,7 @@
 }
     // New function to set up the movement path
     let movementQueue = [];
-    const MOVE_SPEED = 3; // pixels per frame
+    const MOVE_SPEED = 1; // pixels per frame
     let moveInterval = null;
     let movementVector = { x: 0, y: 0 };
     let isKeyboardMovement = false;
@@ -293,6 +536,29 @@
     .catch(error => console.error('Error fetching players in overworld:', error));
 }
 }
+
+    let mapItems = [];
+
+    function fetchMapItemsInViewport() {
+        const centerX = getCurrentPlayerX();
+        const centerY = getCurrentPlayerY();
+
+        fetch(`/api/world-map/items?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
+            .then(response => response.json())
+            .then(data => {
+                mapItems = data;
+                preloadItemSprites(mapItems); // Pre-load sprites for new items
+                if (isInSubmap) {
+                    drawSubmap();
+                } else {
+                    drawWorldMap();
+                }
+            })
+            .catch(error => console.error('Error fetching map items:', error));
+    }
+
+
+
     function checkSubmapEntrance(worldX, worldY) {
     fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
         .then(response => response.json())
@@ -327,85 +593,231 @@
         .catch(error => console.error('Error entering submap:', error));
 }
 
+    const offscreenCanvas = document.createElement('canvas');
+    const offscreenCtx = offscreenCanvas.getContext('2d');
 
+    // Set dimensions
+    offscreenCanvas.width = VIEWPORT_WIDTH;
+    offscreenCanvas.height = VIEWPORT_HEIGHT;
     function drawWorldMap() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const startX = Math.floor(currentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
-    const startY = Math.floor(currentPlayer.worldPositionY / LAND_SIZE) * LAND_SIZE;
-
-    for (let y = -LAND_SIZE; y <= VIEWPORT_HEIGHT + LAND_SIZE; y += LAND_SIZE) {
-    for (let x = -LAND_SIZE; x <= VIEWPORT_WIDTH + LAND_SIZE; x += LAND_SIZE) {
-    const worldX = startX + x;
-    const worldY = startY + y;
-
-    const offsetX = Math.round(x - (currentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
-    const offsetY = Math.round(y - (currentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
-
-    ctx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
-    ctx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.strokeRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
-}
-}
-
-    for (const player of players) {
-    if (player.id !== currentPlayer.id) {
-    const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
-    const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
-
-    if (x >= -SPRITE_SIZE/2 && x < VIEWPORT_WIDTH + SPRITE_SIZE/2 &&
-    y >= -SPRITE_SIZE/2 && y < VIEWPORT_HEIGHT + SPRITE_SIZE/2) {
-    drawPlayer(x, y, player, false);
-}
-}
-}
-
-    submapEntrances.forEach(entrance => {
-    const x = entrance.x - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-    const y = entrance.y - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
-    ctx.fillStyle = '#FF00FF'; // Magenta color for visibility
-    ctx.fillRect(x - 5, y - 5, 10, 10);
-});
+        if (currentCombatId){
+            return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
 
-    drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
+        const startX = Math.floor(currentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
+        const startY = Math.floor(currentPlayer.worldPositionY / LAND_SIZE) * LAND_SIZE;
 
-    coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
-}
+        for (let y = -LAND_SIZE; y <= VIEWPORT_HEIGHT + LAND_SIZE; y += LAND_SIZE) {
+            for (let x = -LAND_SIZE; x <= VIEWPORT_WIDTH + LAND_SIZE; x += LAND_SIZE) {
+                const worldX = startX + x;
+                const worldY = startY + y;
+
+                const offsetX = Math.round(x - (currentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
+                const offsetY = Math.round(y - (currentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
+
+                offscreenCtx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
+                offscreenCtx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
+
+                offscreenCtx.strokeStyle = 'rgba(255,255,255,0.2)';
+                offscreenCtx.strokeRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
+            }
+        }
+
+        for (const player of players) {
+            if (player.id !== currentPlayer.id && !currentPlayer.currentSubmapId) {
+                const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
+                const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
+
+                if (x >= -SPRITE_SIZE/2 && x < VIEWPORT_WIDTH + SPRITE_SIZE/2 &&
+                    y >= -SPRITE_SIZE/2 && y < VIEWPORT_HEIGHT + SPRITE_SIZE/2) {
+                    drawPlayer(x, y, player, false);
+                }
+            }
+        }
+
+        mapItems.forEach(item => {
+            console.log(item)
+            const x = item.worldMapCoordinateX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = item.worldMapCoordinateY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            drawMapItem(x, y, item, offscreenCtx);
+        });
+
+        submapEntrances.forEach(entrance => {
+            const x = entrance.x - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = entrance.y - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            offscreenCtx.fillStyle = '#FF00FF'; // Magenta color for visibility
+            offscreenCtx.fillRect(x - 5, y - 5, 10, 10);
+        });
+
+        encampments.forEach(encampment => {
+            const x = encampment.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = encampment.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            drawEncampment(x, y, encampment);
+        });
+
+        worldObjects.forEach(obj => {
+
+                const x = obj.posX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+                const y = obj.posY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+                drawWorldObject(x,y, obj)
+        })
+
+
+        drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
+
+        coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(offscreenCanvas, 0, 0);
+    }
+    const objSpriteCache = {};
+    const spriteNames = worldObjects
+        .map(obj => obj.spriteName || (obj.worldObjectType && obj.worldObjectType.spriteName))
+        .filter(name => name);
+
+    preloadSprites(spriteNames);
+
+    function preloadSprites(spriteNames) {
+        spriteNames.forEach(name => {
+            if (!objSpriteCache[name]) {
+                const image = new Image();
+                image.src = `/images/world_objects/${name}.png`;
+                objSpriteCache[name] = image;
+            }
+        });
+    }
+    function createObjectSprite(obj) {
+        const spriteName = obj.worldObjectType.spriteName;
+        if (!spriteName) {
+            console.warn('No sprite name found for object:', obj);
+            return null;
+        }
+
+        return objSpriteCache[spriteName] || null;
+    }
+    function drawWorldObject(x, y, obj) {
+        let objectSprite = createObjectSprite(obj);
+
+        if (objectSprite) {
+            ctx.drawImage(objectSprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+        } else {
+            ctx.fillStyle = '#95a5a6';
+            ctx.fillRect(x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+        }
+
+        // Draw object name or type
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(obj.name || obj.worldObjectType.name, x, y + SPRITE_SIZE / 2 + 15);
+    }
 
     function getTileColor(x, y) {
     // In a real implementation, you would fetch the actual terrain type for these coordinates
     const terrainType = ['PLAINS', 'FOREST', 'MOUNTAIN', 'WATER', 'DESERT'][Math.floor(Math.random() * 5)];
     return terrainColors['PLAINS'];
 }
+    function drawMapItem(x, y, item, ctxToDraw) {
+        const spriteSize = 32; // Adjust this size as needed
+        const sprite = itemSpriteCache[item.item.id];
 
+        if (sprite && sprite.complete && !sprite.error) {
+            // Sprite is loaded and has no errors, draw it
+            ctxToDraw.drawImage(sprite, x - spriteSize / 2, y - spriteSize / 2, spriteSize, spriteSize);
+        } else {
+            // Sprite is not loaded or has errors, draw fallback
+            ctxToDraw.fillStyle = 'yellow';
+            ctxToDraw.beginPath();
+            ctxToDraw.arc(x, y, 5, 0, 2 * Math.PI);
+            ctxToDraw.fill();
+        }
 
+        // Draw item name with color based on rarity
+        const rarityColor = getRarityColor(item.item.rarity);
+        ctxToDraw.fillStyle = rarityColor;
+        ctxToDraw.font = 'bold 12px Arial';
+        ctxToDraw.textAlign = 'center';
+        ctxToDraw.fillText(item.item.name, x, y + spriteSize / 2 + 15);
+    }
+
+    function getRarityColor(rarity) {
+        switch (rarity) {
+            case 'JUNK': return '#7F7F7F';
+            case 'COMMON': return '#FFFFFF';
+            case 'UNCOMMON': return '#1EFF00';
+            case 'RARE': return '#0070DD';
+            case 'EPIC': return '#A335EE';
+            case 'LEGENDARY': return '#FF8000';
+            case 'SUPERLATIVE': return '#00FFFF';
+            default: return '#FFFFFF';
+        }
+    }
+    function getItemSprite(itemId) {
+        const sprite = new Image();
+        sprite.src = `/sprites/items/${itemId}.png`;
+        return sprite;
+    }
+
+    // Function to create and cache player sprite
+    async function createPlayerSprite(player) {
+        const cacheKey = `${player.id}-${player.subspriteBackground}-${player.subspriteFace}-${player.subspriteEyes}-${player.subspriteHairHat}`;
+
+        if (playerSpriteCache.has(cacheKey)) {
+            return playerSpriteCache.get(cacheKey);
+        }
+
+        const offscreenCanvas = document.createElement('canvas');
+        offscreenCanvas.width = SPRITE_SIZE;
+        offscreenCanvas.height = SPRITE_SIZE;
+        const offscreenCtx = offscreenCanvas.getContext('2d');
+
+        const layers = [
+            player.subspriteBackground || 'background_1',
+            player.subspriteFace || 'face_1',
+            player.subspriteEyes || 'eyes_1',
+            player.subspriteHairHat || 'hairhat_1'
+        ];
+
+        try {
+            for (const layer of layers) {
+                const sprite = await loadSprite(layer);
+                offscreenCtx.drawImage(sprite, 0, 0, SPRITE_SIZE, SPRITE_SIZE);
+            }
+            playerSpriteCache.set(cacheKey, offscreenCanvas);
+            return offscreenCanvas;
+        } catch (error) {
+            console.error('Error creating player sprite:', error);
+            return null;
+        }
+    }
+
+    // Updated drawPlayer function
     async function drawPlayer(x, y, player, isCurrentPlayer) {
-    const layers = [
-    player.subspriteBackground || 'background_0',
-    player.subspriteFace || 'face_0',
-    player.subspriteEyes || 'eyes_0',
-    player.subspriteHairHat || 'hairhat_0'
-    ];
-    try {
-    for (const layer of layers) {
-    const sprite = await loadSprite(layer);
-    ctx.drawImage(sprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
-}
-    ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(player.username, x, y + SPRITE_SIZE / 2 + 15);
-} catch (error) {
-    console.error('Error loading sprite:', error);
-    ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
-    ctx.beginPath();
-    ctx.arc(x, y, SPRITE_SIZE / 2, 0, 2 * Math.PI);
-    ctx.fill();
-}
-}
+        let playerSprite = await createPlayerSprite(player);
+
+        if (playerSprite) {
+            ctx.drawImage(playerSprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+        } else {
+            // Fallback if sprite creation failed
+            ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
+            ctx.beginPath();
+            ctx.arc(x, y, SPRITE_SIZE / 2, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // Draw player name
+        ctx.fillStyle = isCurrentPlayer ? '#e74c3c' : '#3498db';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(player.username, x, y + SPRITE_SIZE / 2 + 15);
+    }
+
+    // You might want to add a function to clear the cache when necessary
+    function clearPlayerSpriteCache() {
+        playerSpriteCache.clear();
+    }
 
 
     function loadSprite(spriteName) {
@@ -450,41 +862,99 @@
     let sendInterval;
     let accumulatedMovement = { x: 0, y: 0 };
 
+
+    const INTERPOLATION_DURATION = 200; // milliseconds
+    let interpolationData = {};
+
     function updatePlayerPosition(playerIdOfPlayerToUpdate, x, y) {
-    if (!currentPlayer) {
-    console.error('Current player is not initialized');
-    return;
-}
+        if (!currentPlayer) {
+            console.error('Current player is not initialized');
+            return;
+        }
 
-    if (x <= 0 || y <= 0) {
-    console.log('Attempted move to invalid position:', x, y);
-    return;
-}
+        if (x <= 0 || y <= 0) {
+            console.log('Attempted move to invalid position:', x, y);
+            return;
+        }
 
-    x = Math.round(x);
-    y = Math.round(y);
+        x = Math.round(x);
+        y = Math.round(y);
 
-    if (playerIdOfPlayerToUpdate === getCurrentPlayerId()) {
-    if (x === getCurrentPlayerX() && y === getCurrentPlayerY()) {
-    return;
-}
+        if (playerIdOfPlayerToUpdate === getCurrentPlayerId()) {
+            if (x === getCurrentPlayerX() && y === getCurrentPlayerY()) {
+                return;
+            }
+            setCurrentPlayerPosition(x, y);
+            updatePlayerInfo();
+        } else {
+            const player = players.find(p => p.id === playerIdOfPlayerToUpdate);
+            if (player) {
+                player.worldPositionX = x;
+                player.worldPositionY = y;
+            } else {
+                console.log('Player not found in viewport:', playerIdOfPlayerToUpdate);
+                fetchPlayersInViewport();
+            }
+        }
 
-    setCurrentPlayerPosition(x, y);
-    updatePlayerInfo();
-    drawWorldMap();
-} else {
-    const player = players.find(p => p.id === playerIdOfPlayerToUpdate);
-    if (player) {
-    player.worldPositionX = x;
-    player.worldPositionY = y;
-    drawWorldMap();
-} else {
-    console.log('Player not found in viewport:', playerIdOfPlayerToUpdate);
-    fetchPlayersInViewport();
-}
-}
-}
+    //    throttledDrawWorldMap();
+        drawWorldMap();
+    }
 
+    function startInterpolation(player, targetX, targetY) {
+        const startX = player.worldPositionX;
+        const startY = player.worldPositionY;
+        const startTime = Date.now();
+
+        interpolationData[player.id] = {
+            startX,
+            startY,
+            targetX,
+            targetY,
+            startTime
+        };
+
+        // Ensure the interpolation loop is running
+        if (!interpolationLoop) {
+            interpolationLoop = requestAnimationFrame(interpolateMovements);
+        }
+    }
+
+    let interpolationLoop;
+
+    function interpolateMovements() {
+        const currentTime = Date.now();
+        let needsRedraw = false;
+
+        for (const playerId in interpolationData) {
+            const data = interpolationData[playerId];
+            const player = players.find(p => p.id === playerId);
+
+            if (!player) continue;
+
+            const progress = Math.min((currentTime - data.startTime) / INTERPOLATION_DURATION, 1);
+
+            player.worldPositionX = Math.round(data.startX + (data.targetX - data.startX) * progress);
+            player.worldPositionY = Math.round(data.startY + (data.targetY - data.startY) * progress);
+
+            if (progress === 1) {
+                delete interpolationData[playerId];
+            }
+
+            needsRedraw = true;
+        }
+
+        if (needsRedraw) {
+         //   throttledDrawWorldMap();
+            drawWorldMap();
+        }
+
+        if (Object.keys(interpolationData).length > 0) {
+            interpolationLoop = requestAnimationFrame(interpolateMovements);
+        } else {
+            interpolationLoop = null;
+        }
+    }
 
     const sendPositionToServer = debounce(() => {
     if (isInSubmap) {
@@ -548,11 +1018,6 @@
 };
 }
 
-
-
-
-
-
     function startCombat(combatId) {
     mp3Player.loadTrack('/audio/battle.mp3');
     mp3Player.togglePlayPause();
@@ -568,6 +1033,7 @@
         .then(combat => {
             updateCombatUI(combat);
             fetchPlayerSpells();
+            fetchPlayerSpecialAttacks();
             fetchStatusEffects(combatId);
             pollCombatStatus();
         })
@@ -589,7 +1055,7 @@
 
 
     function updateCombatUI(combat) {
-    updatePlayerCards(combat);
+    updatePlayerCards(combat, currentPlayer.id);
     updateTurnIndicator(combat);
     updateCombatInfo(combat);
     updateSpellCooldowns(combat);
@@ -600,21 +1066,44 @@
 }
 
 
-    function updatePlayerCards(combat) {
-    const playerCardsContainer = document.getElementById('playerCards');
-    playerCardsContainer.innerHTML = '';
+    function updatePlayerCards(combat, currentPlayerId) {
+        console.log("Current Player ID:", currentPlayerId);
+        console.log("Player Teams:", combat.playerTeams);
 
-    const playerCount = combat.playerIds.length;
-    const spriteSize = playerCount < 5 ? 128 : 64;
+        const playerCardsContainer = document.getElementById('playerCards');
+        playerCardsContainer.innerHTML = '';
+        const playerCount = combat.playerIds.length;
+        const spriteSize = playerCount < 5 ? 128 : 64;
 
-    combat.playerIds.forEach(id => {
-    const health = combat.playerHealth[id];
-    const maxHealth = combat.playerHealthStarting[id];
-    const healthPercentage = (health / maxHealth) * 100;
+        // Determine the current player's team
+        const currentPlayerTeam = combat.playerTeams[currentPlayerId];
+        console.log("Current Player Team:", currentPlayerTeam);
 
-    const playerCard = document.createElement('div');
-    playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
-    playerCard.innerHTML = `
+        // Group players into allied and enemy teams
+        const alliedTeam = [];
+        const enemyTeams = {};
+        combat.playerIds.forEach(id => {
+            const team = combat.playerTeams[id];
+            if (team === currentPlayerTeam) {
+                alliedTeam.push(id);
+            } else {
+                if (!enemyTeams[team]) {
+                    enemyTeams[team] = [];
+                }
+                enemyTeams[team].push(id);
+            }
+        });
+        console.log("Allied Team:", alliedTeam);
+        console.log("Enemy Teams:", enemyTeams);
+
+        // Function to create a player card
+        const createPlayerCard = (id) => {
+            const health = combat.playerHealth[id];
+            const maxHealth = combat.playerHealthStarting[id];
+            const healthPercentage = (health / maxHealth) * 100;
+            const playerCard = document.createElement('div');
+            playerCard.className = `col-md-${Math.floor(12 / playerCount)} player-card`;
+            playerCard.innerHTML = `
             <div class="player-sprite" style="width: ${spriteSize}px; height: ${spriteSize}px;">
                 ${getPlayerSprite(id, spriteSize)}
             </div>
@@ -626,10 +1115,27 @@
             <p class="text-center">AP: ${combat.playerActionPoints[id]}</p>
             <div class="status-effects" id="status-effects-${id}"></div>
         `;
-    playerCardsContainer.appendChild(playerCard);
-});
-}
+            return playerCard;
+        };
 
+        // Create allied team container
+        const alliedContainer = document.createElement('div');
+        alliedContainer.className = 'row allied-team';
+        alliedTeam.forEach(id => {
+            alliedContainer.appendChild(createPlayerCard(id));
+        });
+        playerCardsContainer.appendChild(alliedContainer);
+
+        // Create enemy team containers
+        Object.values(enemyTeams).forEach((team, index) => {
+            const enemyContainer = document.createElement('div');
+            enemyContainer.className = 'row enemy-team';
+            team.forEach(id => {
+                enemyContainer.appendChild(createPlayerCard(id));
+            });
+            playerCardsContainer.appendChild(enemyContainer);
+        });
+    }
     function updateStatusEffectsDisplay() {
     if (!statusEffects || Object.keys(statusEffects).length === 0) {
     console.log('No status effects to display');
@@ -656,69 +1162,84 @@
 });
 }
 
+
     function performAction(actionType) {
-    selectedAction = actionType;
-    const spellSelection = document.getElementById('spellSelection');
-    const targetSelection = document.getElementById('targetSelection');
+        selectedAction = actionType;
+        const spellSelection = document.getElementById('spellSelection');
+        const specialAttackSelection = document.getElementById('specialAttackSelection');
+        const targetSelection = document.getElementById('targetSelection');
 
-    spellSelection.style.display = 'none';
-    targetSelection.style.display = 'none';
+        spellSelection.style.display = 'none';
+        specialAttackSelection.style.display = 'none';
+        targetSelection.style.display = 'none';
 
-    if (actionType === 'SPELL') {
-    spellSelection.style.display = 'block';
-    updateSpellSelection();
-    updateSpellInfo();
-} else {
-    updateTargetSelection();
-    targetSelection.style.display = 'block';
-}
-}
-
-
+        if (actionType === 'SPELL') {
+            spellSelection.style.display = 'block';
+            updateSpellSelection();
+        } else if (actionType === 'SPECIAL_ATTACK') {
+            specialAttackSelection.style.display = 'block';
+            updateSpecialAttackSelection();
+        } else {
+            updateTargetSelection();
+            targetSelection.style.display = 'block';
+        }
+    }
     function confirmAction() {
-    const targetPlayerId = document.getElementById('targetSelect').value;
-    if (!targetPlayerId) {
-    alert('Please select a target.');
-    return;
-}
+        const targetPlayerId = document.getElementById('targetSelect').value;
+        if (!targetPlayerId) {
+            alert('Please select a target.');
+            return;
+        }
 
-    let actionData = {
-    playerId: playerId,
-    type: selectedAction,
-    targetPlayerId: targetPlayerId,
-    actionPoints: 1
-};
+        let actionData = {
+            playerId: playerId,
+            type: selectedAction,
+            targetPlayerId: targetPlayerId,
+            actionPoints: 1
+        };
 
-    if (selectedAction === 'SPELL') {
-    if (!selectedSpell) {
-    alert('Please select a spell.');
-    return;
-}
-    actionData.spellId = selectedSpell.id;
-}
+        if (selectedAction === 'SPELL') {
+            if (!selectedSpell) {
+                alert('Please select a spell.');
+                return;
+            }
+            actionData.spellId = selectedSpell.id;
+        } else if (selectedAction === 'SPECIAL_ATTACK') {
+            if (!selectedSpecialAttack) {
+                alert('Please select a special attack.');
+                return;
+            }
+            actionData.specialAttackId = selectedSpecialAttack.specialAttackId;
+            if(selectedSpecialAttack.id) {
+                actionData.id = selectedSpecialAttack.id;
+            }
+        }
 
-    fetch(`/api/combat/${currentCombatId}/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(actionData)
-})
-    .then(response => response.json())
-    .then(updatedCombat => {
-    updateCombatUI(updatedCombat);
-    document.getElementById('spellSelection').style.display = 'none';
-    document.getElementById('targetSelection').style.display = 'none';
-    fetchStatusEffects(currentCombatId); // This will now handle cases with no status effects
-    if (!updatedCombat.active) {
-    showCombatResults(updatedCombat);
-}
-})
-    .catch(error => {
-    console.error('Error performing action:', error);
-    alert('An error occurred while performing the action. Please try again.');
-});
+        fetch(`/api/combat/${currentCombatId}/action`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(actionData)
+        })
+            .then(response => response.json())
+            .then(updatedCombat => {
+                updateCombatUI(updatedCombat);
+                document.getElementById('spellSelection').style.display = 'none';
+                document.getElementById('specialAttackSelection').style.display = 'none';
+                document.getElementById('targetSelection').style.display = 'none';
+                fetchStatusEffects(currentCombatId);
+                if (!updatedCombat.active) {
+                    showCombatResults(updatedCombat);
+                }
+            })
+            .catch(error => {
+                console.error('Error performing action:', error);
+                alert('An error occurred while performing the action. Please try again.');
+            });
 
-    selectedSpell = null;
-}
+        selectedSpell = null;
+        selectedSpecialAttack = null;
+    }
+
 
     function fetchPlayerSpells() {
     fetch(`/api/players/${playerId}/spells`)
@@ -744,7 +1265,7 @@
     if (combat.active) {
     updateCombatUI(combat);
     setTimeout(pollCombatStatus, 2000);
-} else {
+    } else {
     console.log('Combat ended');
     showCombatResults(combat);
 }
@@ -845,76 +1366,90 @@
 
 
 
-    function handleSpellSelection() {
-    const spellId = document.getElementById('spellSelect').value;
-    selectedSpell = playerSpells.find(spell => spell.id === spellId);
-    updateSpellInfo();
+    // We should also update the handleSpellSelection function to show the target selection
+    function handleSpellSelection(spellId) {
+        selectedSpell = playerSpells.find(spell => spell.id === spellId);
+        updateSpellInfo();
 
-    // Keep spell selection visible
-    document.getElementById('spellSelection').style.display = 'block';
+        // Update visual selection
+        document.querySelectorAll('.spell-icon').forEach(icon => {
+            icon.classList.toggle('selected', icon.dataset.spellId === spellId);
+        });
 
-    // Show target selection after spell is chosen
-    updateTargetSelection();
-    document.getElementById('targetSelection').style.display = 'block';
-}
+        // Show target selection after spell is chosen
+        updateTargetSelection();
+        document.getElementById('targetSelection').style.display = 'block';
+    }
+
 
     function updateSelectionVisibility(combat) {
-    const isPlayerTurn = combat.currentTurnPlayerId === playerId;
-    const spellSelection = document.getElementById('spellSelection');
-    const targetSelection = document.getElementById('targetSelection');
+        const isPlayerTurn = combat.currentTurnPlayerId === playerId;
+        const spellSelection = document.getElementById('spellSelection');
+        const spellSelectionBar = document.getElementById('spellSelectionBar');
+        const spellInfoContainer = document.getElementById('spellInfoContainer');
+        const targetSelection = document.getElementById('targetSelection');
 
-    if (isPlayerTurn) {
-    // If it's the player's turn, show action buttons
-    document.getElementById('actionButtons').style.display = 'block';
+        if (isPlayerTurn) {
+            document.getElementById('actionButtons').style.display = 'block';
 
-    // If a spell is selected, show both spell and target selection
-    if (selectedAction === 'SPELL' && selectedSpell) {
-    spellSelection.style.display = 'block';
-    targetSelection.style.display = 'block';
-} else if (selectedAction === 'SPELL') {
-    // If SPELL is selected but no spell chosen yet, only show spell selection
-    spellSelection.style.display = 'block';
-    targetSelection.style.display = 'none';
-} else if (selectedAction) {
-    // For other actions, hide spell selection and show target selection
-    spellSelection.style.display = 'none';
-    targetSelection.style.display = 'block';
-} else {
-    // If no action is selected yet, hide both
-    spellSelection.style.display = 'none';
-    targetSelection.style.display = 'none';
-}
-} else {
-    // If it's not the player's turn, hide everything
-    document.getElementById('actionButtons').style.display = 'none';
-    spellSelection.style.display = 'none';
-    targetSelection.style.display = 'none';
-}
-}
+            if (selectedAction === 'SPELL') {
+                spellSelection.style.display = 'block';
+                spellSelectionBar.style.display = 'flex';
+                spellInfoContainer.style.display = 'block';
+                if (selectedSpell) {
+                    targetSelection.style.display = 'block';
+                } else {
+                    targetSelection.style.display = 'none';
+                }
+            } else if (selectedAction) {
+                spellSelection.style.display = 'none';
+                targetSelection.style.display = 'block';
+            } else {
+                spellSelection.style.display = 'none';
+                targetSelection.style.display = 'none';
+            }
+        } else {
+            document.getElementById('actionButtons').style.display = 'none';
+            spellSelection.style.display = 'none';
+            targetSelection.style.display = 'none';
+        }
+    }
+
 
     function updateSpellSelection() {
-    const spellSelect = document.getElementById('spellSelect');
-    spellSelect.innerHTML = '';
-    playerSpells.forEach(spell => {
-    const option = document.createElement('option');
-    option.value = spell.id;
-    option.textContent = spell.name;
-    spellSelect.appendChild(option);
-});
-    updateSpellInfo();
-}
+        const spellSelectionBar = document.getElementById('spellSelectionBar');
+        spellSelectionBar.innerHTML = '';
+
+        playerSpells.forEach(spell => {
+            const spellIcon = document.createElement('img');
+            spellIcon.src = `/sprites/spells/${spell.spellSpritePath}.png`;
+            spellIcon.alt = spell.name;
+            spellIcon.className = 'spell-icon';
+            spellIcon.dataset.spellId = spell.id;
+            spellIcon.addEventListener('click', () => handleSpellSelection(spell.id));
+            spellSelectionBar.appendChild(spellIcon);
+        });
+
+        if (playerSpells.length > 0) {
+            handleSpellSelection(playerSpells[0].id);
+        }
+    }
+
 
     function updateSpellInfo() {
-    const spellId = document.getElementById('spellSelect').value;
-    selectedSpell = playerSpells.find(spell => spell.id === spellId);
+        if (selectedSpell) {
+            document.getElementById('spellInfoName').textContent = selectedSpell.name;
+            document.getElementById('spellInfoDescription').textContent = selectedSpell.description;
+            document.getElementById('spellInfoManaCost').textContent = `Mana Cost: ${selectedSpell.manaCost}`;
+            document.getElementById('spellInfoCooldown').textContent = `Cooldown: ${selectedSpell.cooldown} turns`;
 
-    if (selectedSpell) {
-    document.getElementById('spellInfoName').textContent = selectedSpell.name;
-    document.getElementById('spellInfoDescription').textContent = selectedSpell.description;
-    document.getElementById('spellInfoManaCost').textContent = `Mana Cost: ${selectedSpell.manaCost}`;
-    document.getElementById('spellInfoCooldown').textContent = `Cooldown: ${selectedSpell.cooldown} turns`;
-}
-}
+            const spriteImg = document.getElementById('spellSprite');
+            spriteImg.src = `/sprites/spells/${selectedSpell.spellSpritePath}.png`;
+            spriteImg.alt = `${selectedSpell.name} Sprite`;
+        }
+    }
+
+
 
     function updateTargetSelection() {
     const targetSelect = document.getElementById('targetSelect');
@@ -1012,10 +1547,10 @@
 
     function returnToWorldMap() {
         mp3Player.audio.loop = true;
-        mp3Player.loadTrack('/audio/world.mp3');
+        mp3Player.loadTrack('/audio/world2.mp3');
         mp3Player.audio.play();
     document.getElementById('combatResults').style.display = 'none';
-    document.getElementById('worldMapContainer').style.display = 'block';
+    document.getElementById('worldMapContainer').style.display = 'flex';
     currentCombatId = null;
     selectedPlayer = null;
     hideDuelButton();
@@ -1025,27 +1560,61 @@
     // Duel functions
     function handlePlayerClick(player) {
     selectedPlayer = player;
+    updateTargetedPlayerInfo(player);
     let distance;
 
-    if (isInSubmap) {
-    distance = Math.sqrt(
-    Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
-    Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
-    );
-} else {
-    distance = Math.sqrt(
-    Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
-    Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
-    );
+//     if (isInSubmap) {
+//     distance = Math.sqrt(
+//     Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
+//     Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+//     );
+// } else {
+//     distance = Math.sqrt(
+//     Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
+//     Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+//     );
+// }
+//
+//     if (distance <= DUEL_RANGE) {
+//     showDuelButton();
+// } else {
+//     hideDuelButton();
+// }
 }
 
-    if (distance <= DUEL_RANGE) {
-    showDuelButton();
-} else {
-    hideDuelButton();
-}
-}
+    function updateTargetedPlayerInfo(player) {
+        const targetedPlayerInfo = document.getElementById('targeted-player-info');
+        const duelButton = document.getElementById('duelButton');
 
+        if (player) {
+            document.getElementById('targeted-player-name').textContent = player.username || 'Unknown';
+            document.getElementById('targeted-player-level').textContent = player.level || 'N/A';
+            const position = isInSubmap
+                ? `SubX: ${player.submapCoordinateX}, SubY: ${player.submapCoordinateY}`
+                : `X: ${player.worldPositionX}, Y: ${player.worldPositionY}`;
+            document.getElementById('targeted-player-position').textContent = position;
+            targetedPlayerInfo.style.display = 'block';
+
+            let distance;
+            if (isInSubmap) {
+                distance = Math.sqrt(
+                    Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
+                    Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+                );
+            } else {
+                distance = Math.sqrt(
+                    Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
+                    Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+                );
+            }
+
+            duelButton.style.display = distance <= DUEL_RANGE ? 'block' : 'none';
+        } else {
+            targetedPlayerInfo.style.display = 'none';
+            duelButton.style.display = 'none';
+        }
+    }
+    document.getElementById('duelButton').addEventListener('click', sendDuelRequest);
 
     function showDuelButton() {
     const duelButton = document.getElementById('duelButton');
@@ -1187,29 +1756,33 @@
 
 
 
-    function movePlayer(x, y) {
-    if (isInSubmap) {
-    movePlayerInSubmap(x, y);
-} else {
-    updatePlayerPosition(getCurrentPlayerId(), x, y);
-}
+    const debouncedWsTransmitPosition = debounce(wsTransmitPosition, 100);
 
-    checkAndReportPosition();
-}
+    function movePlayer(x, y) {
+        if (isInSubmap) {
+            movePlayerInSubmap(x, y);
+        } else {
+            updatePlayerPosition(getCurrentPlayerId(), x, y);
+        }
+        throttledWsTransmitPosition();
+    }
+
+    const throttledWsTransmitPosition = throttle(wsTransmitPosition, 200);
 
     function checkAndReportPosition() {
-    const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
-    const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+        const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
+        const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
 
-    const dx = currentX - lastReportedPosition.x;
-    const dy = currentY - lastReportedPosition.y;
-    const distanceMoved = Math.sqrt(dx * dx + dy * dy);
+        const dx = currentX - lastReportedPosition.x;
+        const dy = currentY - lastReportedPosition.y;
+        const distanceMoved = Math.sqrt(dx * dx + dy * dy);
 
-    if (distanceMoved >= REPORT_THRESHOLD) {
-    sendPositionToServer();
-    lastReportedPosition = { x: currentX, y: currentY };
-}
-}
+        if (distanceMoved >= REPORT_THRESHOLD) {
+            debouncedWsTransmitPosition();
+            lastReportedPosition = { x: currentX, y: currentY };
+        }
+    }
+
 
     function processKeyboardMovement() {
     if (movementVector.x !== 0 || movementVector.y !== 0) {
@@ -1304,7 +1877,8 @@
 
     socket.onmessage = function(event) {
     const data = JSON.parse(event.data);
-    switch(data.type) {
+        console.error('Received WebSocket message:', data);
+        switch(data.type) {
     case 'duelRequest':
     handleDuelRequest(data.challengerId);
     break;
@@ -1469,9 +2043,7 @@
     if (!moveInterval) {
     moveInterval = setInterval(updateLocalPosition, MOVE_INTERVAL);
 }
-    if (!sendInterval) {
-    sendInterval = setInterval(sendPositionToServer, SEND_INTERVAL);
-}
+
 });
 
     // Handle keyup events
@@ -1535,19 +2107,245 @@
 }
 
 
+
+//ITEM PICKUP
+    function attemptItemPickup() {
+        const playerX = isInSubmap ? currentPlayer.submapCoordinateX : currentPlayer.worldPositionX;
+        const playerY = isInSubmap ? currentPlayer.submapCoordinateY : currentPlayer.worldPositionY;
+        const pickupRadius = 50; // Adjust this value as needed
+
+        const nearbyItems = mapItems.filter(item => {
+            const itemX = isInSubmap ? item.submapCoordinateX : item.worldMapCoordinateX;
+            const itemY = isInSubmap ? item.submapCoordinateY : item.worldMapCoordinateY;
+            const distance = Math.sqrt(Math.pow(itemX - playerX, 2) + Math.pow(itemY - playerY, 2));
+            return distance <= pickupRadius;
+        });
+
+        if (nearbyItems.length > 0) {
+            // If multiple items are nearby, pick up the first one
+            pickUpItem(nearbyItems[0]);
+         //   initializeInventory();
+        } else {
+            console.log("No items nearby to pick up.");
+        }
+    }
+
+    function pickUpItem(item) {
+        fetch(`/api/world-map/items/${item.id}/pickup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                playerId: currentPlayer.id
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`Picked up ${item.item.name}`);
+                    // Remove the item from the map
+                    mapItems = mapItems.filter(i => i.id !== item.id);
+                    // Redraw the map
+                    PlayerInventory.init();
+                    if (isInSubmap) {
+                        drawSubmap();
+                    } else {
+                        drawWorldMap();
+                    }
+                    // You might want to update the player's inventory here
+
+                } else {
+                    console.log(`Failed to pick up item: ${data.message}`);
+                }
+            })
+            .catch(error => console.error('Error picking up item:', error));
+    }
+
+
+    const PlayerInventory = {
+        addItem: function(item, quantity) {
+            window.parent.postMessage({ action: 'addItem', data: { item, quantity } }, '*');
+        },
+        removeItem: function(itemId, quantity) {
+            window.parent.postMessage({ action: 'removeItem', data: { itemId, quantity } }, '*');
+        },
+        init: function (){
+            console.log("Sending Inventory Init Method To Main Window")
+            window.parent.postMessage({action:'init', data: { }},'*');
+        }
+        // Add other proxy functions as needed
+    };
+
+
+    // Add this event listener to handle item pickup
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'e' || event.key === 'E') {
+            attemptItemPickup();
+        }
+    });
+
+
+//WEBSOCKET TRANSMIT
+
+    function wsTransmitPosition() {
+        console.log(socket.readyState);
+        console.log(Date.now())
+        if (socket.readyState === WebSocket.OPEN) {
+            const message = {
+                type: 'playerMove',
+                playerId: getCurrentPlayerId(),
+                x: Math.round(currentPlayer.worldPositionX),
+                y: Math.round(currentPlayer.worldPositionY)
+            };
+            socket.send(JSON.stringify(message));
+        }
+    }
+
     //
 
 
     initWorldMap();
-    setInterval(fetchPlayersInViewport, 5000);
-
+    setInterval(fetchPlayersInViewport, 3000);
+    setInterval(fetchMapItemsInViewport, 3000);
 
 
 
     //TEMP
+//SPECIAL ATTACKS:
+
+    let playerSpecialAttacks = [];
+    let selectedSpecialAttack = null;
+
+    function fetchPlayerSpecialAttacks() {
+        fetch(`/api/special-attacks/player/${playerId}`)
+            .then(response => response.json())
+            .then(specialAttacks => {
+                playerSpecialAttacks = specialAttacks;
+                updateSpecialAttackSelection();
+                preloadSpecialAttackIcons(); // Preload icons after fetching
+            })
+            .catch(error => console.error('Error fetching player special attacks:', error));
+    }
+    function updateSpecialAttackSelection() {
+        const specialAttackSelectionBar = document.getElementById('specialAttackSelectionBar');
+        specialAttackSelectionBar.innerHTML = '';
+
+        playerSpecialAttacks.forEach(specialAttack => {
+            const specialAttackIcon = document.createElement('img');
+            specialAttackIcon.src = `/sprites/special-attacks/${specialAttack.specialAttackSpritePath}.png`;
+            specialAttackIcon.alt = specialAttack.name;
+            specialAttackIcon.className = 'special-attack-icon';
+            specialAttackIcon.dataset.specialAttackId = specialAttack.id;
+            specialAttackIcon.addEventListener('click', () => handleSpecialAttackSelection(specialAttack.id));
+
+            // Add error handling for image loading
+            specialAttackIcon.onerror = function() {
+                this.onerror = null; // Prevent infinite loop if fallback image also fails
+                this.src = '/sprites/special-attacks/default-special-attack.png'; // Path to a default icon
+                console.warn(`Failed to load special attack icon for ${specialAttack.name}`);
+            };
+
+            specialAttackSelectionBar.appendChild(specialAttackIcon);
+        });
+
+        if (playerSpecialAttacks.length > 0) {
+            handleSpecialAttackSelection(playerSpecialAttacks[0].id);
+        }
+    }
+
+    function preloadSpecialAttackIcons() {
+        playerSpecialAttacks.forEach(specialAttack => {
+            const img = new Image();
+            img.src = `/sprites/special-attacks/${specialAttack.specialAttackSpritePath}.png`;
+        });
+    }
+
+
+    function handleSpecialAttackSelection(specialAttackId) {
+        selectedSpecialAttack = playerSpecialAttacks.find(sa => sa.id === specialAttackId);
+        updateSpecialAttackInfo();
+
+        // Update visual selection
+        document.querySelectorAll('.special-attack-icon').forEach(icon => {
+            icon.classList.toggle('selected', icon.dataset.specialAttackId === specialAttackId);
+        });
+
+        // Show target selection after special attack is chosen
+        updateTargetSelection();
+        document.getElementById('targetSelection').style.display = 'block';
+    }
+
+    function updateSpecialAttackInfo() {
+        if (selectedSpecialAttack) {
+            document.getElementById('specialAttackInfoName').textContent = selectedSpecialAttack.name;
+            document.getElementById('specialAttackInfoDescription').textContent = selectedSpecialAttack.description;
+            document.getElementById('specialAttackInfoCooldown').textContent = `Cooldown: ${selectedSpecialAttack.cooldown} turns`;
+            document.getElementById('specialAttackInfoAttackQuantity').textContent = `Attacks: ${selectedSpecialAttack.attackQuantity}`;
+
+            const spriteImg = document.getElementById('specialAttackSprite');
+            spriteImg.src = `/sprites/special-attacks/${selectedSpecialAttack.specialAttackSpritePath}.png`;
+            spriteImg.alt = `${selectedSpecialAttack.name} Sprite`;
+        }
+    }
+    ///f
+
+
+
 
 
 //
 
+    function drawEncampment(x, y, encampment) {
+        const sprite = encampmentSprites[encampment.sprite];
+        if (sprite) {
+            ctx.drawImage(sprite, x - sprite.width / 2, y - sprite.height / 2);
+        } else {
+            // Fallback if sprite is not loaded
+            ctx.fillStyle = '#800000';
+            ctx.beginPath();
+            ctx.arc(x, y, 10, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // Draw encampment name
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(encampment.name, x, y + 20);
+    }
+
+    // Make sure to load encampment sprites
+    const encampmentSprites = {};
+    function loadEncampmentSprites() {
+        const spriteNames = ['encampment_sprite']; // Add all your encampment sprite names here
+        spriteNames.forEach(name => {
+            const img = new Image();
+            img.onload = () => console.log(`Loaded ${name}`);
+            img.onerror = () => console.error(`Failed to load sprite: ${name}`);
+            img.src = `/sprites/encampments/${name}.png`;
+            encampmentSprites[name] = img;
+        });
+    }
+
+    let encampments = [];
+
+    function fetchEncampmentsInViewport() {
+        const centerX = getCurrentPlayerX();
+        const centerY = getCurrentPlayerY();
+
+        fetch(`/api/npc-encampments/viewport?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
+            .then(response => response.json())
+            .then(data => {
+                encampments = data;
+                drawWorldMap(); // Redraw the map to show the encampments
+            })
+            .catch(error => console.error('Error fetching encampments:', error));
+    }
+
+    // Call this function periodically or when the player moves significantly
+    setInterval(fetchEncampmentsInViewport, 30000); // Fetch every 5 seconds, for example
+
+    loadEncampmentSprites();
 
 // Update every 5 seconds

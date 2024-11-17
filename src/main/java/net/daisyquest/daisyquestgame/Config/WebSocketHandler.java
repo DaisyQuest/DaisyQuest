@@ -1,16 +1,15 @@
 package net.daisyquest.daisyquestgame.Config;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -19,36 +18,35 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class WebSocketHandler extends TextWebSocketHandler {
     private static final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         // The playerId will be set when the client sends a register message
     }
 
-
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        try (JsonReader jsonReader = Json.createReader(new StringReader(message.getPayload()))) {
-            JsonObject jsonMessage = jsonReader.readObject();
-            String type = jsonMessage.getString("type");
-            switch (type) {
-                case "register":
-                    String playerId = jsonMessage.getString("playerId");
-                    sessions.put(playerId, session);
-                    break;
-                case "playerMove":
-                    broadcastPlayerMove(jsonMessage);
-                    break;
-                case "chat":
-                    broadcastChatMessage(jsonMessage);
-                    break;
-                case "enterSubmap":
-                    handleEnterSubmap(jsonMessage);
-                    break;
-                case "exitSubmap":
-                    handleExitSubmap(jsonMessage);
-                    break;
-            }
+        JsonNode jsonMessage = objectMapper.readTree(message.getPayload());
+        String type = jsonMessage.get("type").asText();
+        System.err.println(jsonMessage);
+        switch (type) {
+            case "register":
+                String playerId = jsonMessage.get("playerId").asText();
+                sessions.put(playerId, session);
+                break;
+            case "playerMove":
+                broadcastPlayerMove(jsonMessage);
+                break;
+            case "chat":
+                broadcastChatMessage(jsonMessage);
+                break;
+            case "enterSubmap":
+                handleEnterSubmap(jsonMessage);
+                break;
+            case "exitSubmap":
+                handleExitSubmap(jsonMessage);
+                break;
         }
     }
 
@@ -60,88 +58,87 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void sendDuelRequest(String targetId, String challengerId) throws IOException {
         WebSocketSession targetSession = sessions.get(targetId);
         if (targetSession != null && targetSession.isOpen()) {
-            JsonObject message = Json.createObjectBuilder()
-                    .add("type", "duelRequest")
-                    .add("challengerId", challengerId)
-                    .build();
-            targetSession.sendMessage(new TextMessage(message.toString()));
+            ObjectNode message = objectMapper.createObjectNode()
+                    .put("type", "duelRequest")
+                    .put("challengerId", challengerId);
+            targetSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
         }
     }
 
     public void sendDuelRejection(String challengerId, String targetUsername) throws IOException {
         WebSocketSession challengerSession = sessions.get(challengerId);
         if (challengerSession != null && challengerSession.isOpen()) {
-            JsonObject message = Json.createObjectBuilder()
-                    .add("type", "duelRejected")
-                    .add("targetUsername", targetUsername)
-                    .build();
-            challengerSession.sendMessage(new TextMessage(message.toString()));
+            ObjectNode message = objectMapper.createObjectNode()
+                    .put("type", "duelRejected")
+                    .put("targetUsername", targetUsername);
+            challengerSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
         }
     }
 
     public void sendDuelAccepted(String challengerId, String targetId, String combatId) throws IOException {
-
         List<String> playerIds = Arrays.asList(challengerId, targetId);
 
-        JsonObject message = Json.createObjectBuilder()
-                .add("type", "duelAccepted")
-                .add("combatId", combatId)
-                .add("playerIds", Json.createArrayBuilder(playerIds))
-                .build();
+        ObjectNode message = objectMapper.createObjectNode()
+                .put("type", "duelAccepted")
+                .put("combatId", combatId)
+                .set("playerIds", objectMapper.valueToTree(playerIds));
 
         for (String playerId : playerIds) {
             WebSocketSession session = sessions.get(playerId);
             if (session != null && session.isOpen()) {
-                session.sendMessage(new TextMessage(message.toString()));
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
             }
         }
     }
 
+    private void broadcastPlayerMove(JsonNode moveMessage) throws IOException {
+        String movingPlayerId = moveMessage.get("playerId").asText();
+        long timestamp = System.currentTimeMillis();
 
-    private void broadcastPlayerMove(JsonObject moveMessage) throws IOException {
-        String movingPlayerId = moveMessage.getString("playerId");
+        ObjectNode enhancedMoveMessage = objectMapper.createObjectNode();
+        moveMessage.fields().forEachRemaining(entry -> enhancedMoveMessage.set(entry.getKey(), entry.getValue()));
+        enhancedMoveMessage.put("timestamp", timestamp);
+
         for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
             if (!entry.getKey().equals(movingPlayerId)) {
-                entry.getValue().sendMessage(new TextMessage(moveMessage.toString()));
+                entry.getValue().sendMessage(new TextMessage(objectMapper.writeValueAsString(enhancedMoveMessage)));
             }
         }
     }
 
-    private void broadcastChatMessage(JsonObject chatMessage) throws IOException {
-        String senderId = chatMessage.getString("playerId");
+    private void broadcastChatMessage(JsonNode chatMessage) throws IOException {
+        String senderId = chatMessage.get("playerId").asText();
         for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
             if (!entry.getKey().equals(senderId)) {
-                entry.getValue().sendMessage(new TextMessage(chatMessage.toString()));
+                entry.getValue().sendMessage(new TextMessage(objectMapper.writeValueAsString(chatMessage)));
             }
         }
     }
 
-    private void handleEnterSubmap(JsonObject enterSubmapMessage) throws IOException {
-        String playerId = enterSubmapMessage.getString("playerId");
-        String submapId = enterSubmapMessage.getString("submapId");
+    private void handleEnterSubmap(JsonNode enterSubmapMessage) throws IOException {
+        String playerId = enterSubmapMessage.get("playerId").asText();
+        String submapId = enterSubmapMessage.get("submapId").asText();
         for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
             if (!entry.getKey().equals(playerId)) {
-                JsonObject message = Json.createObjectBuilder()
-                        .add("type", "playerEnteredSubmap")
-                        .add("playerId", playerId)
-                        .add("submapId", submapId)
-                        .build();
-                entry.getValue().sendMessage(new TextMessage(message.toString()));
+                ObjectNode message = objectMapper.createObjectNode()
+                        .put("type", "playerEnteredSubmap")
+                        .put("playerId", playerId)
+                        .put("submapId", submapId);
+                entry.getValue().sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
             }
         }
     }
 
-    private void handleExitSubmap(JsonObject exitSubmapMessage) throws IOException {
-        String playerId = exitSubmapMessage.getString("playerId");
-        String submapId = exitSubmapMessage.getString("submapId");
+    private void handleExitSubmap(JsonNode exitSubmapMessage) throws IOException {
+        String playerId = exitSubmapMessage.get("playerId").asText();
+        String submapId = exitSubmapMessage.get("submapId").asText();
         for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
             if (!entry.getKey().equals(playerId)) {
-                JsonObject message = Json.createObjectBuilder()
-                        .add("type", "playerExitedSubmap")
-                        .add("playerId", playerId)
-                        .add("submapId", submapId)
-                        .build();
-                entry.getValue().sendMessage(new TextMessage(message.toString()));
+                ObjectNode message = objectMapper.createObjectNode()
+                        .put("type", "playerExitedSubmap")
+                        .put("playerId", playerId)
+                        .put("submapId", submapId);
+                entry.getValue().sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
             }
         }
     }
@@ -149,22 +146,19 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void sendEnterSubmapNotification(String playerId, String submapId) throws IOException {
         WebSocketSession session = sessions.get(playerId);
         if (session != null && session.isOpen()) {
-            JsonObject message = Json.createObjectBuilder()
-                    .add("type", "enterSubmap")
-                    .add("submapId", submapId)
-                    .build();
-            session.sendMessage(new TextMessage(message.toString()));
+            ObjectNode message = objectMapper.createObjectNode()
+                    .put("type", "enterSubmap")
+                    .put("submapId", submapId);
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
         }
     }
 
     public void sendExitSubmapNotification(String playerId) throws IOException {
         WebSocketSession session = sessions.get(playerId);
         if (session != null && session.isOpen()) {
-            JsonObject message = Json.createObjectBuilder()
-                    .add("type", "exitSubmap")
-                    .build();
-            session.sendMessage(new TextMessage(message.toString()));
+            ObjectNode message = objectMapper.createObjectNode()
+                    .put("type", "exitSubmap");
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
         }
     }
-
 }

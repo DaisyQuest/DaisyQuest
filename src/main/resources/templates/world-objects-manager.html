@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Objects Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .filters {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .object-card {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .object-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .coordinate-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">World Objects Manager</h1>
+
+    <!-- Filters -->
+    <div class="filters">
+        <form id="searchForm" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Object Type</label>
+                <select class="form-select" name="type">
+                    <option value="">All Types</option>
+                    <option th:each="type : ${worldObjectTypes}"
+                            th:value="${type.id}"
+                            th:text="${type.name}"></option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Name Contains</label>
+                <input type="text" class="form-control" name="name">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Coordinates</label>
+                <div class="coordinate-group">
+                    <input type="number" class="form-control" name="minX" placeholder="Min X">
+                    <input type="number" class="form-control" name="maxX" placeholder="Max X">
+                    <input type="number" class="form-control" name="minY" placeholder="Min Y">
+                    <input type="number" class="form-control" name="maxY" placeholder="Max Y">
+                    <input type="number" class="form-control" name="minZ" placeholder="Min Z">
+                    <input type="number" class="form-control" name="maxZ" placeholder="Max Z">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Submap</label>
+                <select class="form-select" name="submapId">
+                    <option value="">All Maps</option>
+                    <option th:each="submap : ${submaps}"
+                            th:value="${submap.id}"
+                            th:text="${submap.title}"></option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Used Status</label>
+                <select class="form-select" name="used">
+                    <option value="">All</option>
+                    <option value="true">Used</option>
+                    <option value="false">Unused</option>
+                </select>
+            </div>
+
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Search</button>
+                <button type="reset" class="btn btn-secondary">Reset</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div id="results" class="row">
+        <!-- Objects will be loaded here -->
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-center mt-4">
+        <nav aria-label="Page navigation">
+            <ul class="pagination" id="pagination">
+                <!-- Pagination will be generated here -->
+            </ul>
+        </nav>
+    </div>
+</div>
+<div class="mb-4">
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createObjectModal">
+        <i class="fas fa-plus"></i> Create New Object
+    </button>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let currentPage = 0;
+    const pageSize = 20;
+
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        currentPage = 0;
+        searchObjects();
+    });
+
+    function searchObjects() {
+        const form = document.getElementById('searchForm');
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        params.append('page', currentPage);
+        params.append('size', pageSize);
+
+        fetch(`/world-objects-manager/search?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                displayResults(data);
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    function displayResults(objects) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '';
+
+        objects.forEach(obj => {
+            const card = document.createElement('div');
+            card.className = 'col-md-6 col-lg-4 mb-3';
+            card.innerHTML = `
+            <div class="object-card">
+                <h5>${obj.worldObjectType.name}</h5>
+                <p>ID: ${obj.id}</p>
+                <p>Position: X:${obj.xPos} Y:${obj.yPos} Z:${obj.zPos}</p>
+                <p>Submap: ${obj.submapId || 'None'}</p>
+                <p>Used: ${obj.used ? 'Yes' : 'No'}</p>
+                <div class="object-actions">
+                    <button onclick="resetObject('${obj.id}')" class="btn btn-warning btn-sm">
+                        Reset
+                    </button>
+                    <button onclick="deleteObject('${obj.id}')" class="btn btn-danger btn-sm">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        `;
+            resultsDiv.appendChild(card);
+        });
+    }
+
+    function resetObject(id) {
+        if (!confirm('Are you sure you want to reset this object?')) return;
+
+        fetch(`/world-objects-manager/${id}/reset`, { method: 'POST' })
+            .then(response => response.json())
+            .then(() => searchObjects())
+            .catch(error => console.error('Error:', error));
+    }
+
+    function deleteObject(id) {
+        if (!confirm('Are you sure you want to delete this object?')) return;
+
+        fetch(`/world-objects-manager/${id}`, { method: 'DELETE' })
+            .then(() => searchObjects())
+            .catch(error => console.error('Error:', error));
+    }
+
+    // Initial load
+    searchObjects();
+
+
+    function createObject() {
+        const form = document.getElementById('createObjectForm');
+        const formData = new FormData(form);
+
+        // Log the raw form data for debugging
+        console.log('Raw form data:', Object.fromEntries(formData.entries()));
+
+        const data = {
+            worldObjectTypeId: formData.get('worldObjectTypeId'),
+            xPos: parseInt(formData.get('xPos') || '0', 10),
+            yPos: parseInt(formData.get('yPos') || '0', 10),
+            zPos: parseInt(formData.get('zPos') || '0', 10),
+            submapId: formData.get('submapId') || null
+        };
+
+        // Log the processed data for debugging
+        console.log('Processed data:', data);
+
+        // Validate the data
+        if (isNaN(data.xPos) || isNaN(data.yPos) || isNaN(data.zPos)) {
+            alert('Please enter valid numbers for coordinates');
+            return;
+        }
+
+        fetch('/world-objects-manager/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+            .then(async response => {
+                const text = await response.text();
+                console.log('Server response:', text);
+
+                if (!response.ok) {
+                    throw new Error(text);
+                }
+
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    throw new Error('Invalid server response');
+                }
+            })
+            .then(result => {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('createObjectModal'));
+                modal.hide();
+
+                // Clear form
+                form.reset();
+
+                // Show success message
+                alert('Object created successfully!');
+
+                // Refresh the list
+                searchObjects();
+            })
+            .catch(error => {
+                console.error('Error details:', error);
+                alert('Error creating object: ' + error.message);
+            });
+    }
+
+    // Helper function for bulk creation
+    function createObjectAtPosition(typeId, x, y, z, submapId = null) {
+        const data = {
+            worldObjectTypeId: typeId,
+            xPos: parseInt(x, 10),
+            yPos: parseInt(y, 10),
+            zPos: parseInt(z, 10),
+            submapId: submapId
+        };
+
+        // Log bulk creation data
+        console.log('Creating object at position:', data);
+
+        return fetch('/world-objects-manager/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => response.json());
+    }
+
+    // Example bulk creation function
+    async function createObjectGrid() {
+        const typeId = document.querySelector('select[name="worldObjectTypeId"]').value;
+        const startX = parseInt(prompt('Start X position?'));
+        const startY = parseInt(prompt('Start Y position?'));
+        const rows = parseInt(prompt('Number of rows?'));
+        const cols = parseInt(prompt('Number of columns?'));
+        const spacing = parseInt(prompt('Spacing between objects?'));
+
+        if (!confirm(`This will create ${rows * cols} objects. Continue?`)) return;
+
+        try {
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const x = startX + (col * spacing);
+                    const y = startY + (row * spacing);
+                    await createObjectAtPosition(typeId, x, y, 0);
+                }
+            }
+            alert('Grid creation complete!');
+            searchObjects();
+        } catch (error) {
+            alert('Error creating grid: ' + error.message);
+        }
+    }
+
+    // Add button for bulk creation
+    document.querySelector('.mb-4').insertAdjacentHTML('beforeend', `
+    <button type="button" class="btn btn-info ms-2" onclick="createObjectGrid()">
+        <i class="fas fa-th"></i> Create Grid
+    </button>
+`);
+
+</script>
+<div class="modal fade" id="createObjectModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New World Object</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createObjectForm">
+                    <div class="mb-3">
+                        <label class="form-label">Object Type</label>
+                        <select class="form-select" name="worldObjectTypeId" required>
+                            <option value="">Select Object Type...</option>
+                            <option th:each="type : ${worldObjectTypes}"
+                                    th:value="${type.id}"
+                                    th:text="${type.name}"></option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Position</label>
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <input type="number" class="form-control" name="xPos" placeholder="X Position" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" class="form-control" name="yPos" placeholder="Y Position" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" class="form-control" name="zPos" placeholder="Z Position" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Submap (Optional)</label>
+                        <select class="form-select" name="submapId">
+                            <option value="">No Submap</option>
+                            <option th:each="submap : ${submaps}"
+                                    th:value="${submap.id}"
+                                    th:text="${submap.title}"></option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createObject()">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+</body>
+</html>

@@ -46,11 +46,13 @@ public class PlayerService {
         if (playerRepository.existsByUsername(player.getUsername())) {
             throw new UsernameAlreadyExistsException("Username already exists: " + player.getUsername());
         }
-        PlayerInitializer.initPlayer(player, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("blizzard"), spellService.getSpell("thunder")));
+        List<Currency> currencies = currencyService.getAllCurrencies();
+        PlayerInitializer.initPlayer(player,currencies , List.of(spellService.getSpell("fireball"), spellService.getSpell("blizzard"), spellService.getSpell("thunder")));
         Player playerWithId = playerRepository.save(player);
 
         PlayerInventory inventory = new PlayerInventory(playerWithId.getId(), 16); // or whatever initial size
         inventory.setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
+        PlayerInitializer.initializeCurrency(inventory, currencies);
 
         inventory = playerInventoryRepository.save(inventory);
         playerWithId.setInventory(inventory);
@@ -60,22 +62,47 @@ public class PlayerService {
 
     }
 
+    public Player learnSpell(Player p, Spell s){
 
+        p.getKnownSpells().add(s);
+
+        return updatePlayer(p);
+    }
     @Transactional
     public Player createPlayer(String username) throws UsernameAlreadyExistsException {
         Player p = new Player();
         p.setUsername(username);
         return createPlayer(p);
     }
+    @Transactional
+    public void checkAndFixDataIntegrity() {
+        List<Player> allPlayers = playerRepository.findAll();
+        for (Player player : allPlayers) {
+            PlayerInventory inventory = playerInventoryRepository.findByPlayerId(player.getId());
+            if (inventory == null) {
+                inventory = new PlayerInventory(player.getId(), 16);
+                inventory.setEquipmentProperties(equipmentPropertyService.getInitialEquipmentPropertiesForPlayer());
+                inventory = playerInventoryRepository.save(inventory);
+                player.setInventory(inventory);
+                playerRepository.save(player);
+            }
+        }
+        System.out.println("Data integrity check completed.");
+    }
 
-
+    @Transactional
     public Player getPlayer(String id) {
         Player p =  playerRepository.findById(id).orElse(null);
         if(p == null){
             p= new Player();
         }
         PlayerInitializer.initPlayer(p, currencyService.getAllCurrencies(), List.of(spellService.getSpell("fireball"), spellService.getSpell("blizzard"), spellService.getSpell("thunder")));
-        p.setInventory(playerInventoryRepository.findByPlayerId(p.getId()));
+        PlayerInventory pi = playerInventoryRepository.findByPlayerId(p.getId());
+        pi.initializePlayerInventoryIfNecessary();
+        playerInventoryRepository.save(pi);
+        p.setInventory(pi);
+
+
         return p;
     }
 
@@ -191,7 +218,7 @@ public class PlayerService {
         if (currency == null) {
             throw new IllegalArgumentException("Invalid currency ID: " + currencyName);
         }
-        Integer amount = buyer.getCurrencies().get(currency.getId());
+        Integer amount = buyer.getInventory().getCurrencies().get(currency.getId());
         return amount != null && amount >= price;
     }
 
@@ -199,7 +226,7 @@ public class PlayerService {
     public void deductCurrencyByName(Player buyer, String currencyName, int price) {
         Currency currency = currencyService.getCurrencyByName(currencyName);
         if (hasSufficientCurrencyByCurrencyName(buyer, currencyName, price)) {
-            Map<String, Integer> currencies = buyer.getCurrencies();
+            Map<String, Integer> currencies = buyer.getInventory().getCurrencies();;
             int newAmount = currencies.get(currency.getId()) - price;
             currencies.put(currencyName, newAmount);
             updatePlayer(buyer);
@@ -219,7 +246,7 @@ public class PlayerService {
             throw new IllegalArgumentException("Invalid currency ID: " + currencyName);
         }
 
-        Map<String, Integer> currencies = owner.getCurrencies();
+        Map<String, Integer> currencies = owner.getInventory().getCurrencies();
         currencies.merge(currency.getId(), amount, Integer::sum);
         updatePlayer(owner);
     }
@@ -235,7 +262,7 @@ public class PlayerService {
             throw new IllegalArgumentException("Invalid currency name: " + currencyName);
         }
 
-        Map<String, Integer> currencies = owner.getCurrencies();
+        Map<String, Integer> currencies = owner.getInventory().getCurrencies();
         currencies.merge(currency.getId(), amount, Integer::sum);
         updatePlayer(owner);
     }
@@ -672,8 +699,16 @@ public class PlayerService {
         PlayerInventory inventory = player.getInventory();
 
         String[] itemNames = {
-            "Flaming Sword", "Bone Sword"
+                "Amethyst Gem (Cut 1)", "Amethyst Gem (Cut 2)", "Raw Amethyst",
+                "Bone",
+                "Emerald Gem (Cut 1)", "Emerald Gem (Cut 2)", "Raw Emerald",
+                "Leather Armor",
+                "Onyx Gem (Cut 1)", "Onyx Gem (Cut 2)", "Raw Onyx",
+                "Rose Quartz Gem (Cut 1)", "Rose Quartz Gem (Cut 2)", "Raw Rose Quartz",
+                "Ruby Gem (Cut 1)", "Ruby Gem (Cut 2)", "Raw Ruby",
+                "Sapphire Gem (Cut 1)", "Sapphire Gem (Cut 2)", "Raw Sapphire"
         };
+
 
         for (String itemName : itemNames) {
             Item item = itemRepository.findItemByName(itemName);
@@ -682,6 +717,43 @@ public class PlayerService {
 
             try {
                 addItemToInventory(playerId, item.getId(), itemName.equals("Flaming Sword") ? 1 : 1);
+            } catch (InventoryFullException e) {
+                throw new RuntimeException("Failed to add test item " + itemName + ": " + e.getMessage());
+            }
+        }
+
+
+        playerRepository.save(player);
+    }
+
+    @Transactional
+    public void addTestItemsToPlayerByName(String playerName) {
+        Player player = getPlayerByUsername(playerName);
+        if (player == null) {
+            throw new PlayerNotFoundException("Player not found with name: " + playerName);
+        }
+
+        PlayerInventory inventory = player.getInventory();
+
+        String[] itemNames = {
+                "Amethyst Gem (Cut 1)", "Amethyst Gem (Cut 2)", "Raw Amethyst",
+                "Bone",
+                "Emerald Gem (Cut 1)", "Emerald Gem (Cut 2)", "Raw Emerald",
+                "Leather Armor",
+                "Onyx Gem (Cut 1)", "Onyx Gem (Cut 2)", "Raw Onyx",
+                "Rose Quartz Gem (Cut 1)", "Rose Quartz Gem (Cut 2)", "Raw Rose Quartz",
+                "Ruby Gem (Cut 1)", "Ruby Gem (Cut 2)", "Raw Ruby",
+                "Sapphire Gem (Cut 1)", "Sapphire Gem (Cut 2)", "Raw Sapphire"
+        };
+
+
+        for (String itemName : itemNames) {
+            Item item = itemRepository.findItemByName(itemName);
+
+            if (item == null) throw new ItemNotFoundException("Test item not found: " + itemName);
+
+            try {
+                addItemToInventory(player.getId(), item.getId(), itemName.equals("Flaming Sword") ? 1 : 1);
             } catch (InventoryFullException e) {
                 throw new RuntimeException("Failed to add test item " + itemName + ": " + e.getMessage());
             }

@@ -4,7 +4,8 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-    import java.util.Map;
+import java.util.List;
+import java.util.Map;
 
 @Data
 @Document(collection = "items")
@@ -16,6 +17,8 @@ public class Item {
     private Map<String, Integer> attributeModifiers;
     private Map<String, Integer> attributeRequirements;
     private Map<String, Integer> equipmentPropertyModifiers;
+
+    private String spriteName;
 
     private int sellPrice;
     private boolean isChest;
@@ -33,6 +36,10 @@ public class Item {
     private boolean equippable = false;
     private String equipmentSlotTypeString;
     private boolean equippableInStacks = false;
+
+    private Rarity rarity;
+
+    List<SpecialAttack> specialAttacks;
 
     public boolean meetsRequirements(Map<String, Attribute> playerAttributes) {
         if (attributeRequirements == null) return true;

@@ -42,51 +42,66 @@ public class CombatService {
     private static final int INITIAL_HEALTH = 100;
     private static final int INITIAL_ACTION_POINTS = 1;
     private static final int MAX_TURNS = 100;
+    private static final int HP_COEFFICIENT = 15;
+    @Autowired
+    private SpecialAttackService specialAttackService;
 
     public Combat startCombat(List<String> playerIds, Map<String, String> playerTeams) {
         logger.info("Starting new combat with players: {}", playerIds);
         Combat combat = new Combat();
-        combat.setPlayerIds(playerIds);
-        combat.setPlayerTeams(playerTeams);
+        List<String> allParticipantIds = new ArrayList<>(playerIds);
+        Map<String, String> updatedPlayerTeams = new HashMap<>(playerTeams);
+        Map<String, Integer> participantHealth = new HashMap<>();
+        Map<String, Integer> participantActionPoints = new HashMap<>();
+
+        for (String playerId : playerIds) {
+            Player player = playerService.getPlayer(playerId);
+            String playerTeam = updatedPlayerTeams.getOrDefault(playerId, "Team" + playerId);
+            updatedPlayerTeams.put(playerId, playerTeam);
+
+            // Initialize player health and action points
+            participantHealth.put(playerId, player.getAttributes().get("hitpoints").getLevel() * HP_COEFFICIENT);
+            participantActionPoints.put(playerId, INITIAL_ACTION_POINTS);
+
+            // Initialize equipment bonuses for the player
+            PlayerInventory pInventory = player.getInventory();
+            combat.getPlayerEquipmentBonuses().put(playerId, pInventory.calculateEffectiveEquipmentBonuses());
+
+            // Add controlled entities to the combat
+            if (player.getPlayerControlledEntityIds() != null) {
+                for (String controlledEntityId : player.getPlayerControlledEntityIds()) {
+                    allParticipantIds.add(controlledEntityId);
+                    updatedPlayerTeams.put(controlledEntityId, playerTeam);
+
+                    // Initialize controlled entity health and action points
+                    // You may need to adjust this based on how controlled entities' attributes are stored
+                    Player controlledEntity = playerService.getPlayer(controlledEntityId);
+                    participantHealth.put(controlledEntityId, controlledEntity.getAttributes().get("hitpoints").getLevel() * HP_COEFFICIENT);
+                    participantActionPoints.put(controlledEntityId, INITIAL_ACTION_POINTS);
+
+                    // Initialize equipment bonuses for controlled entities if applicable
+                    // combat.getPlayerEquipmentBonuses().put(controlledEntityId, controlledEntity.calculateEffectiveEquipmentBonuses());
+                }
+            }
+        }
+
+        combat.setPlayerIds(allParticipantIds);
         combat.setActive(true);
         combat.setTurnNumber(1);
         combat.setTurnDurationSeconds(TURN_DURATION_SECONDS);
         combat.setCreatedAt(Instant.now());
-
-        Map<String, Integer> playerHealth = new HashMap<>();
-        Map<String, Integer> playerActionPoints = new HashMap<>();
-        for (String playerId : playerIds) {
-            playerHealth.put(playerId, INITIAL_HEALTH);
-            playerActionPoints.put(playerId, INITIAL_ACTION_POINTS);
-
-            //InitializeEquipmentTotals For Each Player
-            PlayerInventory pInventory = playerService.getPlayerInventory(playerId);
-            combat.getPlayerEquipmentBonuses().put(playerId, pInventory.calculateEffectiveEquipmentBonuses());
-        }
-
-        //Initialize Damage Modifier Map
-
-
-
-//        List<StatusEffect> testEffects = testData.createTestStatusEffects();
-//        for (int i = 0; i < playerIds.size(); i++) {
-//            String playerId = playerIds.get(i);
-//            StatusEffect effect = testEffects.get(i % testEffects.size()); // Cycle through effects
-//            statusEffectService.applyStatusEffect(combat, playerId, effect, 3); // Apply for 3 turns
-//        }
-
-
-        combat.setPlayerHealth(playerHealth);
-        combat.setPlayerHealthStarting(Map.copyOf(playerHealth));
-        combat.setPlayerActionPoints(playerActionPoints);
-
-        combat.setCurrentTurnPlayerId(playerIds.get(0));
+        combat.setPlayerTeams(updatedPlayerTeams);
+        combat.setPlayerHealth(participantHealth);
+        combat.setPlayerHealthStarting(Map.copyOf(participantHealth));
+        combat.setPlayerActionPoints(participantActionPoints);
+        combat.setCurrentTurnPlayerId(allParticipantIds.get(0));
         combat.setTurnStartTime(Instant.now().toEpochMilli());
 
         Combat savedCombat = combatRepository.save(combat);
         logger.info("Combat started: {}", savedCombat);
         return savedCombat;
     }
+
     @Autowired
     private CombatLogRepository combatLogRepository;
 
@@ -203,7 +218,13 @@ public class CombatService {
         }
 
         String currentPlayerId = combat.getCurrentTurnPlayerId();
-        if (!currentPlayerId.equals(action.getPlayerId())) {
+        Player currentPlayer = playerService.getPlayer(currentPlayerId);
+
+        // Check if the current player is controlled by another player
+        if (currentPlayer.getControllerPlayerID() != null) {
+            // For now, automatically select the "Attack" action
+            action = new Action(currentPlayerId, Action.ActionType.ATTACK, selectRandomTarget(combat, currentPlayerId), 1, null);
+        } else if (!currentPlayerId.equals(action.getPlayerId())) {
             throw new IllegalStateException("It's not this player's turn");
         }
 
@@ -328,6 +349,8 @@ public class CombatService {
                 // If no spells are available, default to ATTACK
                 actionType = Action.ActionType.ATTACK;
             }
+        }else if(actionType == Action.ActionType.NONE){
+            actionType = Action.ActionType.ATTACK;
         }
 
         logger.info("AI action generated. Type: {}, Target: {}, Spell: {}", actionType, targetId, spellId);
@@ -342,7 +365,14 @@ public class CombatService {
     }
 
     private static Integer getMeleeBonusOfAttackingPlayer(Combat combat, Action action) {
-        return combat.getPlayerEquipmentBonuses().get(action.getPlayerId()).get("Melee Bonus");
+        try {
+            return combat.getPlayerEquipmentBonuses().get(action.getPlayerId()).get("Melee Bonus");
+        }catch(Exception e){
+            return 0;
+            }
+        }
+    private static Integer getMeleeBonusOfPlayerById(Combat c, String playerId) {
+        return c.getPlayerEquipmentBonuses().get(playerId).get("Melee Bonus");
     }
 
     private static Integer getSpellBonusOfAttackingPlayer(Combat combat, Action action) {
@@ -351,10 +381,47 @@ public class CombatService {
 
 
     private void performSpecialAttack(Combat combat, Action action) {
-        int damage = calculateDamage(action.getPlayerId(), 5, 10, getMeleeBonusOfAttackingPlayer(combat, action), 1);
-        applyDamage(combat, action.getTargetPlayerId(), damage);
-        statusEffectService.applyStatusEffect(combat, action.getTargetPlayerId(), statusEffectService.getStatusEffectByDisplayNameNoCache("Poison"), 10);
+        Player attacker = playerService.getPlayer(action.getPlayerId());
+        SpecialAttack specialAttack = specialAttackService.getSpecialAttack(action.getSpecialAttackId());
+
+        if (!canPerformSpecialAttack(combat, attacker, specialAttack)) {
+            return;
+        }
+
+        applySpecialAttackEffect(combat, attacker, action.getTargetPlayerId(), specialAttack);
+        updateSpecialAttackCooldown(combat, attacker.getId(), specialAttack);
     }
+
+    private boolean canPerformSpecialAttack(Combat combat, Player attacker, SpecialAttack specialAttack) {
+        if (specialAttack == null) return false;
+
+        Map<String, Integer> playerCooldowns = combat.getSpellCooldowns().get(attacker.getId());
+        if (playerCooldowns != null && playerCooldowns.containsKey(specialAttack.getId())) {
+            return playerCooldowns.get(specialAttack.getId()) <= 0;
+        }
+
+        return true;
+    }
+
+    private void applySpecialAttackEffect(Combat combat, Player attacker, String targetPlayerId, SpecialAttack specialAttack) {
+        for (int i = 0; i < specialAttack.getAttackQuantity(); i++) {
+            int damage = calculateDamage(attacker.getId(), 5, 10, getMeleeBonusOfPlayerById(combat, attacker.getId()), 1);
+            applyDamage(combat, targetPlayerId, damage);
+            createCombatLog(combat, attacker.getId(), "SPECIAL_ATTACK", targetPlayerId,
+                    String.format("%s deals %d damage to %s with %s (Hit %d/%d)",
+                            attacker.getUsername(), damage, targetPlayerId, specialAttack.getName(), i + 1, specialAttack.getAttackQuantity()));
+        }
+
+        for (SpecialAttack.StatusEffectApplication sEA : specialAttack.getStatusEffects()) {
+            statusEffectService.applyStatusEffect(combat, targetPlayerId, sEA.getStatusEffect(), sEA.getDuration());
+        }
+    }
+
+    private void updateSpecialAttackCooldown(Combat combat, String playerId, SpecialAttack specialAttack) {
+        combat.getSpellCooldowns().computeIfAbsent(playerId, k -> new HashMap<>())
+                .put(specialAttack.getId(), specialAttack.getCooldown());
+    }
+
 
     private void performSpell(Combat combat, Action action) {
         Player caster = playerService.getPlayer(action.getPlayerId());
@@ -450,7 +517,80 @@ public class CombatService {
 
 
     private void performTactics(Combat combat, Action action) {
-        // Implement tactical actions (e.g., increase defense, prepare for next turn)
+        if (!isAIPlayer(action.getTargetPlayerId()) || isAIPlayer(action.getPlayerId())) {
+            // Only allow non-NPC players to capture NPC players
+            return;
+        }
+
+        Player capturingPlayer = playerService.getPlayer(action.getPlayerId());
+        Player targetNPC = playerService.getPlayer(action.getTargetPlayerId());
+
+        if (attemptCapture(capturingPlayer, targetNPC)) {
+            captureNPC(combat, capturingPlayer, targetNPC);
+        } else {
+            createCombatLog(combat, action.getPlayerId(), "CAPTURE_ATTEMPT", action.getTargetPlayerId(),
+                    String.format("%s attempted to capture %s but failed!", capturingPlayer.getUsername(), targetNPC.getUsername()));
+        }
+    }
+
+    private boolean attemptCapture(Player capturingPlayer, Player targetNPC) {
+        // Check if the player has the required capture item
+//        if (!playerHasCaptureItem(capturingPlayer)) {
+//            return false;
+//        }
+
+        // Calculate capture chance
+        double captureChance = calculateCaptureChance(capturingPlayer, targetNPC);
+
+        // Determine if capture is successful
+        return Math.random() < captureChance;
+    }
+
+    private boolean playerHasCaptureItem(Player player) {
+        return player.getInventory().hasItem(CAPTURE_ITEM_ID);
+    }
+    private static final String CAPTURE_ITEM_ID = "npc-capture-device"; // ID of the item required for capture
+    private static final double BASE_CAPTURE_CHANCE = 0.5; // 50%
+    private double calculateCaptureChance(Player capturingPlayer, Player targetNPC) {
+        // For now, we'll just return the base chance
+        // In the future, this could be modified based on various factors
+        return BASE_CAPTURE_CHANCE;
+    }
+    @Autowired
+    private ItemService itemService;
+    private void captureNPC(Combat combat, Player capturingPlayer, Player targetNPC) {
+        // Remove capture item from player's inventory
+        //capturingPlayer.getInventory().removeItem(itemService.getItem(CAPTURE_ITEM_ID), 1);
+
+        // Update the captured NPC
+        targetNPC.setControllerPlayerID(capturingPlayer.getId());
+        playerService.updatePlayer(targetNPC);
+
+        // Update the capturing player
+        if (capturingPlayer.getPlayerControlledEntityIds() == null) {
+            capturingPlayer.setPlayerControlledEntityIds(new ArrayList<>());
+        }
+        capturingPlayer.getPlayerControlledEntityIds().add(targetNPC.getId());
+        playerService.updatePlayer(capturingPlayer);
+
+        // End the combat
+        createCombatLog(combat, capturingPlayer.getId(), "CAPTURE_SUCCESS", targetNPC.getId(),
+                String.format("%s successfully captured %s!", capturingPlayer.getUsername(), targetNPC.getUsername()));
+        endCombat(combat);
+    }
+
+
+
+    private String selectRandomTarget(Combat combat, String currentPlayerId) {
+        List<String> possibleTargets = combat.getPlayerIds().stream()
+                .filter(id -> !id.equals(currentPlayerId) && combat.getPlayerHealth().get(id) > 0)
+                .collect(Collectors.toList());
+
+        if (possibleTargets.isEmpty()) {
+            throw new IllegalStateException("No valid targets available");
+        }
+
+        return possibleTargets.get(random.nextInt(possibleTargets.size()));
     }
 
     private int calculateDamage(String playerId, int minDamage, int maxDamage, int bonusAmountInteger, double bonusMultiplier) {
@@ -543,10 +683,14 @@ public class CombatService {
             return aliveTeams.size() <= 1;
         }
     }
+
+    @Autowired
+    private NPCEncampmentService npcEncampmentService;
+
+
     private void endCombat(Combat combat) {
         logger.info("Ending combat: {}", combat.getId());
         combat.setActive(false);
-
         // Determine winners and losers
         List<String> winners;
         List<String> losers;
@@ -572,39 +716,57 @@ public class CombatService {
                     .collect(Collectors.toList());
         }
 
+        Set<String> encampmentsToCheck = new HashSet<>();
+
         // Handle winners
         for (String winnerId : winners) {
             if (winnerId.startsWith("AI")) continue; // Skip AI winners
             Player winner = playerService.getPlayer(winnerId);
             winner.setTotalExperience(winner.getTotalExperience() + calculateExperienceGain(combat, winner));
+            winner.setDuelable(true);
             playerService.updatePlayer(winner);
         }
 
         // Handle losers
         for (String loserId : losers) {
-            //todo: remove this check
             if (loserId.startsWith("AI")) {
                 handleNPCDefeat(combat, loserId);
+                checkForEncampmentBoss(loserId, encampmentsToCheck);
             } else {
                 Player loser = playerService.getPlayer(loserId);
-                if(loser.isNPC()){
+                if (loser.isNPC()) {
                     loser.setWorldPositionX(-10000);
                     loser.setWorldPositionY(-10000);
                     loser.setSubmapCoordinateX(-10000);
                     loser.setSubmapCoordinateY(-10000);
                     loser.setCurrentSubmapId(null);
                     handleNPCDefeat(combat, loserId);
-                }
-                else {
+                    checkForEncampmentBoss(loserId, encampmentsToCheck);
+                } else {
                     applyLossPenalty(loser);
                 }
+                loser.setDuelable(true);
                 playerService.updatePlayer(loser);
             }
-
         }
 
         // Distribute NPC drops to winners
         distributeNPCDrops(combat, winners, losers);
+
+        // Check and remove encampments if all bosses are defeated
+        for (String encampmentId : encampmentsToCheck) {
+            npcEncampmentService.checkAndRemoveEncampment(encampmentId);
+        }
+    }
+
+    private void checkForEncampmentBoss(String npcId, Set<String> encampmentsToCheck) {
+        List<NPCEncampment> encampments = npcEncampmentService.getAllEncampments();
+        for (NPCEncampment encampment : encampments) {
+            if (encampment.getBossPlayerIds().contains(npcId)) {
+                encampmentsToCheck.add(encampment.getId());
+                break;
+            }
+        }
     }
 
     private int calculateExperienceGain(Combat combat, Player winner) {
@@ -621,8 +783,8 @@ public class CombatService {
     }
 
     private void applyLossPenalty(Player loser) {
-        int currentGold = loser.getCurrencies().getOrDefault("Shadow Essence", 0);
-        loser.getCurrencies().put("Shadow Essence", currentGold / 2);
+        int currentGold = loser.getInventory().getCurrencies().getOrDefault("Shadow Essence", 0);
+        loser.getInventory().getCurrencies().put("Shadow Essence", currentGold / 2);
         // You can add more penalties here if needed
     }
 
@@ -712,7 +874,7 @@ public class CombatService {
             combatRepository.save(combat);
         }
     }
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 1000)
     public void processAITurns() {
         List<Combat> activeCombats = combatRepository.findByActiveTrue();
         logger.info("Processing AI turns for {} active combats", activeCombats.size());

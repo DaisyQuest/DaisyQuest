@@ -9,7 +9,8 @@ public class Action {
     private ActionType type;
     private String targetPlayerId;
     private int actionPoints;
-    private String spellId; // New field for spell actions
+    private String spellId;
+    private String specialAttackId;
     public Action(String playerId, ActionType type, String targetPlayerId, int actionPoints, String spellId) {
         this.playerId = playerId;
         this.type = type;

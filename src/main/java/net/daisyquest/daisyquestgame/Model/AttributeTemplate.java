@@ -4,15 +4,12 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.List;
-import java.util.Map;
-
+@Document(collection = "attributes")
 @Data
-@Document(collection = "npcs")
-public class NPC {
+public class AttributeTemplate {
     @Id
     private String id;
+
     private String name;
-    private Map<String, Integer> attributes;
-    private List<Item> loot;
+    private String spriteName;
 }

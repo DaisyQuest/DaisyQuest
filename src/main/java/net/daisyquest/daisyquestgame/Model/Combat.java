@@ -77,4 +77,32 @@ public class Combat {
         playerHealth.put(playerId, Math.min(maxHealth, currentHealth + amount));
     }
 
+
+    private Map<String, List<String>> playerSpecialAttacks = new HashMap<>();
+
+    // ... existing methods ...
+
+    public void addPlayerSpecialAttack(String playerId, String specialAttackId) {
+        playerSpecialAttacks.computeIfAbsent(playerId, k -> new ArrayList<>()).add(specialAttackId);
+    }
+
+    public void removePlayerSpecialAttack(String playerId, String specialAttackId) {
+        if (playerSpecialAttacks.containsKey(playerId)) {
+            playerSpecialAttacks.get(playerId).remove(specialAttackId);
+        }
+    }
+
+    public List<String> getPlayerSpecialAttacks(String playerId) {
+        return playerSpecialAttacks.getOrDefault(playerId, new ArrayList<>());
+    }
+
+    public void setPlayerSpecialAttacks(String playerId, List<String> specialAttackIds) {
+        playerSpecialAttacks.put(playerId, new ArrayList<>(specialAttackIds));
+    }
+
+    public boolean hasSpecialAttack(String playerId, String specialAttackId) {
+        return playerSpecialAttacks.containsKey(playerId) &&
+                playerSpecialAttacks.get(playerId).contains(specialAttackId);
+    }
+
 }

@@ -45,4 +45,7 @@ public class ItemService {
         return drops;
     }
 
+    public boolean existsById(String itemId) {
+       return itemRepository.existsById(itemId);
+    }
 }

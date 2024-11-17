@@ -1,19 +1,24 @@
 package net.daisyquest.daisyquestgame.Service;
 
 import jakarta.annotation.PostConstruct;
+import net.daisyquest.daisyquestgame.Model.Player;
 import net.daisyquest.daisyquestgame.Model.Spell;
+import net.daisyquest.daisyquestgame.Service.Interfaces.ICacheableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
-public class SpellService {
+public class SpellService implements ICacheableService {
     private final Map<String, Spell> spells = new HashMap<>();
 
     @Autowired
     private StatusEffectService statusEffectService;
+
+
     public SpellService() {
         // Initialize with some default spells
 
@@ -29,7 +34,8 @@ public class SpellService {
         fireball.setManaCost(20);
         fireball.setCooldown(10);
         fireball.setEffect(Spell.SpellEffect.DAMAGE);
-        fireball.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Burn"), 4);
+        fireball.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("BRN"), 4);
+        fireball.setSpellSpritePath("fireball_red");
         spells.put(fireball.getId(), fireball);
 
 
@@ -41,7 +47,9 @@ public class SpellService {
         iceball.setManaCost(45);
         iceball.setCooldown(20);
         iceball.setEffect(Spell.SpellEffect.DAMAGE);
-        iceball.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Freeze"), 4);
+        iceball.setSpellSpritePath("fireball_blue");
+
+        iceball.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("FRZ"), 4);
         spells.put(iceball.getId(), iceball);
 
 
@@ -52,14 +60,51 @@ public class SpellService {
         thunder.setManaCost(10);
         thunder.setCooldown(5);
         thunder.setEffect(Spell.SpellEffect.DAMAGE);
-        thunder.addStatusEffectApplication(statusEffectService.getStatusEffectByDisplayNameNoCache("Stun"), 4);
+
+        thunder.setSpellSpritePath("fireball_purple");
+
+        thunder.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("STN"), 4);
 
         spells.put(thunder.getId(), thunder);
+
+        Spell skeletonRot = new Spell();
+        skeletonRot.setId("skeleton_rot");
+        skeletonRot.setName("Skeleton Rot");
+        skeletonRot.setDescription("Inflicts rot on the target, causing damage over time");
+        skeletonRot.setManaCost(10);
+        skeletonRot.setCooldown(5);
+        skeletonRot.setEffect(Spell.SpellEffect.DAMAGE);
+        skeletonRot.setSpellSpritePath("fireball_grey");
+
+
+        skeletonRot.addStatusEffectApplication(statusEffectService.getStatusEffectByShortDisplayNameNoCache("ROT"), 10);
+
+        spells.put(skeletonRot.getId(), skeletonRot);
     }
 
     public Spell getSpell(String spellId) {
         return spells.get(spellId);
     }
+
+    @Override
+    public void clearCache() {
+        spells.clear();
+        setup();
+    }
+
+    @Override
+    public String getServiceName() {
+        return "SpellService";
+    }
+
+    public List<Spell> getAllSpells() {
+        return spells.values().stream().toList();
+    }
+
+    public Spell getSpellByName(String spellName) {
+        return spells.values().stream().filter(o-> o.getName().equals(spellName)).findFirst().orElse(null);
+    }
+
 
     // Add methods for learning spells, etc.
 }
