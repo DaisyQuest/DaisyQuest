@@ -342,15 +342,18 @@
     function startSkillProgress(result) {
         // Create progress UI
         const progressDiv = document.createElement('div');
+        const interactionProgressContainer = document.getElementById('interactionProgressContainer');
+        interactionProgressContainer.style.width="100%";
         progressDiv.className = 'skill-progress';
+        progressDiv.style.width="100%";
         progressDiv.innerHTML = `
-        <div class="progress-bar" style ="height:30px">
+        <div class="progress-bar" style ="height:30px; width:100%" >
             <div class="progress-fill"></div>
         </div>
         <button class="cancel-button">Cancel</button>
     `;
-        document.body.appendChild(progressDiv);
-
+        //document.body.appendChild(progressDiv);
+        interactionProgressContainer.appendChild(progressDiv);
         // Update progress periodically
         const interval = setInterval(() => {
             fetch(`/api/world-map/world-objects/interactions/${result.interactionId}/progress`)
