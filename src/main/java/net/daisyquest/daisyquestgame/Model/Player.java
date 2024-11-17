@@ -79,4 +79,9 @@ public class Player {
     private List<String> playerControlledEntityIds;
 
 
+    public void addExperience(String skillName, Integer experience) {
+        if(getAttributes().containsKey(skillName)){
+            getAttributes().get(skillName).setExperience(getAttributes().get(skillName).getExperience() + experience);
+        }
+    }
 }

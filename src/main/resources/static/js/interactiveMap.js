@@ -344,7 +344,7 @@
         const progressDiv = document.createElement('div');
         progressDiv.className = 'skill-progress';
         progressDiv.innerHTML = `
-        <div class="progress-bar">
+        <div class="progress-bar" style ="height:30px">
             <div class="progress-fill"></div>
         </div>
         <button class="cancel-button">Cancel</button>
@@ -353,16 +353,18 @@
 
         // Update progress periodically
         const interval = setInterval(() => {
-            fetch(`/api/world-map/world-objects/${result.activeInteractionId}/progress`)
+            fetch(`/api/world-map/world-objects/interactions/${result.interactionId}/progress`)
                 .then(response => response.json())
                 .then(progress => {
-                    if (progress.completed) {
+                    if (progress.progress >= 1) {
                         clearInterval(interval);
                         progressDiv.remove();
                         alert('Skill interaction completed!');
                     } else {
                         const fillElement = progressDiv.querySelector('.progress-fill');
-                        fillElement.style.width = `${progress.percent}%`;
+                        fillElement.style.width = `${progress.progress * 100}%`;
+                        fillElement.style.background = '#00FF00'
+                        fillElement.style.height = '100%';
                     }
                 });
         }, 1000);
@@ -371,7 +373,7 @@
         progressDiv.querySelector('.cancel-button').onclick = () => {
             clearInterval(interval);
             progressDiv.remove();
-            fetch(`/api/world-map/world-objects/${result.activeInteractionId}/cancel`, {
+            fetch(`/api/world-map/world-objects/${result.interactionId}/cancel`, {
                 method: 'POST'
             });
         };
@@ -659,10 +661,14 @@
         });
 
         worldObjects.forEach(obj => {
+            const spriteNames2 = worldObjects
+                .map(obj => obj.spriteName || (obj.worldObjectType && obj.worldObjectType.spriteName))
+                .filter(name => name);
 
-                const x = obj.posX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-                const y = obj.posY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
-                drawWorldObject(x,y, obj)
+            preloadSprites(spriteNames2);
+                const x = obj.xPos - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+                const y = obj.yPos - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+                drawWorldObject(x,y, obj, offscreenCtx)
         })
 
 
@@ -683,7 +689,7 @@
         spriteNames.forEach(name => {
             if (!objSpriteCache[name]) {
                 const image = new Image();
-                image.src = `/images/world_objects/${name}.png`;
+                image.src = `/sprites/world-objects/${name}.png`;
                 objSpriteCache[name] = image;
             }
         });
@@ -697,21 +703,21 @@
 
         return objSpriteCache[spriteName] || null;
     }
-    function drawWorldObject(x, y, obj) {
+    function drawWorldObject(x, y, obj, ctxToDraw) {
         let objectSprite = createObjectSprite(obj);
 
         if (objectSprite) {
-            ctx.drawImage(objectSprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+            ctxToDraw.drawImage(objectSprite, x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
         } else {
-            ctx.fillStyle = '#95a5a6';
-            ctx.fillRect(x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
+            ctxToDraw.fillStyle = '#95a5a6';
+            ctxToDraw.fillRect(x - SPRITE_SIZE / 2, y - SPRITE_SIZE / 2, SPRITE_SIZE, SPRITE_SIZE);
         }
 
         // Draw object name or type
-        ctx.fillStyle = '#2c3e50';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(obj.name || obj.worldObjectType.name, x, y + SPRITE_SIZE / 2 + 15);
+        ctxToDraw.fillStyle = '#2c3e50';
+        ctxToDraw.font = '12px Arial';
+        ctxToDraw.textAlign = 'center';
+        ctxToDraw.fillText(obj.name || obj.worldObjectType.name, x, y + SPRITE_SIZE / 2 + 15);
     }
 
     function getTileColor(x, y) {

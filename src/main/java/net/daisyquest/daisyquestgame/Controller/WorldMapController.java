@@ -159,31 +159,14 @@ public class WorldMapController {
         }
     }
 
-    @PostMapping("/world-objects/{objectId}/interact/{interactionId}/progress")
-    public ResponseEntity<Map<String, Object>> updateInteractionProgress(
-            @PathVariable String objectId,
-            @PathVariable String interactionId,
-            @RequestBody Map<String, Object> progressData) {
+    @GetMapping("/world-objects/interactions/{interactionId}/progress")
+    public ResponseEntity<WorldMapService.InteractionProgress> getInteractionProgress(
+            @PathVariable String interactionId) {
         try {
-            InteractionResult result = worldMapService.updateInteractionProgress(
-                    interactionId, progressData);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", result.getMessage());
-            response.put("completed", result.isCompleted());
-            response.put("state", result.getStateData());
-
-            if (result.isCompleted()) {
-                response.put("rewards", result.getStateData().get("rewards"));
-            }
-
-            return ResponseEntity.ok(response);
-        } catch (IllegalStateException | IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
-            ));
+            WorldMapService.InteractionProgress progress = worldMapService.getInteractionProgress(interactionId);
+            return ResponseEntity.ok(progress);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
 
@@ -214,7 +197,9 @@ public class WorldMapController {
         private Map<String, Object> interactionData;
     }
     @Data
-    static class MoveRequest {
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class MoveRequest {
         private String playerId;
         private int newX;
         private int newY;

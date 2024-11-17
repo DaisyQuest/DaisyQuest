@@ -1,6 +1,8 @@
 package net.daisyquest.daisyquestgame.Service;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import net.daisyquest.daisyquestgame.Model.InteractionType;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -9,6 +11,8 @@ import java.util.Map;
 
 @Data
 @Document(collection = "active_interactions")
+@AllArgsConstructor
+@NoArgsConstructor
 public class ActiveInteraction {
     private String id;
     private String playerId;

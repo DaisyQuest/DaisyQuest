@@ -2,7 +2,11 @@ package net.daisyquest.daisyquestgame.Service;
 
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import net.daisyquest.daisyquestgame.Controller.CooldownActiveException;
 import net.daisyquest.daisyquestgame.Model.*;
 import net.daisyquest.daisyquestgame.Repository.*;
@@ -10,14 +14,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAmount;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
 public class WorldMapService {
+    private final Map<String, ActiveInteraction> activeInteractions = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
+
+
+
+
     public static final int LAND_SIZE = 10000; // Size of each land tile in pixels
     @Autowired
     private WorldMapRepository worldMapRepository;
@@ -219,7 +235,7 @@ public class WorldMapService {
         return distance <= 50; // Adjust this value as needed
     }
 
-    private static final int INTERACTION_RANGE = 2; // Tiles
+    private static final int INTERACTION_RANGE = 1000; // Tiles
 
     @Autowired
     private WorldObjectRepository worldObjectRepository;
@@ -277,56 +293,77 @@ public class WorldMapService {
             InteractionType interactionType,
             Map<String, Object> interactionData) {
 
-        WorldObject worldObject = worldObjectRepository.findById(objectId)
-                .orElseThrow(() -> new IllegalArgumentException("World object not found"));
-
+        // Validate inputs and get the player and object...
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new IllegalArgumentException("Player not found"));
 
+        WorldObject object = worldObjectRepository.findById(objectId)
+                .orElseThrow(() -> new IllegalArgumentException("World object not found"));
         // Validate basic interaction requirements
-        validateInteractionPossible(player, worldObject);  // Fixed: Remove duplicate validation method
+        validateInteractionPossible(player, object);  // Fixed: Remove duplicate validation method
 
         // Check for existing active interaction
         Optional<ActiveInteraction> existingInteraction = activeInteractionRepository
                 .findByPlayerIdAndStatus(playerId, ActiveInteraction.InteractionStatus.IN_PROGRESS);
 
+
+
         if (existingInteraction.isPresent()) {
             throw new IllegalStateException("Player already has an active interaction");
         }
 
+        ActiveInteraction existingInteraction2 = activeInteractions.get(playerId);
+
+        if (existingInteraction2 != null) {
+            throw new IllegalStateException("Player already has an active interaction");
+        }
+
         // Handle cooldown
-        if (worldObject.getCooldownMs() > 0) {
+        if (object.getCooldownMs() > 0) {
             LocalDateTime now = LocalDateTime.now();
             long elapsedMs = ChronoUnit.MILLIS.between(
-                    worldObject.getCreatedDateTime(), now);
+                    object.getCreatedDateTime(), now);
 
-            if (elapsedMs < worldObject.getCooldownMs()) {
-                throw new CooldownActiveException(worldObject.getCooldownMs() - elapsedMs);
+            if (elapsedMs < object.getCooldownMs()) {
+                throw new CooldownActiveException(object.getCooldownMs() - elapsedMs);
             }
         }
 
         // Verify interaction type matches object's type
-        if (worldObject.getWorldObjectType().getInteractionType() != interactionType) {
+        if (object.getWorldObjectType().getInteractionType() != interactionType) {
             throw new IllegalArgumentException("Invalid interaction type for this object");
         }
 
-        // Create new interaction
-        ActiveInteraction interaction = new ActiveInteraction();
-        interaction.setId(UUID.randomUUID().toString());
-        interaction.setPlayerId(playerId);
-        interaction.setWorldObjectId(objectId);
-        interaction.setInteractionType(interactionType);
-        interaction.setStartTime(LocalDateTime.now());
+
 
         // Fix: Get duration from world object type
-        long durationMs = worldObject.getWorldObjectType().getInteractionDurationMs();
-        interaction.setEndTime(LocalDateTime.now().plusNanos(durationMs * 1000));
+        long interactionDurationMs = Optional.ofNullable(object.getWorldObjectType())
+                .map(WorldObjectType::getInteractionDurationMs)
+                .orElseThrow(() -> new IllegalArgumentException("Interaction duration not specified"));
 
-        interaction.setStatus(ActiveInteraction.InteractionStatus.IN_PROGRESS);
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime + interactionDurationMs;
+
+        String interactionId = UUID.randomUUID().toString();
+
+        ActiveInteraction activeInteraction = new ActiveInteraction(
+                interactionId,
+                playerId,
+                objectId,
+                interactionType,
+                LocalDateTime.now(),
+                LocalDateTime.now().plusNanos(interactionDurationMs * 1000000),
+                ActiveInteraction.InteractionStatus.IN_PROGRESS,
+                new HashMap<>()
+        );
+        activeInteractions.put(interactionId, activeInteraction);
+
+        // Schedule the interaction completion
+        scheduler.schedule(() -> completeInteraction(interactionId), interactionDurationMs, TimeUnit.MILLISECONDS);
 
         // Initialize state based on requirements and rewards from the interaction option
         Map<String, Object> state = new HashMap<>();
-        InteractionOption option = worldObject.getWorldObjectType().getInteractionOption();
+        InteractionOption option = object.getWorldObjectType().getInteractionOption();
 
         if (option != null) {
             // Store requirements for validation during progress updates
@@ -336,24 +373,107 @@ public class WorldMapService {
         }
 
         // Add any additional interaction-specific state
-        state.putAll(initializeInteractionState(interactionType, worldObject, player, interactionData));
-        interaction.setStateData(state);
+        state.putAll(initializeInteractionState(interactionType,object, player, interactionData));
+        activeInteraction.setStateData(state);
 
         // Save the interaction
-        activeInteractionRepository.save(interaction);
+       // activeInteractionRepository.save(activeInteraction);
 
         // Update world object state
-        worldObject.setUsed(true);
-        worldObject.setCreatedDateTime(LocalDateTime.now());
-        worldObjectRepository.save(worldObject);
+        object.setUsed(true);
+        object.setCreatedDateTime(LocalDateTime.now());
+        worldObjectRepository.save(object);
 
         return new InteractionResult(
                 true,
                 "Interaction started successfully",
-                interaction.getId(),
+                activeInteraction.getId(),
                 interactionType,  // Fixed: Use the passed interactionType
                 state
         );
+    }
+    private void completeInteraction(String interactionId) {
+        ActiveInteraction interaction = activeInteractions.remove(interactionId);
+        if (interaction != null) {
+            // Retrieve the player and object
+            Player player = playerRepository.findById(interaction.getPlayerId())
+                    .orElse(null);
+            WorldObject object = worldObjectRepository.findById(interaction.getWorldObjectId())
+                    .orElse(null);
+
+            if (player != null && object != null) {
+                // Process the interaction completion
+                processInteractionCompletion(player, object, interaction);
+
+            }
+        }
+    }
+
+    private void processInteractionCompletion(Player player, WorldObject object, ActiveInteraction interaction) {
+        // Example: Grant experience rewards
+        InteractionOption option = object.getWorldObjectType().getInteractionOption();
+        if (option != null) {
+            Map<String, Object> rewards = option.getRewards();
+            if (rewards != null) {
+                Integer experience = (Integer) rewards.get("experience");
+                if (experience != null) {
+                    // Assuming you have a method to add experience to the player
+                    String skillName = "combat"; // Retrieve the skill name from the interaction data
+                    player.addExperience(skillName, experience);
+                    playerRepository.save(player);
+                }
+            }
+        }
+
+        // Update the object state if needed
+        // For example, set cooldowns or mark as used
+        object.setUsed(true);
+        worldObjectRepository.save(object);
+        interaction.setStatus(ActiveInteraction.InteractionStatus.COMPLETED);
+        activeInteractionRepository.save(interaction);
+
+        // Optionally, notify the client about completion (e.g., via WebSocket or other mechanisms)
+    }
+
+    public InteractionProgress getInteractionProgress(String interactionId) {
+        ActiveInteraction interaction = activeInteractions.get(interactionId);
+        if (interaction == null) {
+            interaction = activeInteractionRepository.findById(interactionId).get();
+        }
+
+        long currentTime = System.currentTimeMillis();
+        Duration totalDuration = Duration.between(interaction.getStartTime(), interaction.getEndTime());
+        long totalDurationMs = totalDuration.toMillis();
+      //  long elapsedTime = currentTime - interaction.getStartTime();
+
+        Duration elapsedDuration = Duration.between(interaction.getStartTime(), LocalDateTime.now());
+        long elapsedTimeMs = elapsedDuration.toMillis();
+        double progress = Math.min(1.0, (double) elapsedTimeMs / totalDurationMs);
+
+        return new InteractionProgress(
+                interaction.getId(),
+                interaction.getPlayerId(),
+                interaction.getWorldObjectId(),
+                interaction.getInteractionType(),
+                progress,
+                interaction.getStartTime(),
+                interaction.getEndTime()
+        );
+    }
+    @PreDestroy
+    public void shutdownScheduler() {
+        scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+                if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    System.err.println("Scheduler did not terminate");
+                }
+            }
+        } catch (InterruptedException ie) {
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     public InteractionResult updateInteractionProgress(
@@ -635,13 +755,38 @@ public class WorldMapService {
 
     private Map<String, Object> initializeSkillState(
             WorldObject object, Player player, Map<String, Object> interactionData) {
-        WorldObjectType type = object.getWorldObjectType();
-        InteractionOption option = type.getInteractionOption();
+
+            // Extract the SkillRequirement from the Requirements object
+        List<SkillRequirement> skillRequirements = Optional.ofNullable(object)
+                .map(WorldObject::getWorldObjectType)
+                .map(WorldObjectType::getInteractionOption)
+                .map(InteractionOption::getRequirements)
+                .map(reqs -> reqs.getRequirements().stream()
+                        .filter(req -> req instanceof SkillRequirement)
+                        .map(req -> (SkillRequirement) req)
+                        .collect(Collectors.toList()))
+                .orElse(Collections.emptyList());
+
+
+
+        Object experienceReward = Optional.ofNullable(object)
+                .map(WorldObject::getWorldObjectType)
+                .map(WorldObjectType::getInteractionOption)
+                .map(InteractionOption::getRewards)
+                .map(rew -> rew.get("experience"))
+                .orElse(0);
+
+        Object itemReward = Optional.ofNullable(object)
+                .map(WorldObject::getWorldObjectType)
+                .map(WorldObjectType::getInteractionOption)
+                .map(InteractionOption::getRewards)
+                .map(rew -> rew.get("item"))
+                .orElse("defaultItem");
 
         return Map.of(
-                "skillName", option.getRequirements().get("skill"),
-                "experienceReward", option.getRewards().get("experience"),
-                "itemReward", option.getRewards().get("item")
+                "skillName", skillRequirements.isEmpty() ? "" : String.join(", ", skillRequirements.stream().map(o->o.getSkillId()).collect(Collectors.toList())),
+                "experienceReward", experienceReward,
+                "itemReward", itemReward
         );
     }
 
@@ -720,6 +865,20 @@ public class WorldMapService {
 
     }
 
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class InteractionProgress {
+        private String interactionId;
+        private String playerId;
+        private String objectId;
+        private InteractionType interactionType;
+        private double progress; // 0.0 to 1.0
+        private LocalDateTime startTime;
+        private LocalDateTime endTime;
+
+        // Constructor, getters, and setters
+    }
 }
 
 
