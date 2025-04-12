@@ -2063,24 +2063,7 @@
 });
 
     // Modify the updatePlayerPosition function
-    document.getElementById('chat-input').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-    const message = this.value;
-    if (message.trim() !== '') {
-    // In a real implementation, you would send this message to your server
-    addChatMessage(localCurrentPlayer.username, message);
-    this.value = '';
-}
-}
-});
 
-    function addChatMessage(username, message) {
-    const chatBox = document.getElementById('chat-box');
-    const messageElement = document.createElement('p');
-    messageElement.innerHTML = `<strong>${username}:</strong> ${message}`;
-    chatBox.appendChild(messageElement);
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
 
 
     //HELPERS:
