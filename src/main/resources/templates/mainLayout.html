@@ -12,9 +12,11 @@
 
     <!-- Your custom CSS (optional) -->
     <link th:href="@{/css/inventory.css}" rel="stylesheet"/>
+    <link th:href="@{/css/topbar.css}" rel="stylesheet"/>
 
     <!-- Inline or additional styling as needed -->
     <style>
+
         body {
             background-color: #f8f9fa;
             margin: 0;
@@ -63,7 +65,12 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
         }
-
+        .sidebar-row {
+            flex: 0 0 auto;         /* or “auto” so it doesn't stretch */
+            max-height: 20vh;       /* ~20% of the viewport height */
+            overflow-y: auto;       /* scroll if needed */
+            margin: 0 20px;         /* optional horizontal margin */
+        }
         /* Adjust how you want the sidebar vs. inGameMenu to appear side by side */
         .sidebar-column {
             flex: 0 0 250px; /* width of your sidebar */
@@ -87,7 +94,7 @@
 <!-- 2) Main container for the game -->
 <div class="container-fluid game-container">
     <!-- 2a) Sidebar Fragment (left side) -->
-    <div class="sidebar-column" th:replace="'_sidebar.html' :: sidebar"></div>
+    <div class="sidebar-row" th:replace="'_sidebar.html' :: sidebar"></div>
 
     <!-- 2b) The world map container (iFrame embedding) -->
     <div class="world-map-container">
@@ -229,6 +236,7 @@
 <script th:src="@{/js/talentTrees.js}"></script>
 
 <script th:src="@{/js/chat.js}"></script>
+
 
 </body>
 </html>

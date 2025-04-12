@@ -1,0 +1,40 @@
+.player-sprite img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+.attribute-icon {
+    width: 32px;
+    height: 32px;
+}
+.sprite-preview {
+    width: 128px;
+    height: 128px;
+    position: relative;
+}
+
+.sprite-preview img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.sprite-selector {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sprite-selector .sprite-image {
+    width: 64px;
+    height: 64px;
+    margin: 0 10px;
+}
+
+.sprite-selector .sprite-count {
+    margin-left: 10px;
+}
