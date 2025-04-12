@@ -1,0 +1,268 @@
+<!-- inGameMenu.html -->
+<div class="col-md-9" th:fragment="inGameMenu">
+  <!-- The tab headers -->
+  <ul class="nav nav-tabs" id="myTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="quests-tab" data-bs-toggle="tab" data-bs-target="#quests"
+              type="button" role="tab" aria-controls="quests" aria-selected="false">Quests
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="talent-trees-tab" data-bs-toggle="tab" data-bs-target="#talent-trees"
+              type="button" role="tab" aria-controls="talent-trees" aria-selected="false">Talent Trees
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="inventory-management-tab" data-bs-toggle="tab"
+              data-bs-target="#inventory-management" type="button"
+              role="tab" aria-controls="inventory-management" aria-selected="false">
+        Inventory
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="activities-tab" data-bs-toggle="tab" data-bs-target="#activities"
+              type="button" role="tab" aria-controls="activities" aria-selected="false">Activities
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="shops-tab" data-bs-toggle="tab" data-bs-target="#shops"
+              type="button" role="tab" aria-controls="shops" aria-selected="false">Shops
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="my-shop-tab" data-bs-toggle="tab" data-bs-target="#my-shop"
+              type="button" role="tab" aria-controls="my-shop" aria-selected="false">My Shop
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="crafting-tab" data-bs-toggle="tab" data-bs-target="#crafting"
+              type="button" role="tab" aria-controls="crafting" aria-selected="false">Crafting
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat"
+              type="button" role="tab" aria-controls="chat" aria-selected="false">Chat
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#worldMapH"
+              type="button" role="tab" aria-controls="worldMapH" aria-selected="false">World Map
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="combat-tab" data-bs-toggle="tab" data-bs-target="#combat"
+              type="button" role="tab" aria-controls="combat" aria-selected="true">Game
+      </button>
+    </li>
+  </ul>
+
+  <!-- The tab content. Each fragment is brought in with <th:replace>. -->
+  <div class="tab-content" id="myTabContent">
+    <th:replace="'_questsTab.html' :: questsTab"></th:replace>
+    <th:replace="'_talentTreesTab.html' :: talentTreesTab"></th:replace>
+    <th:replace="'_inventoryManagementTab.html' :: inventoryManagementTab"></th:replace>
+    <th:replace="'_activitiesTab.html' :: activitiesTab"></th:replace>
+    <th:replace="'_shopsTab.html' :: shopsTab"></th:replace>
+    <th:replace="'_myShopTab.html' :: myShopTab"></th:replace>
+    <th:replace="'_craftingTab.html' :: craftingTab"></th:replace>
+    <th:replace="'_chatTab.html' :: chatTab"></th:replace>
+    <th:replace="'_worldMapTab.html' :: worldMapTab"></th:replace>
+    <th:replace="'_combatTab.html' :: combatTab"></th:replace>
+  </div>
+
+  <!-- Active Task Card -->
+  <div class="card mt-3">
+    <div class="card-body">
+      <h5 class="card-title">Active Task</h5>
+      <div id="activeTask"></div>
+    </div>
+  </div>
+
+  <!-- PayPal Donate Card -->
+  <div class="card mt-3">
+    <div class="card-body">
+      <form action="https://www.paypal.com/donate" method="post" target="_top">
+        <input type="hidden" name="hosted_button_id" value="4HUFMKCUUSV9L" />
+        <input type="image"
+               src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif"
+               border="0" name="submit"
+               title="PayPal - The safer, easier way to pay online!"
+               alt="Donate with PayPal button" />
+        <img alt="" border="0"
+             src="https://www.paypal.com/en_US/i/scr/pixel.gif"
+             width="1" height="1" />
+      </form>
+    </div>
+  </div>
+
+  <!-- Modals (Send Item, Sell Land, Sprite Selection, List Item) -->
+
+  <!-- Send Item Modal -->
+  <div class="modal fade" id="sendItemModal" tabindex="-1" aria-labelledby="sendItemModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="sendItemModalLabel">Send Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="sendItemForm">
+            <div class="mb-3">
+              <label for="recipientUsername" class="form-label">Recipient Username</label>
+              <input type="text" class="form-control" id="recipientUsername" required>
+            </div>
+            <input type="hidden" id="itemIdToSend">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary"
+                  data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary"
+                  onclick="sendItem()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sell Land Modal -->
+  <div class="modal fade" id="sellLandModal" tabindex="-1" aria-labelledby="sellLandModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="sellLandModalLabel">Sell Land</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="sellLandForm">
+            <div id="currencyInputs">
+              <!-- Dynamically added currency inputs go here -->
+            </div>
+            <button type="button" class="btn btn-secondary mt-2" onclick="addCurrencyInput()">
+              Add Currency
+            </button>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Close
+          </button>
+          <button type="button" class="btn btn-primary" onclick="confirmSellLand()">
+            Sell Land
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sprite Selection Modal -->
+  <div id="spriteSelectionModal" class="modal fade" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Customize Your Sprite</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6 offset-md-3 mb-4">
+              <div id="spritePreview" class="sprite-preview"></div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="sprite-selector" data-type="background">
+                <button class="btn btn-outline-primary left-btn">&lt;</button>
+                <img src="" alt="Background" class="sprite-image">
+                <button class="btn btn-outline-primary right-btn">&gt;</button>
+                <div class="sprite-count">1 / 10</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="sprite-selector" data-type="face">
+                <button class="btn btn-outline-primary left-btn">&lt;</button>
+                <img src="" alt="Face" class="sprite-image">
+                <button class="btn btn-outline-primary right-btn">&gt;</button>
+                <div class="sprite-count">1 / 10</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="sprite-selector" data-type="eyes">
+                <button class="btn btn-outline-primary left-btn">&lt;</button>
+                <img src="" alt="Eyes" class="sprite-image">
+                <button class="btn btn-outline-primary right-btn">&gt;</button>
+                <div class="sprite-count">1 / 10</div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-12">
+              <div class="sprite-selector" data-type="hairhat">
+                <button class="btn btn-outline-primary left-btn">&lt;</button>
+                <img src="" alt="Hair/Hat" class="sprite-image">
+                <button class="btn btn-outline-primary right-btn">&gt;</button>
+                <div class="sprite-count">1 / 10</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Close
+          </button>
+          <button type="button" class="btn btn-primary" onclick="saveSprite()">
+            Save changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- List Item Modal -->
+  <div class="modal fade" id="listItemModal" tabindex="-1" aria-labelledby="listItemModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="listItemModalLabel">List Item for Sale</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="listItemForm">
+            <div class="mb-3">
+              <label for="itemPrice" class="form-label">Price</label>
+              <input type="number" class="form-control" id="itemPrice" required>
+            </div>
+            <div class="mb-3">
+              <label for="itemCurrency" class="form-label">Currency</label>
+              <select class="form-control" id="itemCurrency" required>
+                <!-- Fill with currency options dynamically -->
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="itemQuantity" class="form-label">Quantity (leave blank for unlimited)</label>
+              <input type="number" class="form-control" id="itemQuantity">
+            </div>
+            <input type="hidden" id="itemIdToList">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary"
+                  data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary"
+                  onclick="listItemForSale()">List Item</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

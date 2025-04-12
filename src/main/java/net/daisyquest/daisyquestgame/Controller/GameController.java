@@ -18,7 +18,7 @@ public class GameController {
 
     @GetMapping("/game")
     public String game() {
-        return "game";
+        return "mainLayout";
     }
 
     @GetMapping("/castleDefense")

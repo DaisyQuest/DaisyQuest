@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DaisyQuest</title>
+
+  <!-- Include your CSS -->
+  <link th:href="@{/css/inventory.css}" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Inline styles (migrated from your original code) -->
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .status-effects {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .status-effect {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      margin: 0 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: white;
+      border: 2px solid;
+    }
+    .game-container {
+      margin-top: 20px;
+    }
+    .card {
+      margin-bottom: 20px;
+    }
+    .quest-info, .activity-info {
+      font-size: 0.9em;
+    }
+    .quest-info strong, .activity-info strong {
+      display: block;
+      margin-top: 10px;
+    }
+    .quest-info ul, .activity-info ul {
+      padding-left: 15px;
+    }
+    .inventory-item {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .attribute-tabs .nav-link {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+    }
+    #combatArea {
+      display: none;
+    }
+    .action-button {
+      margin: 5px;
+    }
+    #turnTimer {
+      font-weight: bold;
+    }
+    .crafting-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .inventory-panel, .ingredients-panel {
+      flex: 1;
+      width: 45%;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      height: 400px;
+      overflow-y: auto;
+    }
+    .crafting-controls {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 0 10px;
+    }
+    .crafting-controls input {
+      width: 50px;
+      text-align: center;
+      margin: 10px 0;
+    }
+    .crafting-controls button {
+      width: 40px;
+      height: 40px;
+      margin: 5px 0;
+      font-size: 1.2em;
+      padding: 0;
+    }
+    .crafting-item {
+      display: flex;
+      width: 40% !important;
+      align-items: center;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 5px;
+    }
+    .crafting-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .crafting-item img {
+      width: 32px;
+      height: 32px;
+      margin-right: 10px;
+    }
+    .crafting-actions {
+      display: flex;
+      justify-content: flex-start;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .craft-button, .recipe-book-button {
+      width: auto;
+      min-width: 100px;
+    }
+    #chatMessages {
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .chat-input {
+      display: flex;
+    }
+    .chat-input input {
+      flex-grow: 1;
+      margin-right: 10px;
+    }
+    #playerInfo, #questList, #activeQuest {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+    .quest-info {
+      font-size: 0.9em;
+    }
+    .quest-info strong {
+      display: block;
+      margin-top: 10px;
+    }
+    .quest-info ul {
+      padding-left: 15px;
+    }
+    .smooth-progress {
+      transition: width 0.1s linear;
+    }
+    .sprite-preview {
+      width: 128px;
+      height: 128px;
+      position: relative;
+    }
+    .sprite-preview img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .sprite-selector {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .sprite-selector .sprite-image {
+      width: 64px;
+      height: 64px;
+      margin: 0 10px;
+    }
+    .sprite-selector .sprite-count {
+      margin-left: 10px;
+    }
+    .world-map {
+      display: grid;
+      grid-template-columns: repeat(var(--map-width), 1fr);
+      gap: 1px;
+      background-color: #ccc;
+      padding: 1px;
+    }
+    .land-tile {
+      width: 50px;
+      height: 50px;
+      background-color: #8bc34a; /* Unclaimed land */
+      border: 1px solid #4caf50;
+      cursor: pointer;
+    }
+    .land-tile:hover {
+      opacity: 0.8;
+    }
+    .land-tile.owned {
+      background-color: #2196f3; /* Other player-owned land */
+    }
+    .land-tile.player-owned {
+      background-color: #9c27b0; /* Current player-owned land */
+    }
+    .land-tile.for-sale {
+      background-color: #ff9800;
+    }
+    .land-tile.player-for-sale {
+      background-color: #ffd700; /* Gold color for player's land for sale */
+    }
+    .combat-container {
+      background-color: #1a1a2e;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+      color: #e94560;
+    }
+    .player-card {
+      background-color: #0f3460;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+      transition: all 0.3s ease;
+      color: #fff;
+    }
+    .player-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(233, 69, 96, 0.3);
+    }
+    .player-sprite {
+      width: 128px;
+      height: 128px;
+      position: relative;
+      margin: 0 auto;
+    }
+    .player-sprite img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .attribute-icon {
+      width: 32px;
+      height: 32px;
+    }
+    .health-bar {
+      height: 20px;
+      background-color: #e94560;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .health-bar-fill {
+      height: 100%;
+      background-color: #4caf50;
+      transition: width 0.5s ease-in-out;
+    }
+    .combat-log {
+      background-color: #0f3460;
+      border-radius: 10px;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      color: #fff;
+    }
+    .combat-log-entry {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+    }
+    .combat-log-entry:hover {
+      background-color: #16213e;
+    }
+    .turn-indicator {
+      font-size: 1.2em;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #4caf50;
+    }
+    #combatInfo {
+      background-color: #0f3460;
+      border-radius: 10px;
+      padding: 15px;
+      color: #fff;
+    }
+    #combatInfo ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    .action-button:hover {
+      background-color: #e94560;
+      color: #fff;
+    }
+    .reward-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .reward-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .reward-items {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .reward-item {
+      background-color: #f0f0f0;
+      padding: 10px;
+      border-radius: 5px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .reward-item img {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 5px;
+    }
+    @keyframes pop-in {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    @keyframes fade-out {
+      0% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+    .talent-tree {
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .talent {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 5px;
+      background-color: #f8f9fa;
+      border-radius: 3px;
+    }
+    .talent-sprite {
+      width: 32px;
+      height: 32px;
+      margin-right: 10px;
+    }
+    .talent-info {
+      flex-grow: 1;
+    }
+    .talent-name {
+      display: block;
+      font-weight: bold;
+    }
+    .talent-level {
+      display: block;
+      font-size: 0.8em;
+      color: #666;
+    }
+    .talent button {
+      padding: 2px 5px;
+      font-size: 0.8em;
+    }
+    #playerInfoCollapse {
+      transition: height 0.3s ease-out;
+    }
+    #playerInfoHeader button {
+      width: 100%;
+      text-align: left;
+      padding: 0.75rem 1.25rem;
+      font-weight: bold;
+      color: #495057;
+      text-decoration: none;
+    }
+    #playerInfoHeader button:hover,
+    #playerInfoHeader button:focus {
+      text-decoration: none;
+      color: #007bff;
+    }
+    #playerInfoHeader button::after {
+      content: '\\25BC';
+      float: right;
+      transition: transform 0.3s ease-out;
+    }
+    #playerInfoHeader button[aria-expanded="true"]::after {
+      transform: rotate(180deg);
+    }
+    .world-map-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .world-map-title {
+      font-size: 1.8rem;
+      color: #2c3e50;
+      margin: 0 0 20px 0;
+      text-align: center;
+    }
+    .html-viewer-embed {
+      height: 100% !important;
+    }
+    .world-map-content {
+      flex-grow: 1;
+      min-height: 900px;
+      background-color: #f8f9fa;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .world-map-button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: 500;
+      color: white;
+      background-color: #3498db;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .world-map-button:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+    }
+    @media (max-height: 1000px) {
+      .world-map-content {
+        min-height: 700px;
+      }
+    }
+    @media (max-height: 800px) {
+      .world-map-content {
+        min-height: 600px;
+      }
+    }
+    #action-button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+    }
+    #action-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+    }
+    @media (max-width: 768px) {
+      .world-map-content {
+        height: 50vh;
+      }
+    }
+  </style>
+</head>
+
+<body>
+<!-- Navbar Fragment -->
+<div th:replace="'_navbar.html' :: navbar"></div>
+
+<!-- Main container for the game -->
+<div class="container-fluid game-container">
+  <!-- Sidebar Fragment -->
+  <div th:replace="'_sidebar.html' :: sidebar"></div>
+
+  <!-- In-game Menu Tabs and Content -->
+  <div th:replace="'inGameMenu.html' :: inGameMenu"></div>
+</div>
+
+<!-- Bootstrap + JS scripts at the bottom -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Your custom JS files (adapt these paths as needed) -->
+<script th:src="@{/js/playerInventory.js}"></script>
+<script th:src="@{/js/game.js}"></script>
+<script th:src="@{/js/talentTrees.js}"></script>
+<script th:src="@{/js/chat.js}"></script>
+
+<!-- The logic for embedding the HTML in an iframe / opening dialogs -->
+<script>
+  (function() {
+    const styles = `
+                .html-viewer-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                }
+                .html-viewer-content {
+                    background-color: white;
+                    padding: 20px;
+                    border-radius: 5px;
+                    width: 90%;
+                    height: 90%;
+                    position: relative;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .html-viewer-close {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    font-size: 24px;
+                    cursor: pointer;
+                    background: none;
+                    border: none;
+                    color: #333;
+                    z-index: 1001;
+                }
+                .html-viewer-iframe {
+                    flex-grow: 1;
+                    border: none;
+                    margin-top: 20px;
+                    width: 100%;
+                    height: 100%;
+                }
+                .html-viewer-embed {
+                    width: 100%;
+                    height: 95%;
+                    border: 1px solid #ccc;
+                    margin-top: 20px;
+                }
+            `;
+
+    function addStyles() {
+      if (!document.getElementById('html-viewer-styles')) {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'html-viewer-styles';
+        styleElement.textContent = styles;
+        document.head.appendChild(styleElement);
+      }
+    }
+
+    window.showHTMLDialog = function(url) {
+      addStyles();
+      const dialogOverlay = document.createElement('div');
+      dialogOverlay.className = 'html-viewer-overlay';
+
+      const dialogContent = document.createElement('div');
+      dialogContent.className = 'html-viewer-content';
+
+      const closeButton = document.createElement('button');
+      closeButton.className = 'html-viewer-close';
+      closeButton.textContent = '×';
+      closeButton.onclick = () => document.body.removeChild(dialogOverlay);
+
+      const iframe = document.createElement('iframe');
+      iframe.className = 'html-viewer-iframe';
+      iframe.src = url;
+
+      dialogContent.appendChild(closeButton);
+      dialogContent.appendChild(iframe);
+      dialogOverlay.appendChild(dialogContent);
+
+      document.body.appendChild(dialogOverlay);
+    };
+
+    window.embedHTML = function(url, targetId) {
+      addStyles();
+      const targetDiv = document.getElementById(targetId);
+      if (!targetDiv) {
+        console.error(`Target div with id "${targetId}" not found.`);
+        return;
+      }
+      targetDiv.innerHTML = '';
+      const iframe = document.createElement('iframe');
+      iframe.className = 'html-viewer-embed';
+      iframe.src = url;
+      iframe.setAttribute('allow', 'scripts');
+      targetDiv.appendChild(iframe);
+    };
+
+    // Toggle collapse for player info
+    document.addEventListener('DOMContentLoaded', function() {
+      const playerInfoHeader = document.getElementById('playerInfoHeader');
+      const playerInfoCollapse = document.getElementById('playerInfoCollapse');
+      if (playerInfoHeader && playerInfoCollapse) {
+        playerInfoHeader.addEventListener('click', function() {
+          const isCollapsed = playerInfoCollapse.classList.contains('show');
+          if (isCollapsed) {
+            playerInfoCollapse.classList.remove('show');
+          } else {
+            playerInfoCollapse.classList.add('show');
+          }
+        });
+      }
+    });
+  })();
+</script>
+</body>
+</html>

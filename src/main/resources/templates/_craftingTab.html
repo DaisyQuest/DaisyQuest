@@ -1,0 +1,37 @@
+<!-- _craftingTab.html -->
+<div class="tab-pane fade" id="crafting" role="tabpanel" aria-labelledby="crafting-tab"
+     th:fragment="craftingTab">
+  <h5>Crafting</h5>
+  <div class="crafting-container">
+    <div class="inventory-panel">
+      <h6>Inventory</h6>
+      <div id="craftingInventoryList"></div>
+    </div>
+
+    <div class="ingredients-panel">
+      <h6>Ingredients</h6>
+      <div id="craftingIngredientsList"></div>
+    </div>
+  </div>
+  <div class="crafting-actions">
+    <button class="btn btn-primary craft-button" onclick="attemptCrafting()">Craft</button>
+    <button class="btn btn-secondary recipe-book-button" onclick="openRecipeBook()">Recipe Book</button>
+  </div>
+
+  <!-- Recipe Book Modal -->
+  <div class="modal fade" id="recipeBookModal" tabindex="-1" aria-labelledby="recipeBookModalLabel"
+       aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="recipeBookModalLabel">Recipe Book</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="recipeBookContent">
+          <!-- Recipes will be dynamically inserted here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

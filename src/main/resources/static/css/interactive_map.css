@@ -1,6 +1,5 @@
 body {
     font-family: 'Roboto', sans-serif;
-    /*background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);*/
     margin: 0;
     padding: 0;
     display: flex;
@@ -9,31 +8,43 @@ body {
     color: #ecf0f1;
 }
 
+.container-fluid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
 .navbar {
     background-color: rgba(44, 62, 80, 0.9) !important;
 }
 
-.container-fluid {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    padding: 0;
+#side-info {
+    width: 300px;        /* adjust as needed */
+    padding: 20px;
+    background-color: rgba(248, 249, 250, 0.95);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    overflow-y: auto;
+    transition: all 0.3s ease;
 }
 
 #main-content {
     flex-grow: 1;
     display: flex;
-    flex-direction: column;
+    flex-direction: row; /* side by side layout */
+    overflow: hidden;    /* optional if you don't want an outer scrollbar */
 }
 
 #worldMapContainer {
-    flex-grow: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: radial-gradient(circle, #2c3e50, #34495e);
+    flex: 1;                    /* expands to fill leftover width */
     position: relative;
+    display: flex;             /* so we can center the canvas if desired */
+    justify-content: center;   /* horizontally center the canvas */
+    align-items: center;       /* vertically center the canvas */
+    background: radial-gradient(circle, #2c3e50, #34495e);
 }
+
 
 #worldMapCanvas {
     max-width: 100%;
@@ -41,6 +52,7 @@ body {
     border: 3px solid #ecf0f1;
     box-shadow: 0 0 20px rgba(236, 240, 241, 0.3);
     border-radius: 10px;
+    /* Remove any fixed width/height if you want it to scale dynamically */
 }
 
 #spellInfoName{

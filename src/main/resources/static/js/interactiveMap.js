@@ -6,9 +6,12 @@
     canvas.addEventListener('click', handleMapClick);
     let worldMap;
     let players = [];
-    let currentPlayer;
+    let localCurrentPlayer;
+    if(window.currentPlayer){ localCurrentPlayer    = currentPlayer;}
+
     const playerSpriteCache = new Map();
-    const playerId = localStorage.getItem('playerId');
+    playerId = localStorage.getItem('playerId');
+
     if (!playerId) {
     window.location.href = '/';
 }
@@ -56,11 +59,11 @@
 };
 
     // Combat variables
-    let currentCombatId;
-    let selectedAction;
-    let selectedSpell;
-    let playerSpells = [];
-    let combatLogs = [];
+   let localCurrentCombatId;
+   let localSelectedAction;
+   let localSelectedSpell;
+   let localPlayerSpells = [];
+   let localCombatLogs = [];
 
     let submapEntrances = [];
 
@@ -98,7 +101,7 @@
     worldMap = worldMapData;
     submapEntrances = submapEntrancesData;
 
-    currentPlayer = {
+    localCurrentPlayer = {
     id: playerData.player.id,
     username: playerData.player.username,
     level: playerData.player.level,
@@ -115,15 +118,15 @@
     subspriteHairHat:playerData.player.subspriteHairHat
     // Add other relevant player properties here
 };
-    isInSubmap = currentPlayer.currentSubmapId != null;
+    isInSubmap = localCurrentPlayer.currentSubmapId != null;
     canvas.width = VIEWPORT_WIDTH;
     canvas.height = VIEWPORT_HEIGHT;
 
-    updatePlayerInfo();
+    updatePlayerInfoLocal();
     setupWebSocket();
 
-    if (currentPlayer.currentSubmapId) {
-    loadSubmapData(currentPlayer.currentSubmapId);
+    if (localCurrentPlayer.currentSubmapId) {
+    loadSubmapData(localCurrentPlayer.currentSubmapId);
 } else {
     drawWorldMap();
     fetchPlayersInViewport();
@@ -386,8 +389,8 @@
     setInterval(fetchWorldObjectsInViewport, 3000);
     function handleSubmapTerrainClick(clickX, clickY) {
     // Convert click coordinates to submap coordinates
-    const submapX = currentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
-    const submapY = currentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
+    const submapX = localCurrentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
+    const submapY = localCurrentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
 
     // Check if the click is on an exit point
     if(currentSubmap.elements) {
@@ -429,15 +432,15 @@
     function findClickedPlayer(clickX, clickY) {
     const playerList =  players;
     for (const player of playerList) {
-    if (player.id === currentPlayer.id) continue; // Skip current player
+    if (player.id === localCurrentPlayer.id) continue; // Skip current player
 
     let playerX, playerY;
     if (isInSubmap) {
-    playerX = player.submapCoordinateX - currentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
-    playerY = player.submapCoordinateY - currentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
+    playerX = player.submapCoordinateX - localCurrentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
+    playerY = player.submapCoordinateY - localCurrentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
 } else {
-    playerX = player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-    playerY = player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+    playerX = player.worldPositionX - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+    playerY = player.worldPositionY - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
 }
 
     const dx = clickX - playerX;
@@ -466,8 +469,8 @@
     returnToOverworld();
 } else {
     // Convert click coordinates to submap coordinates
-    const submapX = currentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
-    const submapY = currentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
+    const submapX = localCurrentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
+    const submapY = localCurrentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
 
     // Ensure the target is within submap boundaries
     const targetX = Math.max(0, Math.min(currentSubmap.width - 1, submapX));
@@ -486,8 +489,8 @@
     const REPORT_THRESHOLD = 10; // Minimum distance to move before reporting to server
 
     function setupMovementPath(targetX, targetY) {
-    const startX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
-    const startY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+    const startX = isInSubmap ? localCurrentPlayer.submapCoordinateX : getCurrentPlayerX();
+    const startY = isInSubmap ? localCurrentPlayer.submapCoordinateY : getCurrentPlayerY();
 
     const dx = targetX - startX;
     const dy = targetY - startY;
@@ -578,7 +581,7 @@
     fetch(`/api/submaps/${submapId}/move/${getCurrentPlayerId()}`, { method: 'POST' })
         .then(response => response.json())
         .then(updatedPlayer => {
-            currentPlayer = {
+            localCurrentPlayer = {
                 id: updatedPlayer.id,
                 username: updatedPlayer.username,
                 level: updatedPlayer.level,
@@ -605,23 +608,23 @@
     offscreenCanvas.width = VIEWPORT_WIDTH;
     offscreenCanvas.height = VIEWPORT_HEIGHT;
     function drawWorldMap() {
-        if (currentCombatId){
+        if (localCurrentCombatId){
             return;
         }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
 
-        const startX = Math.floor(currentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
-        const startY = Math.floor(currentPlayer.worldPositionY / LAND_SIZE) * LAND_SIZE;
+        const startX = Math.floor(localCurrentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
+        const startY = Math.floor(localCurrentPlayer.worldPositionY / LAND_SIZE) * LAND_SIZE;
 
         for (let y = -LAND_SIZE; y <= VIEWPORT_HEIGHT + LAND_SIZE; y += LAND_SIZE) {
             for (let x = -LAND_SIZE; x <= VIEWPORT_WIDTH + LAND_SIZE; x += LAND_SIZE) {
                 const worldX = startX + x;
                 const worldY = startY + y;
 
-                const offsetX = Math.round(x - (currentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
-                const offsetY = Math.round(y - (currentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
+                const offsetX = Math.round(x - (localCurrentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
+                const offsetY = Math.round(y - (localCurrentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
 
                 offscreenCtx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
                 offscreenCtx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
@@ -632,9 +635,9 @@
         }
 
         for (const player of players) {
-            if (player.id !== currentPlayer.id && !currentPlayer.currentSubmapId) {
-                const x = Math.round(player.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
-                const y = Math.round(player.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
+            if (player.id !== localCurrentPlayer.id && !localCurrentPlayer.currentSubmapId) {
+                const x = Math.round(player.worldPositionX - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
+                const y = Math.round(player.worldPositionY - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
 
                 if (x >= -SPRITE_SIZE/2 && x < VIEWPORT_WIDTH + SPRITE_SIZE/2 &&
                     y >= -SPRITE_SIZE/2 && y < VIEWPORT_HEIGHT + SPRITE_SIZE/2) {
@@ -645,21 +648,21 @@
 
         mapItems.forEach(item => {
             console.log(item)
-            const x = item.worldMapCoordinateX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-            const y = item.worldMapCoordinateY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            const x = item.worldMapCoordinateX - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = item.worldMapCoordinateY - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
             drawMapItem(x, y, item, offscreenCtx);
         });
 
         submapEntrances.forEach(entrance => {
-            const x = entrance.x - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-            const y = entrance.y - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            const x = entrance.x - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = entrance.y - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
             offscreenCtx.fillStyle = '#FF00FF'; // Magenta color for visibility
             offscreenCtx.fillRect(x - 5, y - 5, 10, 10);
         });
 
         encampments.forEach(encampment => {
-            const x = encampment.worldPositionX - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-            const y = encampment.worldPositionY - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            const x = encampment.worldPositionX - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+            const y = encampment.worldPositionY - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
             drawEncampment(x, y, encampment);
         });
 
@@ -669,15 +672,15 @@
                 .filter(name => name);
 
             preloadSprites(spriteNames2);
-                const x = obj.xPos - currentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-                const y = obj.yPos - currentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+                const x = obj.xPos - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
+                const y = obj.yPos - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
                 drawWorldObject(x,y, obj, offscreenCtx)
         })
 
 
-        drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
+        drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, localCurrentPlayer, true);
 
-        coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
+        coordsDisplay.textContent = `X: ${localCurrentPlayer.worldPositionX}, Y: ${localCurrentPlayer.worldPositionY}`;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(offscreenCanvas, 0, 0);
     }
@@ -838,11 +841,11 @@
 });
 }
 
-    function updatePlayerInfo() {
-    if (currentPlayer) {
-    document.getElementById('player-name').textContent = currentPlayer.username || '';
-    document.getElementById('player-level').textContent = currentPlayer.level || '';
-    document.getElementById('player-exp').textContent = currentPlayer.currentSubmapId || 'NO SUBMAP';
+    function updatePlayerInfoLocal() {
+    if (localCurrentPlayer) {
+    document.getElementById('player-name').textContent = localCurrentPlayer.username || '';
+    document.getElementById('player-level').textContent = localCurrentPlayer.level || '';
+    document.getElementById('player-exp').textContent = localCurrentPlayer.currentSubmapId || 'NO SUBMAP';
 }
 }
 
@@ -851,7 +854,7 @@
     nearbyPlayersList.innerHTML = '';
     let c = 0;
     players.forEach(player => {
-    if (player.id !== currentPlayer.id) {
+    if (player.id !== localCurrentPlayer.id) {
         if(c < 10) {
             const li = document.createElement('li');
             li.textContent = `${player.username} (Level ${player.level})${player.npc ? ' [NPC]' : ''}`;
@@ -876,7 +879,7 @@
     let interpolationData = {};
 
     function updatePlayerPosition(playerIdOfPlayerToUpdate, x, y) {
-        if (!currentPlayer) {
+        if (!localCurrentPlayer) {
             console.error('Current player is not initialized');
             return;
         }
@@ -894,7 +897,7 @@
                 return;
             }
             setCurrentPlayerPosition(x, y);
-            updatePlayerInfo();
+            updatePlayerInfoLocal();
         } else {
             const player = players.find(p => p.id === playerIdOfPlayerToUpdate);
             if (player) {
@@ -972,8 +975,8 @@
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
     playerId: getCurrentPlayerId(),
-    x: Math.round(currentPlayer.submapCoordinateX),
-    y: Math.round(currentPlayer.submapCoordinateY)
+    x: Math.round(localCurrentPlayer.submapCoordinateX),
+    y: Math.round(localCurrentPlayer.submapCoordinateY)
 })
 }).catch(error => console.error('Error updating player position in submap:', error));
 } else {
@@ -982,8 +985,8 @@
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
     playerId: getCurrentPlayerId(),
-    newX: Math.round(currentPlayer.worldPositionX),
-    newY: Math.round(currentPlayer.worldPositionY)
+    newX: Math.round(localCurrentPlayer.worldPositionX),
+    newY: Math.round(localCurrentPlayer.worldPositionY)
 })
 }).catch(error => console.error('Error updating player position in overworld:', error));
 }
@@ -997,12 +1000,12 @@
     const dy = normalizedVector.y * (MOVE_SPEED * MOVE_INTERVAL / 1000);
 
     if (isInSubmap) {
-    currentPlayer.submapCoordinateX = Math.max(0, Math.min(currentSubmap.width - 1, currentPlayer.submapCoordinateX + dx));
-    currentPlayer.submapCoordinateY = Math.max(0, Math.min(currentSubmap.height - 1, currentPlayer.submapCoordinateY + dy));
+    localCurrentPlayer.submapCoordinateX = Math.max(0, Math.min(currentSubmap.width - 1, localCurrentPlayer.submapCoordinateX + dx));
+    localCurrentPlayer.submapCoordinateY = Math.max(0, Math.min(currentSubmap.height - 1, localCurrentPlayer.submapCoordinateY + dy));
     drawSubmap();
 } else {
-    currentPlayer.worldPositionX += dx;
-    currentPlayer.worldPositionY += dy;
+    localCurrentPlayer.worldPositionX += dx;
+    localCurrentPlayer.worldPositionY += dy;
     drawWorldMap();
 }
 }
@@ -1030,7 +1033,7 @@
     function startCombat(combatId) {
     mp3Player.loadTrack('/audio/battle.mp3');
     mp3Player.togglePlayPause();
-    currentCombatId = combatId;
+    localCurrentCombatId = combatId;
     document.getElementById('worldMapContainer').style.display = 'none';
     document.getElementById('combatArea').style.display = 'block';
     fetchCombatState(combatId);
@@ -1064,7 +1067,7 @@
 
 
     function updateCombatUI(combat) {
-    updatePlayerCards(combat, currentPlayer.id);
+    updatePlayerCards(combat, localCurrentPlayer.id);
     updateTurnIndicator(combat);
     updateCombatInfo(combat);
     updateSpellCooldowns(combat);
@@ -1173,7 +1176,7 @@
 
 
     function performAction(actionType) {
-        selectedAction = actionType;
+        localSelectedAction = actionType;
         const spellSelection = document.getElementById('spellSelection');
         const specialAttackSelection = document.getElementById('specialAttackSelection');
         const targetSelection = document.getElementById('targetSelection');
@@ -1202,18 +1205,18 @@
 
         let actionData = {
             playerId: playerId,
-            type: selectedAction,
+            type: localSelectedAction,
             targetPlayerId: targetPlayerId,
             actionPoints: 1
         };
 
-        if (selectedAction === 'SPELL') {
-            if (!selectedSpell) {
+        if (localSelectedAction === 'SPELL') {
+            if (!localSelectedSpell) {
                 alert('Please select a spell.');
                 return;
             }
-            actionData.spellId = selectedSpell.id;
-        } else if (selectedAction === 'SPECIAL_ATTACK') {
+            actionData.spellId = localSelectedSpell.id;
+        } else if (localSelectedAction === 'SPECIAL_ATTACK') {
             if (!selectedSpecialAttack) {
                 alert('Please select a special attack.');
                 return;
@@ -1224,7 +1227,7 @@
             }
         }
 
-        fetch(`/api/combat/${currentCombatId}/action`, {
+        fetch(`/api/combat/${localCurrentCombatId}/action`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(actionData)
@@ -1235,7 +1238,7 @@
                 document.getElementById('spellSelection').style.display = 'none';
                 document.getElementById('specialAttackSelection').style.display = 'none';
                 document.getElementById('targetSelection').style.display = 'none';
-                fetchStatusEffects(currentCombatId);
+                fetchStatusEffects(localCurrentCombatId);
                 if (!updatedCombat.active) {
                     showCombatResults(updatedCombat);
                 }
@@ -1245,7 +1248,7 @@
                 alert('An error occurred while performing the action. Please try again.');
             });
 
-        selectedSpell = null;
+        localSelectedSpell = null;
         selectedSpecialAttack = null;
     }
 
@@ -1254,20 +1257,20 @@
     fetch(`/api/players/${playerId}/spells`)
         .then(response => response.json())
         .then(spells => {
-            playerSpells = spells;
+            localPlayerSpells = spells;
             updateSpellSelection();
         })
         .catch(error => console.error('Error fetching player spells:', error));
 }
 
     function pollCombatStatus() {
-    if (!currentCombatId) {
+    if (!localCurrentCombatId) {
     console.log('No active combat to poll');
     return;
 }
 
-    console.log('Polling combat status for:', currentCombatId);
-    fetch(`/api/combat/${currentCombatId}`)
+    console.log('Polling combat status for:', localCurrentCombatId);
+    fetch(`/api/combat/${localCurrentCombatId}`)
     .then(response => response.json())
     .then(combat => {
     console.log('Received combat update:', combat);
@@ -1294,7 +1297,7 @@
                     <img src="/sprites/enemy_skeleton.png" width="${size}" height="${size}">
                 </div>`;
 } else {
-    const player = players.find(p => p.id === playerId) || currentPlayer;
+    const player = players.find(p => p.id === playerId) || localCurrentPlayer;
     return `
             <div class="player-sprite" style="width:${size}px;height:${size}px;">
                 <img src="/sprites/${player.subspriteBackground || 'background_1'}.png" class="sprite-layer">
@@ -1327,7 +1330,7 @@
     const cooldowns = combat.spellCooldowns[playerId];
     const cooldownInfo = Object.entries(cooldowns)
     .map(([spellId, cooldown]) => {
-    const spell = playerSpells.find(s => s.id === spellId);
+    const spell = localPlayerSpells.find(s => s.id === spellId);
     return spell ? `${spell.name}: ${cooldown}` : null;
 })
     .filter(Boolean)
@@ -1351,7 +1354,7 @@
     fetch(`/api/combat/${combatId}/logs`)
         .then(response => response.json())
         .then(logs => {
-            combatLogs = logs;
+            localCombatLogs = logs;
             updateCombatLogDisplay();
         })
         .catch(error => console.error('Error fetching combat logs:', error));
@@ -1359,7 +1362,7 @@
 
     function updateCombatLogDisplay() {
     const combatLogDiv = document.getElementById('combatLog');
-    combatLogDiv.innerHTML = combatLogs.map(log => createCombatLogEntry(log)).join('');
+    combatLogDiv.innerHTML = localCombatLogs.map(log => createCombatLogEntry(log)).join('');
     combatLogDiv.scrollTop = combatLogDiv.scrollHeight;
 }
 
@@ -1377,7 +1380,7 @@
 
     // We should also update the handleSpellSelection function to show the target selection
     function handleSpellSelection(spellId) {
-        selectedSpell = playerSpells.find(spell => spell.id === spellId);
+        localSelectedSpell = localPlayerSpells.find(spell => spell.id === spellId);
         updateSpellInfo();
 
         // Update visual selection
@@ -1401,16 +1404,16 @@
         if (isPlayerTurn) {
             document.getElementById('actionButtons').style.display = 'block';
 
-            if (selectedAction === 'SPELL') {
+            if (localSelectedAction === 'SPELL') {
                 spellSelection.style.display = 'block';
                 spellSelectionBar.style.display = 'flex';
                 spellInfoContainer.style.display = 'block';
-                if (selectedSpell) {
+                if (localSelectedSpell) {
                     targetSelection.style.display = 'block';
                 } else {
                     targetSelection.style.display = 'none';
                 }
-            } else if (selectedAction) {
+            } else if (localSelectedAction) {
                 spellSelection.style.display = 'none';
                 targetSelection.style.display = 'block';
             } else {
@@ -1429,7 +1432,7 @@
         const spellSelectionBar = document.getElementById('spellSelectionBar');
         spellSelectionBar.innerHTML = '';
 
-        playerSpells.forEach(spell => {
+        localPlayerSpells.forEach(spell => {
             const spellIcon = document.createElement('img');
             spellIcon.src = `/sprites/spells/${spell.spellSpritePath}.png`;
             spellIcon.alt = spell.name;
@@ -1439,22 +1442,22 @@
             spellSelectionBar.appendChild(spellIcon);
         });
 
-        if (playerSpells.length > 0) {
-            handleSpellSelection(playerSpells[0].id);
+        if (localPlayerSpells.length > 0) {
+            handleSpellSelection(localPlayerSpells[0].id);
         }
     }
 
 
     function updateSpellInfo() {
-        if (selectedSpell) {
-            document.getElementById('spellInfoName').textContent = selectedSpell.name;
-            document.getElementById('spellInfoDescription').textContent = selectedSpell.description;
-            document.getElementById('spellInfoManaCost').textContent = `Mana Cost: ${selectedSpell.manaCost}`;
-            document.getElementById('spellInfoCooldown').textContent = `Cooldown: ${selectedSpell.cooldown} turns`;
+        if (localSelectedSpell) {
+            document.getElementById('spellInfoName').textContent = localSelectedSpell.name;
+            document.getElementById('spellInfoDescription').textContent = localSelectedSpell.description;
+            document.getElementById('spellInfoManaCost').textContent = `Mana Cost: ${localSelectedSpell.manaCost}`;
+            document.getElementById('spellInfoCooldown').textContent = `Cooldown: ${localSelectedSpell.cooldown} turns`;
 
             const spriteImg = document.getElementById('spellSprite');
-            spriteImg.src = `/sprites/spells/${selectedSpell.spellSpritePath}.png`;
-            spriteImg.alt = `${selectedSpell.name} Sprite`;
+            spriteImg.src = `/sprites/spells/${localSelectedSpell.spellSpritePath}.png`;
+            spriteImg.alt = `${localSelectedSpell.name} Sprite`;
         }
     }
 
@@ -1464,7 +1467,7 @@
     const targetSelect = document.getElementById('targetSelect');
     targetSelect.innerHTML = '';
 
-    fetch(`/api/combat/${currentCombatId}`)
+    fetch(`/api/combat/${localCurrentCombatId}`)
     .then(response => response.json())
     .then(combat => {
     combat.playerIds.forEach(id => {
@@ -1560,7 +1563,7 @@
         mp3Player.audio.play();
     document.getElementById('combatResults').style.display = 'none';
     document.getElementById('worldMapContainer').style.display = 'flex';
-    currentCombatId = null;
+    localCurrentCombatId = null;
     selectedPlayer = null;
     hideDuelButton();
     drawWorldMap();
@@ -1607,13 +1610,13 @@
             let distance;
             if (isInSubmap) {
                 distance = Math.sqrt(
-                    Math.pow(player.submapCoordinateX - currentPlayer.submapCoordinateX, 2) +
-                    Math.pow(player.submapCoordinateY - currentPlayer.submapCoordinateY, 2)
+                    Math.pow(player.submapCoordinateX - localCurrentPlayer.submapCoordinateX, 2) +
+                    Math.pow(player.submapCoordinateY - localCurrentPlayer.submapCoordinateY, 2)
                 );
             } else {
                 distance = Math.sqrt(
-                    Math.pow(player.worldPositionX - currentPlayer.worldPositionX, 2) +
-                    Math.pow(player.worldPositionY - currentPlayer.worldPositionY, 2)
+                    Math.pow(player.worldPositionX - localCurrentPlayer.worldPositionX, 2) +
+                    Math.pow(player.worldPositionY - localCurrentPlayer.worldPositionY, 2)
                 );
             }
 
@@ -1656,7 +1659,7 @@
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-    challengerId: currentPlayer.id,
+    challengerId: localCurrentPlayer.id,
     targetId: selectedPlayer.id
 })
 })
@@ -1700,7 +1703,7 @@
     })
         .then(response => response.json())
         .then(updatedPlayer => {
-            currentPlayer = {
+            localCurrentPlayer = {
                 id: updatedPlayer.id,
                 username: updatedPlayer.username,
                 level: updatedPlayer.level,
@@ -1729,12 +1732,12 @@
     x = Math.max(0, Math.min(currentSubmap.width - 1, x));
     y = Math.max(0, Math.min(currentSubmap.height - 1, y));
 
-    if (x === currentPlayer.submapCoordinateX && y === currentPlayer.submapCoordinateY) {
+    if (x === localCurrentPlayer.submapCoordinateX && y === localCurrentPlayer.submapCoordinateY) {
     return;
 }
 
-    currentPlayer.submapCoordinateX = x;
-    currentPlayer.submapCoordinateY = y;
+    localCurrentPlayer.submapCoordinateX = x;
+    localCurrentPlayer.submapCoordinateY = y;
     drawSubmap();
 }
 
@@ -1779,8 +1782,8 @@
     const throttledWsTransmitPosition = throttle(wsTransmitPosition, 200);
 
     function checkAndReportPosition() {
-        const currentX = isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX();
-        const currentY = isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY();
+        const currentX = isInSubmap ? localCurrentPlayer.submapCoordinateX : getCurrentPlayerX();
+        const currentY = isInSubmap ? localCurrentPlayer.submapCoordinateY : getCurrentPlayerY();
 
         const dx = currentX - lastReportedPosition.x;
         const dy = currentY - lastReportedPosition.y;
@@ -1796,8 +1799,8 @@
     function processKeyboardMovement() {
     if (movementVector.x !== 0 || movementVector.y !== 0) {
     const normalizedVector = normalizeVector(movementVector);
-    const newX = (isInSubmap ? currentPlayer.submapCoordinateX : getCurrentPlayerX()) + normalizedVector.x * MOVE_SPEED;
-    const newY = (isInSubmap ? currentPlayer.submapCoordinateY : getCurrentPlayerY()) + normalizedVector.y * MOVE_SPEED;
+    const newX = (isInSubmap ? localCurrentPlayer.submapCoordinateX : getCurrentPlayerX()) + normalizedVector.x * MOVE_SPEED;
+    const newY = (isInSubmap ? localCurrentPlayer.submapCoordinateY : getCurrentPlayerY()) + normalizedVector.y * MOVE_SPEED;
     movePlayer(Math.round(newX), Math.round(newY));
 }
 }
@@ -1834,16 +1837,16 @@
     // Draw other players in the submap
     players.forEach(player => {
     if (player.id !== getCurrentPlayerId()) {
-    const x = player.submapCoordinateX - currentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
-    const y = player.submapCoordinateY - currentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
+    const x = player.submapCoordinateX - localCurrentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
+    const y = player.submapCoordinateY - localCurrentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
     drawPlayer(x, y, player, false);
 }
 });
 
     // Draw current player
-    drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
+    drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, localCurrentPlayer, true);
 
-    coordsDisplay.textContent = `Submap: ${currentSubmap ? currentSubmap.title : 'Unknown'} | X: ${currentPlayer.submapCoordinateX}, Y: ${currentPlayer.submapCoordinateY}`;
+    coordsDisplay.textContent = `Submap: ${currentSubmap ? currentSubmap.title : 'Unknown'} | X: ${localCurrentPlayer.submapCoordinateX}, Y: ${localCurrentPlayer.submapCoordinateY}`;
 }
 
     function loadSubmapData(submapId) {
@@ -1881,7 +1884,7 @@
 
     socket.onopen = function(event) {
     console.log('WebSocket connection established');
-    socket.send(JSON.stringify({ type: 'register', playerId: currentPlayer.id }));
+    socket.send(JSON.stringify({ type: 'register', playerId: localCurrentPlayer.id }));
 };
 
     socket.onmessage = function(event) {
@@ -1921,7 +1924,7 @@
 
     function handleDuelAccepted(combatId, playerIds) {
     console.log('Duel accepted, starting combat:', combatId);
-    currentCombatId = combatId;
+    localCurrentCombatId = combatId;
     document.getElementById('worldMapContainer').style.display = 'none';
     document.getElementById('combatArea').style.display = 'block';
 
@@ -1942,7 +1945,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             challengerId: challengerId,
-            targetId: currentPlayer.id
+            targetId: localCurrentPlayer.id
         })
     })
         .then(response => response.json())
@@ -1963,7 +1966,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             challengerId: challengerId,
-            targetId: currentPlayer.id
+            targetId: localCurrentPlayer.id
         })
     })
         .then(response => response.json())
@@ -2021,12 +2024,12 @@
 
         if (dx !== 0 || dy !== 0) {
             if (isInSubmap) {
-                const newX = Math.max(0, Math.min(currentSubmap.width - 1, currentPlayer.submapCoordinateX + dx));
-                const newY = Math.max(0, Math.min(currentSubmap.height - 1, currentPlayer.submapCoordinateY + dy));
+                const newX = Math.max(0, Math.min(currentSubmap.width - 1, localCurrentPlayer.submapCoordinateX + dx));
+                const newY = Math.max(0, Math.min(currentSubmap.height - 1, localCurrentPlayer.submapCoordinateY + dy));
                 movePlayerInSubmap(Math.round(newX), Math.round(newY));
             } else {
-                const newX = currentPlayer.worldPositionX + dx;
-                const newY = currentPlayer.worldPositionY + dy;
+                const newX = localCurrentPlayer.worldPositionX + dx;
+                const newY = localCurrentPlayer.worldPositionY + dy;
                 updatePlayerPosition(getCurrentPlayerId(), Math.round(newX), Math.round(newY));
             }
         }
@@ -2065,7 +2068,7 @@
     const message = this.value;
     if (message.trim() !== '') {
     // In a real implementation, you would send this message to your server
-    addChatMessage(currentPlayer.username, message);
+    addChatMessage(localCurrentPlayer.username, message);
     this.value = '';
 }
 }
@@ -2083,25 +2086,25 @@
     //HELPERS:
 
     function getCurrentPlayerId() {
-    return currentPlayer ? currentPlayer.id : null;
+    return localCurrentPlayer ? localCurrentPlayer.id : null;
 }
 
     function getCurrentPlayerX() {
-    return currentPlayer ? currentPlayer.worldPositionX : 0;
+    return localCurrentPlayer ? localCurrentPlayer.worldPositionX : 0;
 }
 
     function getCurrentPlayerY() {
-    return currentPlayer ? currentPlayer.worldPositionY : 0;
+    return localCurrentPlayer ? localCurrentPlayer.worldPositionY : 0;
 }
 
     function getCurrentPlayerData() {
-    return currentPlayer || null;
+    return localCurrentPlayer || null;
 }
 
     function setCurrentPlayerPosition(x, y) {
-    if (currentPlayer) {
-    currentPlayer.worldPositionX = x;
-    currentPlayer.worldPositionY = y;
+    if (localCurrentPlayer) {
+    localCurrentPlayer.worldPositionX = x;
+    localCurrentPlayer.worldPositionY = y;
 }
 }
 
@@ -2109,8 +2112,8 @@
 
 //ITEM PICKUP
     function attemptItemPickup() {
-        const playerX = isInSubmap ? currentPlayer.submapCoordinateX : currentPlayer.worldPositionX;
-        const playerY = isInSubmap ? currentPlayer.submapCoordinateY : currentPlayer.worldPositionY;
+        const playerX = isInSubmap ? localCurrentPlayer.submapCoordinateX : localCurrentPlayer.worldPositionX;
+        const playerY = isInSubmap ? localCurrentPlayer.submapCoordinateY : localCurrentPlayer.worldPositionY;
         const pickupRadius = 50; // Adjust this value as needed
 
         const nearbyItems = mapItems.filter(item => {
@@ -2136,7 +2139,7 @@
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                playerId: currentPlayer.id
+                playerId: localCurrentPlayer.id
             })
         })
             .then(response => response.json())
@@ -2194,8 +2197,8 @@
             const message = {
                 type: 'playerMove',
                 playerId: getCurrentPlayerId(),
-                x: Math.round(currentPlayer.worldPositionX),
-                y: Math.round(currentPlayer.worldPositionY)
+                x: Math.round(localCurrentPlayer.worldPositionX),
+                y: Math.round(localCurrentPlayer.worldPositionY)
             };
             socket.send(JSON.stringify(message));
         }

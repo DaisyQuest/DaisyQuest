@@ -15,7 +15,7 @@ let playerCurrencies = {};
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
 //document.getElementById('startCombatBtn').addEventListener('click', startCombat);
-document.getElementById('spellSelect').addEventListener('change', handleSpellSelection);
+// document.getElementById('spellSelect').addEventListener('change', handleSpellSelection);
 
 // Initialization
 function initializeGame() {
@@ -686,8 +686,8 @@ function fetchAttributes() {
         .then(response => response.json())
         .then(data => {
             attributes = data;
-            createAttributeTabs('quest');
-            createAttributeTabs('activity');
+          //  createAttributeTabs('quest');
+         //   createAttributeTabs('activity');
         });
 }
 
@@ -1278,29 +1278,29 @@ function convertTimestampToReadableDate(timestamp) {
     var formattedDate = date.toLocaleString();
     return formattedDate;
 }
-
-function createAttributeTabs(taskType) {
-    const tabList = document.getElementById(`${taskType}AttributeTabs`);
-    const tabContent = document.getElementById(`${taskType}AttributeTabContent`);
-
-    attributes.forEach((attr, index) => {
-        const tab = document.createElement('li');
-        tab.className = 'nav-item';
-        tab.innerHTML = `
-            <button class="nav-link ${index === 0 ? 'active' : ''}" id="${taskType}-${attr}-tab" data-bs-toggle="tab" 
-                    data-bs-target="#${taskType}-${attr}" type="button" role="tab" 
-                    aria-controls="${taskType}-${attr}" aria-selected="${index === 0}">${attr}</button>
-        `;
-        tabList.appendChild(tab);
-
-        const content = document.createElement('div');
-        content.className = `tab-pane fade ${index === 0 ? 'show active' : ''}`;
-        content.id = `${taskType}-${attr}`;
-        content.setAttribute('role', 'tabpanel');
-        content.setAttribute('aria-labelledby', `${taskType}-${attr}-tab`);
-        tabContent.appendChild(content);
-    });
-}
+//
+// function createAttributeTabs(taskType) {
+//     const tabList = document.getElementById(`${taskType}AttributeTabs`);
+//     const tabContent = document.getElementById(`${taskType}AttributeTabContent`);
+//
+//     attributes.forEach((attr, index) => {
+//         const tab = document.createElement('li');
+//         tab.className = 'nav-item';
+//         tab.innerHTML = `
+//             <button class="nav-link ${index === 0 ? 'active' : ''}" id="${taskType}-${attr}-tab" data-bs-toggle="tab"
+//                     data-bs-target="#${taskType}-${attr}" type="button" role="tab"
+//                     aria-controls="${taskType}-${attr}" aria-selected="${index === 0}">${attr}</button>
+//         `;
+//         tabList.appendChild(tab);
+//
+//         const content = document.createElement('div');
+//         content.className = `tab-pane fade ${index === 0 ? 'show active' : ''}`;
+//         content.id = `${taskType}-${attr}`;
+//         content.setAttribute('role', 'tabpanel');
+//         content.setAttribute('aria-labelledby', `${taskType}-${attr}-tab`);
+//         tabContent.appendChild(content);
+//     });
+// }
 
 function createTaskList(tasks, taskType) {
     return `

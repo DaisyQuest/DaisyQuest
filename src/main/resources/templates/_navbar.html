@@ -1,0 +1,14 @@
+<!-- _navbar.html -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary" th:fragment="navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">DaisyQuest</a>
+    <div id="interactiveMapPlayButton"></div>
+
+    <div id="unclaimedRewardsIndicator" class="unclaimed-rewards-indicator">
+      Unclaimed Rewards <span id="unclaimedRewardsCount" class="badge">0</span>
+    </div>
+    <button id="claimDailyRewardBtn" style="display: none;" onclick="claimDailyReward()">
+      Claim Daily Reward
+    </button>
+  </div>
+</nav>

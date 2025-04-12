@@ -1,0 +1,33 @@
+<!-- _worldMapTab.html -->
+<div class="tab-pane fade" id="worldMapH" role="tabpanel" aria-labelledby="world-tab"
+     th:fragment="worldMapTab">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">World Map</h5>
+            <div id="worldMaps"></div>
+            <div id="worldMap" class="world-map">
+                <!-- Map tiles will be dynamically inserted here -->
+            </div>
+
+            <div id="landDetails" class="land-details">
+                <h3>Land Details</h3>
+                <div id="landInfo"></div>
+                <button id="buyButton" onclick="buyLand()">Buy Land</button>
+                <button id="sellButton" onclick="sellLand()">Sell Land</button>
+                <button id="partitionButton" onclick="partitionLand()">Partition Land</button>
+            </div>
+
+            <div id="partitionModal" class="modal">
+                <div class="modal-content">
+                    <h3>Partition Land</h3>
+                    <label for="partitionArea">Area:</label>
+                    <input type="number" id="partitionArea" min="0.1" max="1" step="0.1">
+                    <label for="payoutInterval">Payout Interval:</label>
+                    <input type="number" id="payoutInterval" min="1">
+                    <button onclick="submitPartition()">Create Partition</button>
+                    <button onclick="closeModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

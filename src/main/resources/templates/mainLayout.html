@@ -1,0 +1,234 @@
+<!-- mainLayout.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DaisyQuest - Main Layout</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          rel="stylesheet"/>
+
+    <!-- Your custom CSS (optional) -->
+    <link th:href="@{/css/inventory.css}" rel="stylesheet"/>
+
+    <!-- Inline or additional styling as needed -->
+    <style>
+        body {
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        .game-container {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        /* Sidebar will come from _sidebar.html, inGameMenu from inGameMenu.html */
+
+        /* Example .world-map-container styling */
+        .world-map-container {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .world-map-content {
+            flex-grow: 1;
+            min-height: 700px; /* Adapt this as needed */
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .world-map-button {
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: fit-content;
+        }
+        .world-map-button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+
+        /* Adjust how you want the sidebar vs. inGameMenu to appear side by side */
+        .sidebar-column {
+            flex: 0 0 250px; /* width of your sidebar */
+            margin-right: 20px;
+        }
+        .menu-column {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        /* Optional if you want the world map to share space with the menu */
+        /* If you want the world map container at the top or below the sidebar, adapt the layout accordingly. */
+    </style>
+</head>
+
+<body>
+
+<!-- 1) Navbar Fragment -->
+<div th:replace="'_navbar.html' :: navbar"></div>
+
+<!-- 2) Main container for the game -->
+<div class="container-fluid game-container">
+    <!-- 2a) Sidebar Fragment (left side) -->
+    <div class="sidebar-column" th:replace="'_sidebar.html' :: sidebar"></div>
+
+    <!-- 2b) The world map container (iFrame embedding) -->
+    <div class="world-map-container">
+        <!-- The div to embed /worldMap into an iframe -->
+        <div id="embeddedContent" class="world-map-content"></div>
+
+        <!-- Button to reload or start the iframe -->
+        <button class="world-map-button" id="action-button"
+                onclick="embedHTML('/worldMap', 'embeddedContent')">
+            Start / Reload World Map
+        </button>
+    </div>
+
+    <!-- 2c) In-Game Menu Tabs & Content (right side) -->
+    <div class="menu-column" th:replace="'inGameMenu.html' :: inGameMenu"></div>
+</div>
+
+<!-- 3) Script that defines embedHTML() and showHTMLDialog() -->
+<script>
+    (function() {
+        // Styles used for embedding or showing a dialog
+        const styles = `
+    .html-viewer-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .html-viewer-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 5px;
+        width: 90%;
+        height: 90%;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+    .html-viewer-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 24px;
+        cursor: pointer;
+        background: none;
+        border: none;
+        color: #333;
+        z-index: 1001;
+    }
+    .html-viewer-iframe {
+        flex-grow: 1;
+        border: none;
+        margin-top: 20px;
+        width: 100%;
+        height: 100%;
+    }
+    .html-viewer-embed {
+        width: 100%;
+        height: 95%;
+        border: 1px solid #ccc;
+        margin-top: 20px;
+    }
+    `;
+
+        function addStyles() {
+            if (!document.getElementById('html-viewer-styles')) {
+                const styleElement = document.createElement('style');
+                styleElement.id = 'html-viewer-styles';
+                styleElement.textContent = styles;
+                document.head.appendChild(styleElement);
+            }
+        }
+
+        // Show an HTML file in a fullscreen "dialog" overlay
+        function showHTMLDialog(url) {
+            addStyles();
+
+            const dialogOverlay = document.createElement('div');
+            dialogOverlay.className = 'html-viewer-overlay';
+
+            const dialogContent = document.createElement('div');
+            dialogContent.className = 'html-viewer-content';
+
+            const closeButton = document.createElement('button');
+            closeButton.className = 'html-viewer-close';
+            closeButton.textContent = '×';
+            closeButton.onclick = () => document.body.removeChild(dialogOverlay);
+
+            const iframe = document.createElement('iframe');
+            iframe.className = 'html-viewer-iframe';
+            iframe.src = url;
+
+            dialogContent.appendChild(closeButton);
+            dialogContent.appendChild(iframe);
+            dialogOverlay.appendChild(dialogContent);
+            document.body.appendChild(dialogOverlay);
+        }
+
+        // Embed an HTML file in a target div (via an iframe)
+        function embedHTML(url, targetId) {
+            addStyles();
+            const targetDiv = document.getElementById(targetId);
+            if (!targetDiv) {
+                console.error(`Target div with id "${targetId}" not found.`);
+                return;
+            }
+            // Clear any existing content
+            targetDiv.innerHTML = '';
+
+            const iframe = document.createElement('iframe');
+            iframe.className = 'html-viewer-embed';
+            iframe.src = url;
+            // Allow the iframe to access the parent window if needed
+            iframe.setAttribute('allow', 'scripts');
+
+            targetDiv.appendChild(iframe);
+        }
+
+        // Expose these on the window for global usage (like onclick in HTML)
+        window.showHTMLDialog = showHTMLDialog;
+        window.embedHTML = embedHTML;
+        document.addEventListener('DOMContentLoaded', function() {
+            embedHTML('/worldMap', 'embeddedContent');
+        });
+    })();
+</script>
+
+<!-- 4) Load your other scripts at the bottom -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/game.js}"></script>
+<!-- Additional JS as needed -->
+<script th:src="@{/js/playerInventory.js}"></script>
+<script th:src="@{/js/talentTrees.js}"></script>
+
+<script th:src="@{/js/chat.js}"></script>
+
+</body>
+</html>
