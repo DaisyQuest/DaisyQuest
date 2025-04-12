@@ -12,5 +12,6 @@ public interface WorldObjectRepository extends MongoRepository<WorldObject, Stri
     List<WorldObject> findByxPosBetweenAndyPosBetween(int minX, int maxX, int minY, int maxY);
 
     // Helper methods for specific locations
+    @Query("{'xPos': ?0, 'yPos': ?1}")
     List<WorldObject> findByXPosAndYPos(int x, int y);
 }

@@ -10,7 +10,7 @@ version = '0.0.1-SNAPSHOT'
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
@@ -51,10 +51,10 @@ tasks.named('test') {
 
 def getCurrentBranch() {
     def stdout = new ByteArrayOutputStream()
-    exec {
-        commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
-        standardOutput = stdout
-    }
+  //  exec {
+      //  commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+      //  standardOutput = stdout
+  //  }
     return stdout.toString().trim()
 }
 

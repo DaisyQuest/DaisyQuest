@@ -232,7 +232,7 @@ public class WorldMapService {
         }
 
         double distance = Math.sqrt(Math.pow(itemX - playerX, 2) + Math.pow(itemY - playerY, 2));
-        return distance <= 50; // Adjust this value as needed
+        return distance <= INTERACTION_RANGE; // Adjust this value as needed
     }
 
     private static final int INTERACTION_RANGE = 1000; // Tiles
@@ -648,7 +648,7 @@ public class WorldMapService {
         }
 
         // Calculate maximum allowed movement distance
-        int maxDistance = 1; // Allow diagonal movement
+        int maxDistance = 1000; // Allow diagonal movement
         if (calculateDistance(player.getWorldPositionX(), player.getWorldPositionY(), newX, newY) > maxDistance) {
             throw new IllegalArgumentException("Movement distance too large");
         }
@@ -659,8 +659,8 @@ public class WorldMapService {
     }
 
     private boolean isWithinMapBounds(int x, int y) {
-        return x >= 0 && x < getWorldMap().getWidth() &&
-                y >= 0 && y < getWorldMap().getHeight();
+        return x >= 0 && x < getWorldMap().getWidth() * LAND_SIZE &&
+                y >= 0 && y < getWorldMap().getHeight() * LAND_SIZE;
     }
 
     private boolean isTraversable(int x, int y) {

@@ -3,6 +3,7 @@ package net.daisyquest.daisyquestgame.Config;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import net.daisyquest.daisyquestgame.Service.WorldMapService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -19,6 +20,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class WebSocketHandler extends TextWebSocketHandler {
     private static final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final WorldMapService worldMapService;
+
+    public WebSocketHandler(WorldMapService worldMapService) {
+        this.worldMapService = worldMapService;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -98,7 +104,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         ObjectNode enhancedMoveMessage = objectMapper.createObjectNode();
         moveMessage.fields().forEachRemaining(entry -> enhancedMoveMessage.set(entry.getKey(), entry.getValue()));
         enhancedMoveMessage.put("timestamp", timestamp);
-
+      //  worldMapService.movePlayer(movingPlayerId,enhancedMoveMessage.get("x").asInt(), enhancedMoveMessage.get("y").asInt());
         for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
             if (!entry.getKey().equals(movingPlayerId)) {
                 entry.getValue().sendMessage(new TextMessage(objectMapper.writeValueAsString(enhancedMoveMessage)));
