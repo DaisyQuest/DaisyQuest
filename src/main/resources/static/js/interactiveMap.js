@@ -41,8 +41,14 @@
 
 
     const LAND_SIZE = 10000;
-    const VIEWPORT_WIDTH = 1240;
-    const VIEWPORT_HEIGHT = 720;
+    // const VIEWPORT_WIDTH = 1240;
+    // const VIEWPORT_HEIGHT = 720;
+
+    function updateCanvasSize() {
+           canvas.width = canvas.clientWidth;
+           canvas.height = canvas.clientHeight;
+         }
+
     const SPRITE_SIZE = 64;
     let mp3Player;
     document.addEventListener('DOMContentLoaded', function() {
@@ -121,8 +127,8 @@
     // Add other relevant player properties here
 };
     isInSubmap = localCurrentPlayer.currentSubmapId != null;
-    canvas.width = VIEWPORT_WIDTH;
-    canvas.height = VIEWPORT_HEIGHT;
+    // canvas.width = VIEWPORT_WIDTH;
+    // canvas.height = VIEWPORT_HEIGHT;
 
     updatePlayerInfoLocal();
         updatePlayerInfoForGame();
@@ -145,7 +151,9 @@
 
     function initWorldMap() {
     initGameData();
-}
+    updateCanvasSize();
+
+    }
 
     // Add this function at the top of your script
     function throttle(func, limit) {
@@ -200,11 +208,11 @@
         console.log('Fetching world objects for viewport:', {
             centerX,
             centerY,
-            viewportWidth: VIEWPORT_WIDTH,
-            viewportHeight: VIEWPORT_HEIGHT
+            viewportWidth: canvas.width,
+            viewportHeight: canvas.height
         });
 
-        fetch(`/api/world-map/world-objects?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`, {
+        fetch(`/api/world-map/world-objects?centerX=${centerX}&centerY=${centerY}&viewportWidth=${canvas.width}&viewportHeight=${canvas.height}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json'
@@ -243,8 +251,8 @@
         }
 
         // Convert click coordinates to world coordinates
-        const worldX = getCurrentPlayerX() + Math.round(clickX - VIEWPORT_WIDTH / 2);
-        const worldY = getCurrentPlayerY() + Math.round(clickY - VIEWPORT_HEIGHT / 2);
+        const worldX = getCurrentPlayerX() + Math.round(clickX - canvas.width / 2);
+        const worldY = getCurrentPlayerY() + Math.round(clickY - canvas.height / 2);
 
         // Check for world objects first
         const clickedObject = findClickedWorldObject(clickX, clickY);
@@ -268,12 +276,12 @@
 
     // Add this function to find clicked world objects
     function findClickedWorldObject(clickX, clickY) {
-        const worldX = getCurrentPlayerX() + (clickX - VIEWPORT_WIDTH / 2);
-        const worldY = getCurrentPlayerY() + (clickY - VIEWPORT_HEIGHT / 2);
+        const worldX = getCurrentPlayerX() + (clickX - canvas.width / 2);
+        const worldY = getCurrentPlayerY() + (clickY - canvas.height / 2);
 
         return worldObjects.find(object => {
-            const screenX = object.xPos - getCurrentPlayerX() + VIEWPORT_WIDTH / 2;
-            const screenY = object.yPos - getCurrentPlayerY() + VIEWPORT_HEIGHT / 2;
+            const screenX = object.xPos - getCurrentPlayerX() + canvas.width / 2;
+            const screenY = object.yPos - getCurrentPlayerY() + canvas.height / 2;
 
             // Assuming objects have a standard interaction radius of 32 pixels
             const distance = Math.sqrt(
@@ -392,8 +400,8 @@
     setInterval(fetchWorldObjectsInViewport, 3000);
     function handleSubmapTerrainClick(clickX, clickY) {
     // Convert click coordinates to submap coordinates
-    const submapX = localCurrentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
-    const submapY = localCurrentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
+    const submapX = localCurrentPlayer.submapCoordinateX + (clickX - canvas.width / 2);
+    const submapY = localCurrentPlayer.submapCoordinateY + (clickY - canvas.height / 2);
 
     // Check if the click is on an exit point
     if(currentSubmap.elements) {
@@ -415,8 +423,8 @@
 }
 }
     function handleOverworldTerrainClick(clickX, clickY) {
-    const worldX = getCurrentPlayerX() + Math.round(clickX - VIEWPORT_WIDTH / 2);
-    const worldY = getCurrentPlayerY() + Math.round(clickY - VIEWPORT_HEIGHT / 2);
+    const worldX = getCurrentPlayerX() + Math.round(clickX - canvas.width / 2);
+    const worldY = getCurrentPlayerY() + Math.round(clickY - canvas.height / 2);
 
     // Check if click is on a submap entrance
     fetch(`/api/world-map/check-submap-entrance?x=${worldX}&y=${worldY}`)
@@ -439,11 +447,11 @@
 
     let playerX, playerY;
     if (isInSubmap) {
-    playerX = player.submapCoordinateX - localCurrentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
-    playerY = player.submapCoordinateY - localCurrentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
+    playerX = player.submapCoordinateX - localCurrentPlayer.submapCoordinateX + canvas.width / 2;
+    playerY = player.submapCoordinateY - localCurrentPlayer.submapCoordinateY + canvas.height / 2;
 } else {
-    playerX = player.worldPositionX - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-    playerY = player.worldPositionY - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+    playerX = player.worldPositionX - localCurrentPlayer.worldPositionX + canvas.width / 2;
+    playerY = player.worldPositionY - localCurrentPlayer.worldPositionY + canvas.height / 2;
 }
 
     const dx = clickX - playerX;
@@ -472,8 +480,8 @@
     returnToOverworld();
 } else {
     // Convert click coordinates to submap coordinates
-    const submapX = localCurrentPlayer.submapCoordinateX + (clickX - VIEWPORT_WIDTH / 2);
-    const submapY = localCurrentPlayer.submapCoordinateY + (clickY - VIEWPORT_HEIGHT / 2);
+    const submapX = localCurrentPlayer.submapCoordinateX + (clickX - canvas.width / 2);
+    const submapY = localCurrentPlayer.submapCoordinateY + (clickY - canvas.height / 2);
 
     // Ensure the target is within submap boundaries
     const targetX = Math.max(0, Math.min(currentSubmap.width - 1, submapX));
@@ -537,7 +545,7 @@
     const centerX = getCurrentPlayerX();
     const centerY = getCurrentPlayerY();
 
-    fetch(`/api/world-map/players?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
+    fetch(`/api/world-map/players?centerX=${centerX}&centerY=${centerY}&viewportWidth=${canvas.width}&viewportHeight=${canvas.height}`)
     .then(response => response.json())
     .then(data => {
     players = Array.isArray(data) ? data : [];
@@ -554,7 +562,7 @@
         const centerX = getCurrentPlayerX();
         const centerY = getCurrentPlayerY();
 
-        fetch(`/api/world-map/items?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
+        fetch(`/api/world-map/items?centerX=${centerX}&centerY=${centerY}&viewportWidth=${canvas.width}&viewportHeight=${canvas.height}`)
             .then(response => response.json())
             .then(data => {
                 mapItems = data;
@@ -608,8 +616,8 @@
     const offscreenCtx = offscreenCanvas.getContext('2d');
 
     // Set dimensions
-    offscreenCanvas.width = VIEWPORT_WIDTH;
-    offscreenCanvas.height = VIEWPORT_HEIGHT;
+    offscreenCanvas.width = canvas.width;
+    offscreenCanvas.height = canvas.height;
     function drawWorldMap() {
         if (localCurrentCombatId){
             return;
@@ -621,13 +629,13 @@
         const startX = Math.floor(localCurrentPlayer.worldPositionX / LAND_SIZE) * LAND_SIZE;
         const startY = Math.floor(localCurrentPlayer.worldPositionY / LAND_SIZE) * LAND_SIZE;
 
-        for (let y = -LAND_SIZE; y <= VIEWPORT_HEIGHT + LAND_SIZE; y += LAND_SIZE) {
-            for (let x = -LAND_SIZE; x <= VIEWPORT_WIDTH + LAND_SIZE; x += LAND_SIZE) {
+        for (let y = -LAND_SIZE; y <= canvas.height + LAND_SIZE; y += LAND_SIZE) {
+            for (let x = -LAND_SIZE; x <= canvas.width + LAND_SIZE; x += LAND_SIZE) {
                 const worldX = startX + x;
                 const worldY = startY + y;
 
-                const offsetX = Math.round(x - (localCurrentPlayer.worldPositionX % LAND_SIZE) + VIEWPORT_WIDTH / 2);
-                const offsetY = Math.round(y - (localCurrentPlayer.worldPositionY % LAND_SIZE) + VIEWPORT_HEIGHT / 2);
+                const offsetX = Math.round(x - (localCurrentPlayer.worldPositionX % LAND_SIZE) + canvas.width / 2);
+                const offsetY = Math.round(y - (localCurrentPlayer.worldPositionY % LAND_SIZE) + canvas.height / 2);
 
                 offscreenCtx.fillStyle = getTileColor(Math.floor(worldX / LAND_SIZE), Math.floor(worldY / LAND_SIZE));
                 offscreenCtx.fillRect(offsetX, offsetY, LAND_SIZE, LAND_SIZE);
@@ -639,11 +647,11 @@
 
         for (const player of players) {
             if (player.id !== localCurrentPlayer.id && !localCurrentPlayer.currentSubmapId) {
-                const x = Math.round(player.worldPositionX - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2);
-                const y = Math.round(player.worldPositionY - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2);
+                const x = Math.round(player.worldPositionX - localCurrentPlayer.worldPositionX + canvas.width / 2);
+                const y = Math.round(player.worldPositionY - localCurrentPlayer.worldPositionY + canvas.height / 2);
 
-                if (x >= -SPRITE_SIZE/2 && x < VIEWPORT_WIDTH + SPRITE_SIZE/2 &&
-                    y >= -SPRITE_SIZE/2 && y < VIEWPORT_HEIGHT + SPRITE_SIZE/2) {
+                if (x >= -SPRITE_SIZE/2 && x < canvas.width + SPRITE_SIZE/2 &&
+                    y >= -SPRITE_SIZE/2 && y < canvas.height + SPRITE_SIZE/2) {
                     drawPlayer(x, y, player, false);
                 }
             }
@@ -651,21 +659,21 @@
 
         mapItems.forEach(item => {
             console.log(item)
-            const x = item.worldMapCoordinateX - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-            const y = item.worldMapCoordinateY - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            const x = item.worldMapCoordinateX - localCurrentPlayer.worldPositionX + canvas.width / 2;
+            const y = item.worldMapCoordinateY - localCurrentPlayer.worldPositionY + canvas.height / 2;
             drawMapItem(x, y, item, offscreenCtx);
         });
 
         submapEntrances.forEach(entrance => {
-            const x = entrance.x - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-            const y = entrance.y - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            const x = entrance.x - localCurrentPlayer.worldPositionX + canvas.width / 2;
+            const y = entrance.y - localCurrentPlayer.worldPositionY + canvas.height / 2;
             offscreenCtx.fillStyle = '#FF00FF'; // Magenta color for visibility
             offscreenCtx.fillRect(x - 5, y - 5, 10, 10);
         });
 
         encampments.forEach(encampment => {
-            const x = encampment.worldPositionX - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-            const y = encampment.worldPositionY - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+            const x = encampment.worldPositionX - localCurrentPlayer.worldPositionX + canvas.width / 2;
+            const y = encampment.worldPositionY - localCurrentPlayer.worldPositionY + canvas.height / 2;
             drawEncampment(x, y, encampment);
         });
 
@@ -675,13 +683,13 @@
                 .filter(name => name);
 
             preloadSprites(spriteNames2);
-                const x = obj.xPos - localCurrentPlayer.worldPositionX + VIEWPORT_WIDTH / 2;
-                const y = obj.yPos - localCurrentPlayer.worldPositionY + VIEWPORT_HEIGHT / 2;
+                const x = obj.xPos - localCurrentPlayer.worldPositionX + canvas.width / 2;
+                const y = obj.yPos - localCurrentPlayer.worldPositionY + canvas.height / 2;
                 drawWorldObject(x,y, obj, offscreenCtx)
         })
 
 
-        drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, localCurrentPlayer, true);
+        drawPlayer(canvas.width / 2, canvas.height / 2, localCurrentPlayer, true);
 
         coordsDisplay.textContent = `X: ${localCurrentPlayer.worldPositionX}, Y: ${localCurrentPlayer.worldPositionY}`;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1865,14 +1873,14 @@
     // Draw other players in the submap
     players.forEach(player => {
     if (player.id !== getCurrentPlayerId()) {
-    const x = player.submapCoordinateX - localCurrentPlayer.submapCoordinateX + VIEWPORT_WIDTH / 2;
-    const y = player.submapCoordinateY - localCurrentPlayer.submapCoordinateY + VIEWPORT_HEIGHT / 2;
+    const x = player.submapCoordinateX - localCurrentPlayer.submapCoordinateX + canvas.width / 2;
+    const y = player.submapCoordinateY - localCurrentPlayer.submapCoordinateY + canvas.height / 2;
     drawPlayer(x, y, player, false);
 }
 });
 
     // Draw current player
-    drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, localCurrentPlayer, true);
+    drawPlayer(canvas.width / 2, canvas.height / 2, localCurrentPlayer, true);
 
     coordsDisplay.textContent = `Submap: ${currentSubmap ? currentSubmap.title : 'Unknown'} | X: ${localCurrentPlayer.submapCoordinateX}, Y: ${localCurrentPlayer.submapCoordinateY}`;
 }
@@ -2346,7 +2354,7 @@
         const centerX = getCurrentPlayerX();
         const centerY = getCurrentPlayerY();
 
-        fetch(`/api/npc-encampments/viewport?centerX=${centerX}&centerY=${centerY}&viewportWidth=${VIEWPORT_WIDTH}&viewportHeight=${VIEWPORT_HEIGHT}`)
+        fetch(`/api/npc-encampments/viewport?centerX=${centerX}&centerY=${centerY}&viewportWidth=${canvas.width}&viewportHeight=${canvas.height}`)
             .then(response => response.json())
             .then(data => {
                 encampments = data;
@@ -2360,4 +2368,12 @@
 
     loadEncampmentSprites();
 
+    window.addEventListener('resize', () => {
+        updateCanvasSize();
+        if (!isInSubmap) {
+            drawWorldMap();
+        } else {
+            drawSubmap();
+        }
+    });
 // Update every 5 seconds
