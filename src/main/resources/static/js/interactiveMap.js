@@ -903,7 +903,7 @@
     let accumulatedMovement = { x: 0, y: 0 };
 
 
-    const INTERPOLATION_DURATION = 200; // milliseconds
+    const INTERPOLATION_DURATION = 1000 / 60; // milliseconds
     let interpolationData = {};
 
     function updatePlayerPosition(playerIdOfPlayerToUpdate, x, y) {
@@ -2031,36 +2031,36 @@
     // Handle keydown events
     document.addEventListener('keydown', (event) => {
         let dx = 0, dy = 0;
-        switch (event.key) {
-            case 'ArrowUp':
-            case 'w':
-                dy = -MOVE_SPEED;
-                break;
-            case 'ArrowDown':
-            case 's':
-                dy = MOVE_SPEED;
-                break;
-            case 'ArrowLeft':
-            case 'a':
-                dx = -MOVE_SPEED;
-                break;
-            case 'ArrowRight':
-            case 'd':
-                dx = MOVE_SPEED;
-                break;
-        }
+        // switch (event.key) {
+        //     case 'ArrowUp':
+        //     case 'w':
+        //         dy = -MOVE_SPEED;
+        //         break;
+        //     case 'ArrowDown':
+        //     case 's':
+        //         dy = MOVE_SPEED;
+        //         break;
+        //     case 'ArrowLeft':
+        //     case 'a':
+        //         dx = -MOVE_SPEED;
+        //         break;
+        //     case 'ArrowRight':
+        //     case 'd':
+        //         dx = MOVE_SPEED;
+        //         break;
+        // }
 
-        if (dx !== 0 || dy !== 0) {
-            if (isInSubmap) {
-                const newX = Math.max(0, Math.min(currentSubmap.width - 1, localCurrentPlayer.submapCoordinateX + dx));
-                const newY = Math.max(0, Math.min(currentSubmap.height - 1, localCurrentPlayer.submapCoordinateY + dy));
-                movePlayerInSubmap(Math.round(newX), Math.round(newY));
-            } else {
-                const newX = localCurrentPlayer.worldPositionX + dx;
-                const newY = localCurrentPlayer.worldPositionY + dy;
-                updatePlayerPosition(getCurrentPlayerId(), Math.round(newX), Math.round(newY));
-            }
-        }
+        // if (dx !== 0 || dy !== 0) {
+        //     if (isInSubmap) {
+        //         const newX = Math.max(0, Math.min(currentSubmap.width - 1, localCurrentPlayer.submapCoordinateX + dx));
+        //         const newY = Math.max(0, Math.min(currentSubmap.height - 1, localCurrentPlayer.submapCoordinateY + dy));
+        //         movePlayerInSubmap(Math.round(newX), Math.round(newY));
+        //     } else {
+        //         const newX = localCurrentPlayer.worldPositionX + dx;
+        //         const newY = localCurrentPlayer.worldPositionY + dy;
+        //         updatePlayerPosition(getCurrentPlayerId(), Math.round(newX), Math.round(newY));
+        //     }
+        // }
     });
 
     document.addEventListener('keydown', (event) => {
@@ -2097,7 +2097,7 @@
     //HELPERS:
 
     function getCurrentPlayerId() {
-    return localCurrentPlayer ? localCurrentPlayer.id : null;
+    return localCurrentPlayer ? localCurrentPlayer.id : playerId ? playerId : null;
 }
 
     function getCurrentPlayerX() {
@@ -2166,8 +2166,7 @@
                     } else {
                         drawWorldMap();
                     }
-                    // You might want to update the player's inventory here
-
+                    initializeInventory();// You might want to update the player's inventory here
                 } else {
                     console.log(`Failed to pick up item: ${data.message}`);
                 }
@@ -2178,14 +2177,14 @@
 
     const PlayerInventory = {
         addItem: function(item, quantity) {
-            window.parent.postMessage({ action: 'addItem', data: { item, quantity } }, '*');
+            window.postMessage({ action: 'addItem', data: { item, quantity } }, '*');
         },
         removeItem: function(itemId, quantity) {
-            window.parent.postMessage({ action: 'removeItem', data: { itemId, quantity } }, '*');
+            window.postMessage({ action: 'removeItem', data: { itemId, quantity } }, '*');
         },
         init: function (){
             console.log("Sending Inventory Init Method To Main Window")
-            window.parent.postMessage({action:'init', data: { }},'*');
+            window.postMessage({action:'init', data: { }},'*');
         }
         // Add other proxy functions as needed
     };

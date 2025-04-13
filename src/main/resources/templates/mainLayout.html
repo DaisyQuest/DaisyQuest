@@ -58,7 +58,7 @@
             flex: 1; /* expand to fill remaining space */
             position: relative;
             display: flex;
-            flex-direction: column; /* stack canvas + (optionally) menu vertically by default */
+            flex-direction: row; /* stack canvas + (optionally) menu vertically by default */
             align-items: center;    /* horizontally center the canvas */
             background: radial-gradient(circle, #2c3e50, #34495e);
             padding: 20px;
@@ -130,7 +130,7 @@
 
 <!-- 2) Main container for the entire game layout -->
 <div class="container-fluid game-container">
-
+    <div id="worldMapContainer">
     <!-- LEFT: Info Cards -->
     <div id="side-info">
         <div class="info-card">
@@ -166,9 +166,10 @@
     </div><!-- /#side-info -->
 
     <!-- CENTER: The world map container (canvas, coordinates, combat overlays) -->
-    <div id="worldMapContainer">
+
         <canvas id="worldMapCanvas" width="1024" height="576"></canvas>
         <div id="coordinates"></div>
+        <div id="inGameMenuRow" th:replace="'inGameMenu.html' :: inGameMenu"></div>
 
         <!-- Combat Overlays -->
         <div id="combatArea" style="display: none;">
@@ -179,10 +180,10 @@
             <div id="resultsInfo"></div>
             <button class="btn btn-primary" onclick="returnToWorldMap()">Return to World Map</button>
         </div>
+
     </div><!-- /#worldMapContainer -->
 
     <!-- RIGHT: the integrated inGameMenu -->
-    <div id="inGameMenuRow" th:replace="'inGameMenu.html' :: inGameMenu"></div>
 
 </div><!-- /.container-fluid -->
 

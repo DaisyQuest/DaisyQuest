@@ -22,6 +22,9 @@ function fetchPlayerInventory() {
     if(!playerId){
         playerId = window.playerId
     }
+    if(!playerId){
+        return;
+    }
     fetch(`/api/inventory/${playerId}`)
         .then(response => response.json())
         .then(data => {
@@ -539,15 +542,15 @@ window.addEventListener('message', function(event) {
 
     switch(action) {
         case 'init':
-            PlayerInventory.initializeInventory();
+            initializeInventory();
             break;
         case 'addItem':
-            PlayerInventory.addItem(data.item, data.quantity);
-            PlayerInventory.initializeInventory();
+            //addItem(data.item, data.quantity);
+            initializeInventory();
             break;
         case 'removeItem':
-            PlayerInventory.removeItem(data.itemId, data.quantity);
-            PlayerInventory.initializeInventory();
+           //removeItem(data.itemId, data.quantity);
+           initializeInventory();
             break;
         // Add other cases as needed
     }
