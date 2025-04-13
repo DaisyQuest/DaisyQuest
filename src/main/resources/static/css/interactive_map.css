@@ -3,7 +3,7 @@ body {
     margin: 0;
     padding: 0;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     min-height: 100vh;
     color: #ecf0f1;
 }
@@ -11,7 +11,7 @@ body {
 .container-fluid {
     flex: 1;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     padding: 0;
 }
 

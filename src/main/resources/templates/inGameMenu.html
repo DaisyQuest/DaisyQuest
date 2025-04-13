@@ -1,7 +1,10 @@
 <!-- inGameMenu.html -->
-<div class="col-md-9" th:fragment="inGameMenu">
+
+<div th:fragment="inGameMenu">
+
+<div class="menu" th:fragment="inGameMenu">
   <!-- The tab headers -->
-  <ul class="nav nav-tabs" id="myTab" role="tablist">
+  <ul class="nav nav-pills flex-column" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="quests-tab" data-bs-toggle="tab" data-bs-target="#quests"
               type="button" role="tab" aria-controls="quests" aria-selected="false">Quests
@@ -265,4 +268,5 @@
     </div>
   </div>
 
+</div>
 </div>
