@@ -7,7 +7,9 @@
     let worldMap;
     let players = [];
     let localCurrentPlayer;
-    if(window.currentPlayer){ localCurrentPlayer    = currentPlayer;}
+    if(window.currentPlayer){ localCurrentPlayer    = currentPlayer;
+        playerId=currentPlayer.id
+    }
 
     const playerSpriteCache = new Map();
     playerId = localStorage.getItem('playerId');
@@ -123,6 +125,7 @@
     canvas.height = VIEWPORT_HEIGHT;
 
     updatePlayerInfoLocal();
+        updatePlayerInfoForGame();
     setupWebSocket();
 
     if (localCurrentPlayer.currentSubmapId) {
@@ -848,6 +851,31 @@
     document.getElementById('player-exp').textContent = localCurrentPlayer.currentSubmapId || 'NO SUBMAP';
 }
 }
+
+
+    function updatePlayerInfoForGame() {
+        fetch(`/api/players/${playerId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                currentPlayer = data.player;
+                currencyDetails = data.currencyDetails;
+                updatePlayerInfoUI(currentPlayer, currencyDetails);
+            })
+            .catch(error => {
+                console.error('Error updating player info:', error);
+                document.getElementById('playerInfo').innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    Failed to update player info. Please try again later.
+                </div>
+            `;
+            });
+    }
+
 
     function updateNearbyPlayersList() {
     const nearbyPlayersList = document.getElementById('nearby-players');

@@ -1,18 +1,4 @@
-// Global variables
-let playerId;
-let attributes = [];
-let currentCombatId = null;
-let playerSpells = [];
-let selectedSpell = null;
-let selectedAction = null;
-let craftingInventory = [];
-let craftingIngredients = [];
-let currentPlayer;
-let unclaimedRewardCount = 0;
-let combatLogs = [];
-let currencyDetails;
-let playerCurrencies = {};
-// Event Listeners
+
 document.addEventListener('DOMContentLoaded', initializeGame);
 //document.getElementById('startCombatBtn').addEventListener('click', startCombat);
 // document.getElementById('spellSelect').addEventListener('change', handleSpellSelection);

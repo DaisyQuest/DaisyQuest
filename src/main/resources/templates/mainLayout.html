@@ -2,6 +2,9 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+
+    <script src="/js/globals.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DaisyQuest - Main Layout</title>
@@ -13,6 +16,7 @@
     <!-- Your custom CSS (optional) -->
     <link th:href="@{/css/inventory.css}" rel="stylesheet"/>
     <link th:href="@{/css/topbar.css}" rel="stylesheet"/>
+
 
     <!-- Inline or additional styling as needed -->
     <style>
@@ -40,7 +44,7 @@
 
         .world-map-content {
             flex-grow: 1;
-            min-height: 700px; /* Adapt this as needed */
+            min-height: 900px; /* Adapt this as needed */
             background-color: #f8f9fa;
             border-radius: 10px;
             overflow: hidden;
@@ -108,8 +112,6 @@
         </button>
     </div>
 
-    <!-- 2c) In-Game Menu Tabs & Content (right side) -->
-    <div class="menu-column" th:replace="'inGameMenu.html' :: inGameMenu"></div>
 </div>
 
 <!-- 3) Script that defines embedHTML() and showHTMLDialog() -->
@@ -230,12 +232,12 @@
 
 <!-- 4) Load your other scripts at the bottom -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script th:src="@{/js/game.js}"></script>
+<script defer th:src="@{/js/game.js}"></script>
 <!-- Additional JS as needed -->
-<script th:src="@{/js/playerInventory.js}"></script>
-<script th:src="@{/js/talentTrees.js}"></script>
+<script defer th:src="@{/js/talentTrees.js}"></script>
 
-<script th:src="@{/js/chat.js}"></script>
+<script defer th:src="@{/js/chat.js}"></script>
+<script defer th:src="@{/js/playerInventory.js}"></script>
 
 
 </body>

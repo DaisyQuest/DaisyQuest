@@ -1,6 +1,10 @@
 <!-- _inventoryManagementTab.html -->
-<div class="tab-pane fade" id="inventory-management" role="tabpanel"
-     aria-labelledby="inventory-management-tab" th:fragment="inventoryManagementTab">
+<!-- This partial no longer uses "tab-pane fade" or "role=tabpanel" attributes.
+     Instead, it's just a fragment containing the relevant inventory UI. -->
+
+<div th:fragment="inventoryManagementTab">
+  <link th:href="@{/css/inventory.css}" rel="stylesheet"/>
+
   <div class="card">
     <div class="card-body">
       <h5 class="card-title">Inventory Management</h5>
@@ -19,5 +23,16 @@
       </div>
     </div>
   </div>
+
+  <!-- Either include your JS calls here, or remove these and call them in your
+       overlay logic (for example, in showOverlay('inventory')) -->
+  <script th:src="@{/js/playerInventory.js}"></script>
+  <script>
+    if (typeof initializeInventory === 'function') {
+      initializeInventory();
+    }
+    if (typeof renderInventory === 'function') {
+      renderInventory();
+    }
+  </script>
 </div>
-<script>initializeInventory(); renderInventory();</script>

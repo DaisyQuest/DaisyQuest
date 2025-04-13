@@ -16,6 +16,12 @@ function initializeInventory() {
 }
 
 function fetchPlayerInventory() {
+    if(!playerId) {    playerId = localStorage.getItem('playerId');
+    }
+
+    if(!playerId){
+        playerId = window.playerId
+    }
     fetch(`/api/inventory/${playerId}`)
         .then(response => response.json())
         .then(data => {
@@ -482,7 +488,7 @@ function drop(ev) {
     }
 }
 
-document.getElementById('inventory-management-tab').addEventListener('shown.bs.tab', initializeInventory);
+//document.getElementById('inventory-management-tab').addEventListener('shown.bs.tab', initializeInventory);
 
 function useSelectedItem() {
     if (selectedItem) {
@@ -517,6 +523,13 @@ window.PlayerInventory = {
     initializeInventory: initializeInventory
     // Add other functions you want to expose
 };
+window.initializeInventory = initializeInventory;
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+        initializeInventory();
+});
 
 // Set up a message listener for the iframe
 window.addEventListener('message', function(event) {
