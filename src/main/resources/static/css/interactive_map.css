@@ -3,7 +3,7 @@ body {
     margin: 0;
     padding: 0;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     min-height: 100vh;
     color: #ecf0f1;
 }
@@ -13,6 +13,7 @@ body {
     display: flex;
     flex-direction: row;
     padding: 0;
+    margin: 0;
 }
 
 .navbar {
@@ -20,7 +21,8 @@ body {
 }
 
 #side-info {
-    width: 300px;        /* adjust as needed */
+    width: 300px;
+    max-height: calc(100vh - 56px);
     padding: 20px;
     background-color: rgba(248, 249, 250, 0.95);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -30,80 +32,63 @@ body {
 }
 
 #main-content {
-    flex-grow: 1;
+    flex: 1;
     display: flex;
-    flex-direction: row; /* side by side layout */
-    overflow: hidden;    /* optional if you don't want an outer scrollbar */
+    flex-direction: row;
+    overflow: hidden;
 }
 
 #worldMapContainer {
-    flex: 1;                    /* expands to fill leftover width */
+    flex: 1;
     position: relative;
-    display: flex;             /* so we can center the canvas if desired */
-    justify-content: center;   /* horizontally center the canvas */
-    align-items: center;       /* vertically center the canvas */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
     background: radial-gradient(circle, #2c3e50, #34495e);
+    padding: 20px;
+    overflow: auto;
 }
 
-
 #worldMapCanvas {
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
     border: 3px solid #ecf0f1;
     box-shadow: 0 0 20px rgba(236, 240, 241, 0.3);
     border-radius: 10px;
-    /* Remove any fixed width/height if you want it to scale dynamically */
-}
-
-#spellInfoName{
-    color: black;
-}
-#spellSelection{
-    color: black;
+    display: block;
+    margin-bottom: 20px;
 }
 
 #coordinates {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 10px;
+    left: 10px;
     background-color: rgba(52, 73, 94, 0.8);
     color: #1a1a2e;
-    padding: 10px 15px;
+    padding: 8px 12px;
     border-radius: 25px;
-    font-size: 16px;
+    font-size: 14px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-.player-info {
-    background-color: rgba(52, 73, 94, 0.7);
-    border-radius: 10px;
+.info-card {
+    background-color: #fff;
+    border-radius: 8px;
+    color: #333;
     padding: 15px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-}
-
-.player-info:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 8px rgba(0,0,0,0.2);
-}
-
-.player-info h3 {
-    margin-top: 0;
-    color: #3498db;
-    font-size: 1.2em;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
 }
 
 #chat-box {
-    height: 200px;
-    background-color: rgba(52, 73, 94, 0.7);
-    border-radius: 10px;
-    padding: 15px;
+    height: 150px;
     overflow-y: auto;
-    margin-top: 20px;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+    color: #333;
 }
 
 #chat-input {
@@ -123,14 +108,17 @@ body {
     box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
 }
 
-/* Combat interface enhancements */
 #combatArea {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: linear-gradient(135deg, #2c3e50, #34495e);
     color: #ecf0f1;
     padding: 25px;
-    border-radius: 15px;
-    margin-top: 20px;
     box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    overflow-y: auto;
 }
 
 #turnIndicator {
@@ -164,6 +152,7 @@ body {
     transform: translateY(-5px);
     box-shadow: 0 8px 12px rgba(0,0,0,0.2);
 }
+
 .spell-selection-bar {
     display: flex;
     overflow-x: auto;
@@ -182,7 +171,8 @@ body {
     transition: border-color 0.3s ease;
 }
 
-.spell-icon:hover, .spell-icon.selected {
+.spell-icon:hover,
+.spell-icon.selected {
     border-color: #ffcc00;
 }
 
@@ -191,11 +181,10 @@ body {
     width: 128px;
     height: 128px;
     margin: 0 auto 15px;
-    border: 3px solid #333; /* Add a border */
-    border-radius: 50%; /* Make the border circular */
+    border: 3px solid #333;
+    border-radius: 50%;
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
-
 
 .player-sprite img {
     position: absolute;
@@ -239,7 +228,8 @@ body {
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-#spellSelection, #targetSelection {
+#spellSelection,
+#targetSelection {
     background-color: rgba(52, 73, 94, 0.7);
     padding: 15px;
     border-radius: 10px;
@@ -273,12 +263,18 @@ body {
 }
 
 #combatResults {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: linear-gradient(135deg, #2c3e50, #34495e);
     color: #ecf0f1;
     padding: 30px;
     border-radius: 15px;
     text-align: center;
     box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    overflow-y: auto;
 }
 
 .dialog-overlay {
@@ -336,106 +332,8 @@ body {
     background: rgba(236, 240, 241, 0.7);
 }
 
-
-body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    margin: 0;
-    padding: 0;
-}
-li{
+li {
     color: #1a1a2e;
-}
-.container-fluid {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-}
-#top-info {
-    background-color: #f8f9fa;
-    padding: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-.info-cards {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-}
-.info-card {
-    flex: 1;
-    min-width: 180px;
-    background-color: #fff;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-#worldMapContainer {
-    flex: 1;
-    position: relative;
-}
-#worldMapCanvas {
-    width: 1240px;
-    height: 720px;
-    display: block;
-}
-#coordinates {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background-color: rgba(255, 255, 255, 0.7);
-    padding: 5px 10px;
-    border-radius: 5px;
-}
-.mp3-player {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-.controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-#seek-slider, #volume-slider {
-    width: 80%;
-}
-#combatArea, #combatResults {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 20px;
-    overflow-y: auto;
-}
-#chat-box {
-    height: 150px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    #worldMapCanvas {
-        width: 100%;
-        height: auto;
-    }
-
-    .player-card {
-        margin-bottom: 10px;
-    }
-
-    #actionButtons button {
-        width: 100%;
-    }
 }
 
 .special-attack-selection-bar {
@@ -447,28 +345,40 @@ li{
 }
 
 .special-attack-icon {
-    width: 64px;  /* Set a fixed width */
-    height: 64px; /* Set a fixed height */
+    width: 64px;
+    height: 64px;
     margin-right: 10px;
     cursor: pointer;
     border: 2px solid transparent;
     border-radius: 5px;
     transition: border-color 0.3s ease;
-    object-fit: cover; /* This will ensure the image covers the area without distortion */
-    background-color: #2c3e50; /* A dark background color for icons */
+    object-fit: cover;
+    background-color: #2c3e50;
 }
 
-#specialAttackInfoName {
-    color:black;
-}
-#specialAttackInfoDescription {
-    color: black;
-}
-.special-attack-icon:hover, .special-attack-icon.selected {
+.special-attack-icon:hover,
+.special-attack-icon.selected {
     border-color: #ffcc00;
 }
 
-.allied-team, .enemy-team {
+#spellInfoName {
+    color: black;
+}
+
+#spellSelection {
+    color: black;
+}
+
+#specialAttackInfoName {
+    color: black;
+}
+
+#specialAttackInfoDescription {
+    color: black;
+}
+
+.allied-team,
+.enemy-team {
     display: flex;
     justify-content: flex-start;
     border-style: solid;
@@ -486,7 +396,10 @@ li{
 .allied-team::before {
     content: '';
     position: absolute;
-    top: -3px; right: -3px; bottom: -3px; left: -3px;
+    top: -3px;
+    right: -3px;
+    bottom: -3px;
+    left: -3px;
     background: linear-gradient(to right, #2ecc71, #27ae60);
     border-radius: 12px;
     z-index: -1;
@@ -500,17 +413,53 @@ li{
 .enemy-team::before {
     content: '';
     position: absolute;
-    top: -3px; right: -3px; bottom: -3px; left: -3px;
+    top: -3px;
+    right: -3px;
+    bottom: -3px;
+    left: -3px;
     background: linear-gradient(to left, #da190b, #e74c3c);
     border-radius: 12px;
     z-index: -1;
 }
 
-.allied-team::after, .enemy-team::after {
+.allied-team::after,
+.enemy-team::after {
     content: '';
     position: absolute;
-    top: 0; right: 0; bottom: 0; left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     background: white;
     border-radius: 8px;
     z-index: -1;
+}
+
+#combatArea,
+#combatResults {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.mp3-player {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+#seek-slider,
+#volume-slider {
+    width: 80%;
 }

@@ -12,6 +12,7 @@
 
     <!-- Optional custom CSS -->
     <link th:href="@{/css/interactive_map.css}" rel="stylesheet" />
+    <script src ="/js/playerInventory.js"> </script>
     <script src="/js/globals.js"></script>
 
     <style>
@@ -19,137 +20,138 @@
          * Your Combined / Provided CSS goes below
          ********************************************/
 
-        body {
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            color: #ecf0f1;
-        }
+        /*body {*/
+        /*    font-family: 'Roboto', sans-serif;*/
+        /*    margin: 0;*/
+        /*    padding: 0;*/
+        /*    display: flex;*/
+        /*    flex-direction: column;*/
+        /*    min-height: 100vh;*/
+        /*    color: #ecf0f1;*/
+        /*}*/
 
-        .container-fluid {
-            flex: 1;
-            display: flex;
-            flex-direction: row;
-            padding: 0;
-        }
+        /*.container-fluid {*/
+        /*    flex: 1;*/
+        /*    display: flex;*/
+        /*    flex-direction: row;*/
+        /*    padding: 0;*/
+        /*}*/
 
-        .navbar {
-            background-color: rgba(44, 62, 80, 0.9) !important;
-        }
+        /*.navbar {*/
+        /*    background-color: rgba(44, 62, 80, 0.9) !important;*/
+        /*}*/
 
-        #main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: row; /* side by side layout */
-            overflow: hidden;    /* optional if you don't want an outer scrollbar */
-        }
+        /*#main-content {*/
+        /*    flex-grow: 1;*/
+        /*    display: flex;*/
+        /*    flex-direction: row; !* side by side layout *!*/
+        /*    overflow: hidden;    !* optional if you don't want an outer scrollbar *!*/
+        /*}*/
 
-        /* Left side: #side-info */
-        #side-info {
-            width: 300px;        /* adjust as needed */
-            padding: 20px;
-            background-color: rgba(248, 249, 250, 0.95);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            overflow-y: auto;
-            transition: all 0.3s ease;
-        }
+        /*!* Left side: #side-info *!*/
+        /*#side-info {*/
+        /*    width: 300px;        !* adjust as needed *!*/
+        /*    padding: 20px;*/
+        /*    background-color: rgba(248, 249, 250, 0.95);*/
+        /*    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);*/
+        /*    backdrop-filter: blur(10px);*/
+        /*    overflow-y: auto;*/
+        /*    transition: all 0.3s ease;*/
+        /*}*/
 
-        /* Center: #worldMapContainer */
-        #worldMapContainer {
-            flex: 1;  /* expands to fill leftover width */
-            position: relative;
-            display: flex;  /* so we can center the canvas if desired */
-            justify-content: center;   /* horizontally center the canvas */
-            align-items: center;       /* vertically center the canvas */
-            background: radial-gradient(circle, #2c3e50, #34495e);
-        }
+        /*!* Center: #worldMapContainer *!*/
+        /*#worldMapContainer {*/
+        /*    flex: 1;  !* expands to fill leftover width *!*/
+        /*    position: relative;*/
+        /*    display: flex;  !* so we can center the canvas if desired *!*/
+        /*    justify-content: center;   !* horizontally center the canvas *!*/
+        /*    align-items: center;       !* vertically center the canvas *!*/
+        /*    background: radial-gradient(circle, #2c3e50, #34495e);*/
+        /*}*/
 
-        #worldMapCanvas {
-            max-width: 100%;
-            max-height: 100%;
-            border: 3px solid #ecf0f1;
-            box-shadow: 0 0 20px rgba(236, 240, 241, 0.3);
-            border-radius: 10px;
-        }
+        /*#worldMapCanvas {*/
+        /*    max-width: 100%;*/
+        /*    max-height: 100%;*/
+        /*    border: 3px solid #ecf0f1;*/
+        /*    box-shadow: 0 0 20px rgba(236, 240, 241, 0.3);*/
+        /*    border-radius: 10px;*/
+        /*}*/
 
-        #coordinates {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background-color: rgba(52, 73, 94, 0.8);
-            color: #1a1a2e;
-            padding: 10px 15px;
-            border-radius: 25px;
-            font-size: 16px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
+        /*#coordinates {*/
+        /*    position: absolute;*/
+        /*    top: 20px;*/
+        /*    left: 20px;*/
+        /*    background-color: rgba(52, 73, 94, 0.8);*/
+        /*    color: #1a1a2e;*/
+        /*    padding: 10px 15px;*/
+        /*    border-radius: 25px;*/
+        /*    font-size: 16px;*/
+        /*    box-shadow: 0 2px 5px rgba(0,0,0,0.2);*/
+        /*}*/
 
-        /* Right side: #inGameMenuColumn (the tabbed menu) */
-        #inGameMenuRow {
-            width: 350px; /* Adjust as needed */
-            background-color: #2c3e50;
-            display: flex;
-            flex-direction: row;
-            overflow-y: auto;
-        }
+        /*!* Right side: #inGameMenuColumn (the tabbed menu) *!*/
+        /*#inGameMenuRow {*/
+        /*    width: 350px; !* Adjust as needed *!*/
+        /*    background-color: #2c3e50;*/
+        /*    display: flex;*/
+        /*    flex-direction: row;*/
+        /*    overflow-y: auto;*/
+        /*}*/
 
-        /***** Additional styling for your in-game menu tabs *****/
-        /* You can tweak as desired. Using your existing tab styles from the question. */
+        /*!***** Additional styling for your in-game menu tabs *****!*/
+        /*!* You can tweak as desired. Using your existing tab styles from the question. *!*/
 
-        .nav-tabs {
-            background-color: rgba(44, 62, 80, 0.9);
-            border-bottom: 2px solid #34495e;
-        }
-        .nav-link {
-            color: #ecf0f1;
-        }
-        .nav-link.active {
-            background-color: #34495e;
-            color: #fff;
-        }
+        /*.nav-tabs {*/
+        /*    background-color: rgba(44, 62, 80, 0.9);*/
+        /*    border-bottom: 2px solid #34495e;*/
+        /*}*/
+        /*.nav-link {*/
+        /*    color: #ecf0f1;*/
+        /*}*/
+        /*.nav-link.active {*/
+        /*    background-color: #34495e;*/
+        /*    color: #fff;*/
+        /*}*/
 
-        .tab-content {
-            flex: 1;
-            padding: 10px;
-            background-color: #34495e;
-            overflow-y: auto; /* so tab contents can scroll if large */
-        }
+        /*.tab-content {*/
+        /*    flex: 1;*/
+        /*    padding: 10px;*/
+        /*    background-color: #34495e;*/
+        /*    overflow-y: auto; !* so tab contents can scroll if large *!*/
+        /*}*/
 
-        /* Many of your existing .player-card, #chat-box, #combatArea, #turnIndicator, etc. go here.
-           For brevity, I'm referencing your existing posted CSS rules that you included. */
-        /* ... (the rest of your provided CSS from the question) ... */
+        /*!* Many of your existing .player-card, #chat-box, #combatArea, #turnIndicator, etc. go here.*/
+        /*   For brevity, I'm referencing your existing posted CSS rules that you included. *!*/
+        /*!* ... (the rest of your provided CSS from the question) ... *!*/
 
-        .special-attack-selection-bar {
-            display: flex;
-            overflow-x: auto;
-            padding: 10px;
-            background-color: rgba(0, 0, 0, 0.5);
-            border-radius: 5px;
-        }
+        /*.special-attack-selection-bar {*/
+        /*    display: flex;*/
+        /*    overflow-x: auto;*/
+        /*    padding: 10px;*/
+        /*    background-color: rgba(0, 0, 0, 0.5);*/
+        /*    border-radius: 5px;*/
+        /*}*/
 
-        .special-attack-icon {
-            width: 64px;
-            height: 64px;
-            margin-right: 10px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            border-radius: 5px;
-            transition: border-color 0.3s ease;
-            object-fit: cover;
-            background-color: #2c3e50;
-        }
+        /*.special-attack-icon {*/
+        /*    width: 64px;*/
+        /*    height: 64px;*/
+        /*    margin-right: 10px;*/
+        /*    cursor: pointer;*/
+        /*    border: 2px solid transparent;*/
+        /*    border-radius: 5px;*/
+        /*    transition: border-color 0.3s ease;*/
+        /*    object-fit: cover;*/
+        /*    background-color: #2c3e50;*/
+        /*}*/
 
-        /* ... continue with all your other custom styles ... */
+        /*!* ... continue with all your other custom styles ... *!*/
 
     </style>
 </head>
 
 <body>
 <a class="navbar-brand" href="#">DaisyQuest</a>
+<div th:fragment="worldMapContent">
 <div>
     <span><strong>Player:</strong> <span id="miniPlayerName"></span></span>
     <span class="ms-3"><strong>Level:</strong> <span id="miniPlayerLevel"></span></span>
@@ -296,7 +298,8 @@
 <script th:src="@{/js/interactiveMap.js}"></script>
 <script th:src="@{/js/MP3Player.js}"></script>
 <script th:src="@{/js/chat.js}"></script>
-
+    <script src ="/js/playerInventory.js"> </script>
+    <script src="/js/globals.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 // If needed, pass the local current player
@@ -304,5 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.initChat();
 })
     </script>
+</div>
 </body>
 </html>

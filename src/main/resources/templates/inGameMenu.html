@@ -44,10 +44,16 @@
       color: #ecf0f1;
       position: relative;
     }
+
+
   </style>
 
     <!-- Left-side menu bar -->
     <ul class="nav nav-pills flex-column">
+
+      <li class="nav-item">
+        <button class="nav-link" type="button" onclick="showOverlay('playerInfo')">playerInfo</button>
+      </li>
       <li class="nav-item">
         <button class="nav-link" type="button" onclick="showOverlay('quests')">Quests</button>
       </li>
@@ -89,6 +95,73 @@
 
     <!-- This container will hold whichever content (tab) is requested -->
     <div id="overlayContentContainer">
+
+
+      <div id="playerInfoContent" style="display: none;">
+        <div class="card bg-light text-dark">
+          <div class="card-header" id="playerInfoHeader">
+            <h5 class="mb-0">Player Info</h5>
+          </div>
+          <div class="card-body">
+            <div id="playerInfo">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="sprite-preview mb-3">
+                    <!-- Old code from your sidebar -->
+                    <img src="/sprites/background_0.png">
+                    <img src="/sprites/face_0.png">
+                    <img src="/sprites/eyes_0.png">
+                    <img src="/sprites/hairhat_0.png">
+                  </div>
+                  <button class="btn btn-primary btn-sm mb-3" onclick="openSpriteSelectionModal()">
+                    Customize Sprite
+                  </button>
+                </div>
+                <div class="col-md-8">
+                  <h6>Player: Test</h6>
+                  <p>Level: 1</p>
+                  <p>Total Experience: 0</p>
+                  <p>Mana: 1000 / 1000</p>
+                  <h6 class="mt-4 mb-3">Attributes:</h6>
+                  <ul class="list-group attribute-list">
+                    <li class="list-group-item d-flex align-items-center">
+                      <img src="/sprites/hitpoints_full_icon.png" alt="hitpoints" class="attribute-icon me-2">
+                      <span class="attribute-name"> Hitpoints:</span>
+                      <span class="attribute-value ms-auto">Level 10 (XP: 0)</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center">
+                      <img src="/sprites/weapon_left_0.png" alt="sorcery" class="attribute-icon me-2">
+                      <span class="attribute-name"> Sorcery:</span>
+                      <span class="attribute-value ms-auto">Level 1 (XP: 0)</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center">
+                      <img src="/sprites//items/brilliant_onyx_gold_ring.png" alt="crafting" class="attribute-icon me-2">
+                      <span class="attribute-name"> Crafting:</span>
+                      <span class="attribute-value ms-auto">Level 1 (XP: 0)</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center">
+                      <img src="/sprites/combat_attribute_icon.png" alt="combat" class="attribute-icon me-2">
+                      <span class="attribute-name"> Combat:</span>
+                      <span class="attribute-value ms-auto">Level 1 (XP: 0)</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center">
+                      <img src="/sprites//spells/fireball_green.png" alt="alchemy" class="attribute-icon me-2">
+                      <span class="attribute-name"> Alchemy:</span>
+                      <span class="attribute-value ms-auto">Level 1 (XP: 0)</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center">
+                      <img src="/sprites//items/sapphire_gem_cut_2.png" alt="lapidiary" class="attribute-icon me-2">
+                      <span class="attribute-name"> Lapidiary:</span>
+                      <span class="attribute-value ms-auto">Level 1 (XP: 0)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div> <!-- card-body -->
+        </div> <!-- card -->
+      </div>
+
 
       <!-- Quests -->
       <div id="questsContent" style="display: none;"        th:replace="'_questTab.html' :: questTab">
@@ -359,6 +432,7 @@
       overlay.style.display = 'flex';
 
       const sections = [
+        'playerInfo',
         'questsContent',
         'talentTreesContent',
         'inventoryContent',
