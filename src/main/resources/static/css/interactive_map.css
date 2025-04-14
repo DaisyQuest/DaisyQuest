@@ -52,7 +52,7 @@ body {
 
 #worldMapCanvas {
     width: 100%;
-    max-width: 1200px;
+    max-width: 100%;
     height: auto;
     border: 3px solid #ecf0f1;
     box-shadow: 0 0 20px rgba(236, 240, 241, 0.3);

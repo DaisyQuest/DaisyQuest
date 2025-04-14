@@ -56,6 +56,7 @@
         mp3Player.loadTrack('/audio/world2.mp3');
         mp3Player.audio.loop = true;
         mp3Player.togglePlayPause();
+        updateCanvasSize();
     });
 
     const terrainColors = {
@@ -137,6 +138,7 @@
     if (localCurrentPlayer.currentSubmapId) {
     loadSubmapData(localCurrentPlayer.currentSubmapId);
 } else {
+
     drawWorldMap();
     fetchPlayersInViewport();
 }
@@ -2365,7 +2367,7 @@
 
     // Call this function periodically or when the player moves significantly
     setInterval(fetchEncampmentsInViewport, 30000); // Fetch every 5 seconds, for example
-
+    updateCanvasSize()
     loadEncampmentSprites();
 
     window.addEventListener('resize', () => {

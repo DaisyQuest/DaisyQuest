@@ -74,6 +74,7 @@
             border-radius: 10px;
             display: block;
             margin-bottom: 20px;
+
         }
 
         #coordinates {
@@ -167,7 +168,7 @@
 
     <!-- CENTER: The world map container (canvas, coordinates, combat overlays) -->
 
-        <canvas id="worldMapCanvas" width="1024" height="576"></canvas>
+        <canvas id="worldMapCanvas" width="1500" height="900"></canvas>
         <div id="coordinates"></div>
         <div id="inGameMenuRow" th:replace="'inGameMenu.html' :: inGameMenu"></div>
 
@@ -198,6 +199,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         window.initChat && window.initChat();
+        updateCanvasSize();
+
         // If you have a function to init the map or set local player:
         // initWorldMap();
     });
