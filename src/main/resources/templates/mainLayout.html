@@ -135,20 +135,18 @@
     <!-- LEFT: Info Cards -->
     <div id="side-info">
         <div class="info-card">
-            <h3>Player Info</h3>
-            <p>Name: <span id="player-name"></span></p>
-            <p>Level: <span id="player-level"></span></p>
-            <p>Submap ID: <span id="player-exp"></span></p>
-        </div>
-        <div class="info-card">
-            <h3>Targeted Player</h3>
-            <div id="targeted-player-info">
-                <p>Name: <span id="targeted-player-name"></span></p>
-                <p>Level: <span id="targeted-player-level"></span></p>
-                <p>Position: <span id="targeted-player-position"></span></p>
-            </div>
-            <div id="targeted-player-actions">
-                <button id="duelButton" class="btn btn-danger" style="display: none;">Challenge to Duel</button>
+            <div class="info-card">
+                <h3>Current Target</h3>
+                <div id="currentTargetInfo" style="display: none;">
+                    <p>Name: <span id="currentTargetName"></span></p>
+                    <p>Level: <span id="currentTargetLevel"></span></p>
+                    <p>Position: <span id="currentTargetPosition"></span></p>
+                </div>
+                <div id="currentTargetActions" style="display: none;">
+                    <!-- Buttons for interacting with the current target -->
+                    <button id="duelButton" class="btn btn-danger" style="display: none;">Challenge to Duel</button>
+                    <!-- Potentially more buttons: e.g. "Inspect", "Trade", "Examine", etc. -->
+                </div>
             </div>
         </div>
         <div class="info-card">

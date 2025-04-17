@@ -6,6 +6,7 @@
     canvas.addEventListener('click', handleMapClick);
     let worldMap;
     let players = [];
+    let selectedTarget;
     let localCurrentPlayer;
     if(window.currentPlayer){ localCurrentPlayer    = currentPlayer;
         playerId=currentPlayer.id
@@ -132,7 +133,7 @@
     // canvas.height = VIEWPORT_HEIGHT;
 
     updatePlayerInfoLocal();
-        updatePlayerInfoForGame();
+    updatePlayerInfoForGame();
     setupWebSocket();
 
     if (localCurrentPlayer.currentSubmapId) {
@@ -189,15 +190,146 @@
     const clickX = event.clientX - rect.left;
     const clickY = event.clientY - rect.top;
 
-    // Find if a player was clicked
-    const clickedPlayer = findClickedPlayer(clickX, clickY);
 
-    if (clickedPlayer) {
-    handlePlayerClick(clickedPlayer);
-} else {
-    handleTerrainClick(clickX, clickY);
+
+        // 1) Check players
+        const clickedPlayer = findClickedPlayer(clickX, clickY);
+        if (clickedPlayer) {
+            selectedTarget = { type: 'player', data: clickedPlayer };
+            updateCurrentTargetInfo(selectedTarget);
+            return;
+        }
+
+        // 2) Check objects
+        const clickedObject = findClickedWorldObject(clickX, clickY);
+        if (clickedObject) {
+            selectedTarget = { type: 'object', data: clickedObject };
+            updateCurrentTargetInfo(selectedTarget);
+            return;
+        }
+
+        // 3) Check items
+        const clickedItem = findClickedItem(clickX, clickY);
+        if (clickedItem) {
+            selectedTarget = { type: 'item', data: clickedItem };
+            updateCurrentTargetInfo(selectedTarget);
+            return;
+        }
+
+        // 4) Check encampments
+        const clickedEncamp = findClickedEncampment(clickX, clickY);
+        if (clickedEncamp) {
+            selectedTarget = { type: 'encampment', data: clickedEncamp };
+            updateCurrentTargetInfo(selectedTarget);
+            return;
+        }
+
+        // If no target found, fallback to terrain click:
+        handleTerrainClick(clickX, clickY);
+        // Optionally, clear the current target UI if you want:
+        clearCurrentTarget();
+
+
+
+
 }
-}
+
+    function updateCurrentTargetInfo(target) {
+        const infoDiv = document.getElementById('currentTargetInfo');
+        const actionsDiv = document.getElementById('currentTargetActions');
+        const duelBtn = document.getElementById('duelButton');
+
+        if (!target) {
+            infoDiv.style.display = 'none';
+            actionsDiv.style.display = 'none';
+            return;
+        }
+
+        // Show info
+        infoDiv.style.display = 'block';
+        actionsDiv.style.display = 'block';
+
+        const nameEl = document.getElementById('currentTargetName');
+        const levelEl = document.getElementById('currentTargetLevel');
+        const posEl = document.getElementById('currentTargetPosition');
+
+        // Defaults if not a player
+        nameEl.textContent = '(Unknown)';
+        levelEl.textContent = 'N/A';
+        posEl.textContent = 'N/A';
+        duelBtn.style.display = 'none';
+
+        switch (target.type) {
+            case 'player': {
+                const player = target.data;
+                nameEl.textContent = player.username || 'Unknown Player';
+                levelEl.textContent = player.level || 'N/A';
+                const distance = computeDistanceToPlayer(player);
+                posEl.textContent = getPlayerPositionString(player);
+
+                // If in range, show the duel button
+                if (distance <= DUEL_RANGE) {
+                    duelBtn.style.display = 'inline-block';
+                }
+                break;
+            }
+            case 'object': {
+                const obj = target.data;
+                nameEl.textContent = obj.name || obj.worldObjectType.name || 'World Object';
+                levelEl.textContent = 'N/A'; // Possibly no "level" for an object
+                posEl.textContent = `X: ${obj.xPos}, Y: ${obj.yPos}`;
+                // If you want an "Interact" button or something, show it here
+                break;
+            }
+            case 'item': {
+                const item = target.data;
+                nameEl.textContent = item.item.name;
+                levelEl.textContent = item.item.rarity; // e.g. show item rarity
+                const [ix, iy] = isInSubmap
+                    ? [item.submapCoordinateX, item.submapCoordinateY]
+                    : [item.worldMapCoordinateX, item.worldMapCoordinateY];
+                posEl.textContent = `X: ${ix}, Y: ${iy}`;
+                break;
+            }
+            case 'encampment': {
+                const enc = target.data;
+                nameEl.textContent = enc.name || 'Encampment';
+                levelEl.textContent = enc.faction || 'N/A';
+                posEl.textContent = `X: ${enc.worldPositionX}, Y: ${enc.worldPositionY}`;
+                // Potentially show "Enter Encampment" button, etc.
+                break;
+            }
+        }
+    }
+
+    // A small function to compute distance to a given player
+    function computeDistanceToPlayer(player) {
+        let px, py;
+        if (isInSubmap) {
+            px = player.submapCoordinateX - localCurrentPlayer.submapCoordinateX;
+            py = player.submapCoordinateY - localCurrentPlayer.submapCoordinateY;
+        } else {
+            px = player.worldPositionX - localCurrentPlayer.worldPositionX;
+            py = player.worldPositionY - localCurrentPlayer.worldPositionY;
+        }
+        return Math.sqrt(px * px + py * py);
+    }
+
+    // A helper that shows submap or overworld position
+    function getPlayerPositionString(player) {
+        if (isInSubmap) {
+            return `SubX: ${player.submapCoordinateX}, SubY: ${player.submapCoordinateY}`;
+        } else {
+            return `X: ${player.worldPositionX}, Y: ${player.worldPositionY}`;
+        }
+    }
+
+    function clearCurrentTarget() {
+        selectedTarget = null;
+        document.getElementById('currentTargetInfo').style.display = 'none';
+        document.getElementById('currentTargetActions').style.display = 'none';
+    }
+
 
     // Add a new function to handle map clicks
     let worldObjects = [];
@@ -243,6 +375,42 @@
                     drawWorldMap(); // Still draw the map even if object fetch failed
                 }
             });
+    }
+
+    function findClickedItem(clickX, clickY) {
+        let closestItem = null;
+        let closestDist = Infinity;
+
+        for (const item of mapItems) {
+            const { x: screenX, y: screenY } = getScreenCoordsOfItem(item);
+            const distance = distanceBetween(clickX, clickY, screenX, screenY);
+
+            // If distance is within your click radius, check if it's the closest so far
+            if (distance <= 32 && distance < closestDist) {
+                closestDist = distance;
+                closestItem = item;
+            }
+        }
+
+        return closestItem;
+    }
+
+    function findClickedEncampment(clickX, clickY) {
+        const worldX = getCurrentPlayerX() + (clickX - canvas.width / 2);
+        const worldY = getCurrentPlayerY() + (clickY - canvas.height / 2);
+
+        return encampments.find(object => {
+            const screenX = object.xPos - getCurrentPlayerX() + canvas.width / 2;
+            const screenY = object.yPos - getCurrentPlayerY() + canvas.height / 2;
+
+            // Assuming objects have a standard interaction radius of 32 pixels
+            const distance = Math.sqrt(
+                Math.pow(clickX - screenX, 2) +
+                Math.pow(clickY - screenY, 2)
+            );
+
+            return distance <= 32; // Adjust this radius as needed
+        });
     }
 
     // Modify the existing handleTerrainClick function
@@ -862,7 +1030,216 @@
 }
 }
 
+    // 1) Attach a new "contextmenu" event to handle right-click
+    canvas.addEventListener('contextmenu', (event) => {
+        event.preventDefault();       // Prevent the browser’s default context menu
+        handleMapRightClick(event);
+    });
 
+    // 2) The new function to handle right-click
+    function handleMapRightClick(event) {
+        event.preventDefault();  // Prevent the browser’s default context menu
+
+        const rect = canvas.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+
+        // Gather all possible targets at the click
+        const targets = findAllTargetsAt(clickX, clickY);
+
+        // Always add a special "move" target so that we can right-click to move.
+        // We'll compute the world coordinates (or submap coords) of that click.
+        let worldX, worldY;
+        if (isInSubmap) {
+            worldX = localCurrentPlayer.submapCoordinateX + (clickX - canvas.width / 2);
+            worldY = localCurrentPlayer.submapCoordinateY + (clickY - canvas.height / 2);
+        } else {
+            worldX = localCurrentPlayer.worldPositionX + Math.round(clickX - canvas.width / 2);
+            worldY = localCurrentPlayer.worldPositionY + Math.round(clickY - canvas.height / 2);
+        }
+
+        // Push a pseudo-target of type 'move' with the coordinates
+        targets.push({ type: 'move', data: { x: worldX, y: worldY } });
+
+        // Now always show the right-click menu, even if targets was empty
+        showRightClickMenu(targets, event.pageX, event.pageY);
+    }
+
+
+    // 3) A helper that collects all possible clickable entities under (clickX, clickY).
+    //    We check players, items, world objects, encampments in the same manner.
+    function findAllTargetsAt(clickX, clickY) {
+        const found = [];
+
+        // 3a) Check if any player is at this location
+        players.forEach((player) => {
+            // Skip our own player
+            if (player.id === localCurrentPlayer.id) return;
+            const { x: px, y: py } = getScreenCoordsOfPlayer(player);
+            const dist = distanceBetween(clickX, clickY, px, py);
+            if (dist <= SPRITE_SIZE / 2) {
+                found.push({ type: 'player', data: player });
+            }
+        });
+
+        // 3b) Check if any world objects are at this location
+        worldObjects.forEach((obj) => {
+            const { x: ox, y: oy } = getScreenCoordsOfObject(obj);
+            const dist = distanceBetween(clickX, clickY, ox, oy);
+            // We'll assume 32 px radius for objects
+            if (dist <= 32) {
+                found.push({ type: 'object', data: obj });
+            }
+        });
+
+        // 3c) Check if any items are at this location
+        mapItems.forEach((item) => {
+            const { x: ix, y: iy } = getScreenCoordsOfItem(item);
+            const dist = distanceBetween(clickX, clickY, ix, iy);
+            // We'll assume 16 px radius for items
+            if (dist <= 16) {
+                found.push({ type: 'item', data: item });
+            }
+        });
+
+        // 3d) Check if any encampments are at this location
+        encampments.forEach((enc) => {
+            const { x: ex, y: ey } = getScreenCoordsOfEncampment(enc);
+            // Assume encampment has a radius of 32
+            const dist = distanceBetween(clickX, clickY, ex, ey);
+            if (dist <= 32) {
+                found.push({ type: 'encampment', data: enc });
+            }
+        });
+
+        return found;
+    }
+
+    // 4) Utility to get on-screen coords of a player
+    function getScreenCoordsOfPlayer(player) {
+        let x, y;
+        if (isInSubmap) {
+            x = player.submapCoordinateX - localCurrentPlayer.submapCoordinateX + canvas.width / 2;
+            y = player.submapCoordinateY - localCurrentPlayer.submapCoordinateY + canvas.height / 2;
+        } else {
+            x = player.worldPositionX - localCurrentPlayer.worldPositionX + canvas.width / 2;
+            y = player.worldPositionY - localCurrentPlayer.worldPositionY + canvas.height / 2;
+        }
+        return { x, y };
+    }
+
+    // 5) Similarly for a worldObject
+    function getScreenCoordsOfObject(obj) {
+        const x = obj.xPos - getCurrentPlayerX() + canvas.width / 2;
+        const y = obj.yPos - getCurrentPlayerY() + canvas.height / 2;
+        return { x, y };
+    }
+
+    // 6) For items
+    function getScreenCoordsOfItem(item) {
+        const x = isInSubmap
+            ? (item.submapCoordinateX - localCurrentPlayer.submapCoordinateX + canvas.width / 2)
+            : (item.worldMapCoordinateX - localCurrentPlayer.worldPositionX + canvas.width / 2);
+        const y = isInSubmap
+            ? (item.submapCoordinateY - localCurrentPlayer.submapCoordinateY + canvas.height / 2)
+            : (item.worldMapCoordinateY - localCurrentPlayer.worldPositionY + canvas.height / 2);
+        return { x, y };
+    }
+
+    // 7) For encampments
+    function getScreenCoordsOfEncampment(enc) {
+        const x = enc.worldPositionX - localCurrentPlayer.worldPositionX + canvas.width / 2;
+        const y = enc.worldPositionY - localCurrentPlayer.worldPositionY + canvas.height / 2;
+        return { x, y };
+    }
+
+    // 8) Distance helper
+    function distanceBetween(ax, ay, bx, by) {
+        const dx = ax - bx;
+        const dy = ay - by;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // 9) Show a context menu listing all the found targets
+    function showRightClickMenu(targets, pageX, pageY) {
+        // Remove old menu if present
+        const existingMenu = document.getElementById('rightClickMenu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+
+        const menu = document.createElement('div');
+        menu.id = 'rightClickMenu';
+        menu.style.position = 'absolute';
+        menu.style.left = pageX + 'px';
+        menu.style.top = pageY + 'px';
+        menu.style.backgroundColor = '#333';
+        menu.style.color = '#fff';
+        menu.style.padding = '8px';
+        menu.style.borderRadius = '4px';
+        menu.style.zIndex = '9999';
+
+        targets.forEach((target, index) => {
+            const btn = document.createElement('button');
+            btn.textContent = formatTargetLabel(target);
+            btn.style.display = 'block';
+            btn.style.width = '100%';
+            btn.style.marginBottom = '4px';
+            btn.onclick = () => {
+                // On click, handle the chosen target, then remove the menu
+                handleTarget(target);
+                menu.remove();
+            };
+            menu.appendChild(btn);
+        });
+
+        // Append to body so it floats over the canvas
+        document.body.appendChild(menu);
+    }
+
+    // 10) A helper to choose how to label each target in the menu
+    function formatTargetLabel(target) {
+        switch (target.type) {
+            case 'player':
+                return `Player: ${target.data.username}`;
+            case 'object':
+                return `Object: ${target.data.name || target.data.worldObjectType.name}`;
+            case 'item':
+                return `Item: ${target.data.item.name}`;
+            case 'encampment':
+                return `Encampment: ${target.data.name}`;
+            case 'move':
+                // Our custom label
+                return 'Move Here';
+            default:
+                return 'Unknown Target';
+        }
+    }
+
+    // 11) Actually handle the chosen target
+    function handleTarget(target) {
+        switch (target.type) {
+            case 'player':
+                handlePlayerClick(target.data);
+                break;
+            case 'object':
+                handleWorldObjectInteraction(target.data);
+                break;
+            case 'item':
+                // Possibly pick up item or show item details
+                console.log('Item clicked:', target.data);
+                // You could auto-run pickUpItem(target.data) or something else
+                break;
+            case 'encampment':
+                console.log('Encampment clicked:', target.data);
+                // Possibly show an encampment UI or handle travel
+                break;
+            case 'move':
+                // Simply move the player to target.data.x, target.data.y
+                setupMovementPath(target.data.x, target.data.y);
+                break;
+        }
+    }
     function updatePlayerInfoForGame() {
         fetch(`/api/players/${playerId}`)
             .then(response => {
@@ -2211,8 +2588,13 @@
 //WEBSOCKET TRANSMIT
 
     function wsTransmitPosition() {
+        if (!socket) {
+            console.warn("WebSocket not initialized yet.");
+            return;
+        }
         console.log(socket.readyState);
         console.log(Date.now())
+
         if (socket.readyState === WebSocket.OPEN) {
             const message = {
                 type: 'playerMove',
