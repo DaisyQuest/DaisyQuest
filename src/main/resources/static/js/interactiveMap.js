@@ -1290,7 +1290,7 @@
     let accumulatedMovement = { x: 0, y: 0 };
 
 
-    const INTERPOLATION_DURATION = 1000 / 60; // milliseconds
+    const INTERPOLATION_DURATION = 200; // milliseconds
     let interpolationData = {};
 
     function updatePlayerPosition(playerIdOfPlayerToUpdate, x, y) {
