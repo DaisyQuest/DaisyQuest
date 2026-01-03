@@ -15,9 +15,15 @@
   <body>
     <main class="app">
       <section class="panel hero">
-        <header>
-          <h1>DaisyQuest: Ember Duel</h1>
-          <p class="subtitle">A refined combat encounter for the next-generation DaisyQuest.</p>
+        <header class="hero-header">
+          <div>
+            <h1>DaisyQuest: Ember Duel</h1>
+            <p class="subtitle">A refined combat encounter for the next-generation DaisyQuest.</p>
+          </div>
+          <div class="theme-selector">
+            <label for="theme-select">Theme</label>
+            <select id="theme-select" aria-label="Select a theme"></select>
+          </div>
         </header>
         <div class="npc-selector">
           <label for="npc-select">Choose a challenger</label>
@@ -71,6 +77,39 @@
         <h3>Battle Chronicle</h3>
         <ul id="log"></ul>
       </section>
+      <section class="panel progression">
+        <header class="panel-header">
+          <div>
+            <h3>Reward Track</h3>
+            <p class="subtitle">Fuel your rise with every victory and crafted upgrade.</p>
+          </div>
+          <span class="badge badge-accent" id="progress-level-badge">Level 1</span>
+        </header>
+        <div class="reward-track">
+          <div class="track-card">
+            <div class="track-header">
+              <div>
+                <h4>Battle Mastery</h4>
+                <p class="caption">Earn XP for victories, crafting, and upgrades.</p>
+              </div>
+              <span class="badge" id="progress-xp-label">0 XP</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="track-meta">
+              <span id="progress-current">0 / 120 XP</span>
+              <span id="progress-next">Next reward at Level 2</span>
+            </div>
+          </div>
+          <div class="reward-card" id="reward-card">
+            <h4>Next Reward</h4>
+            <p id="reward-description">Win a duel to reveal your next blessing.</p>
+            <button class="action" id="claim-reward" type="button" disabled>Claim Reward</button>
+          </div>
+        </div>
+        <ul class="milestone-list" id="milestone-list"></ul>
+      </section>
       <section class="panel inventory">
         <h3>Inventory & Equipment</h3>
         <div class="inventory-grid">
@@ -95,6 +134,73 @@
         <p id="recipe-details" class="crafting-details"></p>
         <button class="action" id="craft-button" type="button">Craft</button>
         <p id="crafting-result" class="crafting-result"></p>
+      </section>
+      <section class="panel registry">
+        <header class="panel-header">
+          <div>
+            <h3>Registry Workshop</h3>
+            <p class="subtitle">Curate items and recipes without leaving the game.</p>
+          </div>
+          <div class="registry-tabs">
+            <button class="tab-button is-active" type="button" data-tab="items">Items</button>
+            <button class="tab-button" type="button" data-tab="recipes">Recipes</button>
+          </div>
+        </header>
+        <div class="registry-pane is-active" data-pane="items">
+          <div class="registry-grid">
+            <div>
+              <div class="registry-toolbar">
+                <h4>Item Registry</h4>
+                <button class="secondary" type="button" id="new-item">New Item</button>
+              </div>
+              <div id="item-registry-list" class="registry-list"></div>
+            </div>
+            <form id="item-editor" class="registry-form">
+              <h4 id="item-form-title">Create Item</h4>
+              <label for="item-id">Item Id</label>
+              <input id="item-id" name="itemId" type="text" required />
+              <label for="item-name">Name</label>
+              <input id="item-name" name="itemName" type="text" required />
+              <label for="item-description">Description</label>
+              <textarea id="item-description" name="itemDescription" rows="3" required></textarea>
+              <label for="item-rarity">Rarity</label>
+              <select id="item-rarity" name="itemRarity" required></select>
+              <div class="form-row">
+                <label>
+                  <input id="item-equippable" type="checkbox" />
+                  Equippable
+                </label>
+                <select id="item-slot" name="itemSlot"></select>
+              </div>
+              <p class="form-message" id="item-form-message"></p>
+              <button class="action" type="submit">Save Item</button>
+            </form>
+          </div>
+        </div>
+        <div class="registry-pane" data-pane="recipes">
+          <div class="registry-grid">
+            <div>
+              <div class="registry-toolbar">
+                <h4>Recipe Registry</h4>
+                <button class="secondary" type="button" id="new-recipe">New Recipe</button>
+              </div>
+              <div id="recipe-registry-list" class="registry-list"></div>
+            </div>
+            <form id="recipe-editor" class="registry-form">
+              <h4 id="recipe-form-title">Create Recipe</h4>
+              <label for="recipe-id">Recipe Id</label>
+              <input id="recipe-id" name="recipeId" type="text" required />
+              <label for="recipe-name">Name</label>
+              <input id="recipe-name" name="recipeName" type="text" required />
+              <label for="recipe-result">Result Item</label>
+              <select id="recipe-result" name="recipeResult" required></select>
+              <div class="ingredients-list" id="ingredients-list"></div>
+              <button class="secondary" type="button" id="add-ingredient">Add Ingredient</button>
+              <p class="form-message" id="recipe-form-message"></p>
+              <button class="action" type="submit">Save Recipe</button>
+            </form>
+          </div>
+        </div>
       </section>
     </main>
     <script type="module" src="app.js"></script>

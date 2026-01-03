@@ -1,0 +1,56 @@
+{
+  "themes": [
+    {
+      "name": "aurora",
+      "label": "Aurora Bloom",
+      "isDefault": true,
+      "tokens": {
+        "dq-bg": "#0b1020",
+        "dq-surface": "#16192d",
+        "dq-surface-strong": "#1e2240",
+        "dq-border": "#2c335a",
+        "dq-text": "#f8fafc",
+        "dq-muted": "#94a3b8",
+        "dq-accent": "#facc15",
+        "dq-accent-strong": "#f97316",
+        "dq-success": "#22c55e",
+        "dq-danger": "#ef4444",
+        "dq-glow": "0 0 24px rgba(250, 204, 21, 0.35)"
+      }
+    },
+    {
+      "name": "ember",
+      "label": "Ember Forge",
+      "tokens": {
+        "dq-bg": "#140c14",
+        "dq-surface": "#251225",
+        "dq-surface-strong": "#341634",
+        "dq-border": "#532a52",
+        "dq-text": "#fff7ed",
+        "dq-muted": "#fda4af",
+        "dq-accent": "#fb7185",
+        "dq-accent-strong": "#f97316",
+        "dq-success": "#4ade80",
+        "dq-danger": "#f87171",
+        "dq-glow": "0 0 24px rgba(251, 113, 133, 0.35)"
+      }
+    },
+    {
+      "name": "verdant",
+      "label": "Verdant Crest",
+      "tokens": {
+        "dq-bg": "#061315",
+        "dq-surface": "#0f2f2b",
+        "dq-surface-strong": "#14423d",
+        "dq-border": "#1f5d53",
+        "dq-text": "#ecfdf5",
+        "dq-muted": "#6ee7b7",
+        "dq-accent": "#34d399",
+        "dq-accent-strong": "#22c55e",
+        "dq-success": "#22c55e",
+        "dq-danger": "#f87171",
+        "dq-glow": "0 0 24px rgba(52, 211, 153, 0.35)"
+      }
+    }
+  ]
+}

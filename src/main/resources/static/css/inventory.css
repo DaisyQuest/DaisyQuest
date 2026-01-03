@@ -11,13 +11,14 @@
     position: relative;
     width: 100%;
     height: 100%;
-    border: 2px solid #ccc;
+    border: 2px solid var(--dq-border);
     border-radius: 5px;
     overflow: hidden;
+    background-color: var(--dq-surface);
 }
 
 .item-container.equippable {
-    border-color: #4CAF50;
+    border-color: var(--dq-success);
 }
 
 .item-sprite {
@@ -34,8 +35,8 @@
     position: absolute;
     bottom: 0;
     right: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
+    background-color: rgba(15, 23, 42, 0.8);
+    color: var(--dq-text);
     font-size: 0.8em;
     padding: 2px 4px;
     border-top-left-radius: 5px;
@@ -45,8 +46,8 @@
     position: absolute;
     top: 0;
     left: 0;
-    background-color: #4CAF50;
-    color: white;
+    background-color: var(--dq-success);
+    color: #0b1020;
     font-size: 0.8em;
     padding: 2px 4px;
     border-bottom-right-radius: 5px;
@@ -55,8 +56,8 @@
 .empty-slot {
     width: 100%;
     height: 100%;
-    background-color: #f0f0f0;
-    border: 2px dashed #ccc;
+    background-color: rgba(148, 163, 184, 0.1);
+    border: 2px dashed var(--dq-border);
     border-radius: 5px;
 }
 
@@ -73,8 +74,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 1px solid #ccc;
-    background-color: #f8f8f8;
+    border: 1px solid var(--dq-border);
+    background-color: var(--dq-surface);
 }
 
 .item-container {
@@ -100,8 +101,8 @@
     position: absolute;
     bottom: 2px;
     right: 2px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
+    background-color: rgba(15, 23, 42, 0.8);
+    color: var(--dq-text);
     font-size: 0.8em;
     padding: 1px 3px;
     border-radius: 3px;
@@ -120,12 +121,12 @@
 }
 
 .unequip-button {
-    background-color: #ff9800;
-    color: white;
+    background-color: var(--dq-accent-strong);
+    color: #0b1020;
 }
 
 .unequip-button:hover {
-    background-color: #e68a00;
+    background-color: var(--dq-accent);
 }
 
 .inventory-button {
@@ -146,39 +147,39 @@
 }
 
 .equip-button {
-    background-color: #4CAF50;
-    color: white;
+    background-color: var(--dq-success);
+    color: #0b1020;
 }
 
 .equip-button:hover {
-    background-color: #45a049;
+    background-color: #1faa59;
 }
 
 .use-button {
-    background-color: #008CBA;
-    color: white;
+    background-color: #38bdf8;
+    color: #0b1020;
 }
 
 .use-button:hover {
-    background-color: #007aa3;
+    background-color: #0ea5e9;
 }
 
 .drop-button {
-    background-color: #f44336;
-    color: white;
+    background-color: var(--dq-danger);
+    color: #0b1020;
 }
 
 .drop-button:hover {
-    background-color: #da190b;
+    background-color: #dc2626;
 }
 
 .send-button {
-    background-color: #ff9800;
-    color: white;
+    background-color: var(--dq-accent);
+    color: #0b1020;
 }
 
 .send-button:hover {
-    background-color: #e68a00;
+    background-color: var(--dq-accent-strong);
 }
 
 
@@ -195,7 +196,7 @@
 .inventory-slot {
     width: 50px;
     height: 50px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--dq-border);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -206,8 +207,8 @@
     position: absolute;
     bottom: 0;
     right: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
+    background-color: rgba(15, 23, 42, 0.8);
+    color: var(--dq-text);
     font-size: 0.8em;
     padding: 1px 3px;
 }
@@ -215,5 +216,5 @@
 .empty-slot {
     width: 100%;
     height: 100%;
-    background-color: #f0f0f0;
+    background-color: rgba(148, 163, 184, 0.1);
 }

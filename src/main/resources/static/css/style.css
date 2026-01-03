@@ -2,12 +2,12 @@
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
-    background-color: white;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    background-color: var(--dq-surface-elevated);
+    box-shadow: var(--dq-card-glow);
 }
 
 h1 {
-    color: #333;
+    color: var(--dq-text);
 }
 
 input, button {
@@ -17,13 +17,12 @@ input, button {
 }
 
 button {
-    background-color: #4CAF50;
-    color: white;
+    background-color: var(--dq-accent);
+    color: #0b1020;
     border: none;
     cursor: pointer;
 }
 
 button:hover {
-    background-color: #45a049;
+    background-color: var(--dq-accent-strong);
 }
-

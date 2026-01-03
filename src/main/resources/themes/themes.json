@@ -1,0 +1,74 @@
+{
+  "themes": [
+    {
+      "name": "aurora",
+      "label": "Aurora Bloom",
+      "isDefault": true,
+      "tokens": {
+        "dq-bg": "#0b1020",
+        "dq-surface": "#111827",
+        "dq-surface-elevated": "#1f2937",
+        "dq-border": "#27324a",
+        "dq-text": "#f8fafc",
+        "dq-muted": "#94a3b8",
+        "dq-accent": "#facc15",
+        "dq-accent-strong": "#f97316",
+        "dq-accent-soft": "#fde68a",
+        "dq-success": "#22c55e",
+        "dq-danger": "#ef4444",
+        "dq-focus": "#38bdf8",
+        "dq-progress-track": "rgba(148, 163, 184, 0.25)",
+        "dq-progress-fill": "linear-gradient(90deg, #facc15, #fb7185, #f97316)",
+        "dq-glow": "0 0 25px rgba(250, 204, 21, 0.4)",
+        "dq-card-glow": "0 20px 40px rgba(15, 23, 42, 0.45)",
+        "dq-reward": "radial-gradient(circle at top, rgba(250, 204, 21, 0.28), rgba(15, 23, 42, 0.92))"
+      }
+    },
+    {
+      "name": "ember",
+      "label": "Ember Forge",
+      "tokens": {
+        "dq-bg": "#130c0c",
+        "dq-surface": "#241011",
+        "dq-surface-elevated": "#331414",
+        "dq-border": "#4c1d1d",
+        "dq-text": "#fff7ed",
+        "dq-muted": "#fca5a5",
+        "dq-accent": "#fb7185",
+        "dq-accent-strong": "#f97316",
+        "dq-accent-soft": "#fecdd3",
+        "dq-success": "#4ade80",
+        "dq-danger": "#f87171",
+        "dq-focus": "#f97316",
+        "dq-progress-track": "rgba(244, 63, 94, 0.25)",
+        "dq-progress-fill": "linear-gradient(90deg, #fb7185, #f97316, #facc15)",
+        "dq-glow": "0 0 30px rgba(248, 113, 113, 0.45)",
+        "dq-card-glow": "0 20px 40px rgba(30, 0, 0, 0.55)",
+        "dq-reward": "radial-gradient(circle at top, rgba(251, 113, 133, 0.3), rgba(19, 12, 12, 0.92))"
+      }
+    },
+    {
+      "name": "verdant",
+      "label": "Verdant Crest",
+      "tokens": {
+        "dq-bg": "#061312",
+        "dq-surface": "#0b2d26",
+        "dq-surface-elevated": "#114036",
+        "dq-border": "#1b5c4a",
+        "dq-text": "#ecfdf5",
+        "dq-muted": "#6ee7b7",
+        "dq-accent": "#34d399",
+        "dq-accent-strong": "#22c55e",
+        "dq-accent-soft": "#a7f3d0",
+        "dq-success": "#22c55e",
+        "dq-danger": "#f87171",
+        "dq-focus": "#34d399",
+        "dq-progress-track": "rgba(16, 185, 129, 0.2)",
+        "dq-progress-fill": "linear-gradient(90deg, #34d399, #22c55e, #facc15)",
+        "dq-glow": "0 0 25px rgba(52, 211, 153, 0.4)",
+        "dq-card-glow": "0 20px 40px rgba(6, 18, 16, 0.6)",
+        "dq-reward": "radial-gradient(circle at top, rgba(52, 211, 153, 0.25), rgba(6, 18, 16, 0.9))"
+      }
+    }
+  ]
+}

@@ -1,0 +1,309 @@
+.dq-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.dq-topbar__title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dq-topbar__subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--dq-muted);
+}
+
+.dq-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.dq-theme-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--dq-muted);
+    font-size: 0.9rem;
+}
+
+.dq-theme-picker select {
+    background: var(--dq-surface-elevated);
+    border: 1px solid var(--dq-border);
+    border-radius: 999px;
+    color: var(--dq-text);
+    padding: 0.35rem 0.85rem;
+    min-width: 160px;
+}
+
+.dq-panel {
+    background: var(--dq-surface);
+    border: 1px solid var(--dq-border);
+    border-radius: 18px;
+    padding: 20px;
+    box-shadow: var(--dq-card-glow);
+}
+
+.dq-card,
+.card.dq-card,
+.card {
+    background: var(--dq-surface-elevated);
+    border: 1px solid var(--dq-border);
+    border-radius: 18px;
+    color: var(--dq-text);
+    box-shadow: var(--dq-card-glow);
+}
+
+.nav-tabs .nav-link {
+    color: var(--dq-muted);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--dq-text);
+    background: var(--dq-surface);
+    border-color: var(--dq-border) var(--dq-border) transparent;
+}
+
+.dq-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(250, 204, 21, 0.2);
+    color: var(--dq-accent);
+    border: 1px solid rgba(250, 204, 21, 0.4);
+}
+
+.dq-badge--success {
+    background: rgba(34, 197, 94, 0.2);
+    color: var(--dq-success);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.dq-badge--danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--dq-danger);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.dq-progress {
+    background: var(--dq-progress-track);
+    border-radius: 999px;
+    height: 12px;
+    overflow: hidden;
+    border: 1px solid var(--dq-border);
+}
+
+.dq-progress__fill {
+    height: 100%;
+    background: var(--dq-progress-fill);
+    box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.35);
+}
+
+.dq-task-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.95));
+    border: 1px solid var(--dq-border);
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.dq-task-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(250, 204, 21, 0.18), transparent 55%);
+    pointer-events: none;
+}
+
+.dq-task-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.dq-task-title {
+    margin: 0;
+    font-weight: 700;
+}
+
+.dq-task-desc {
+    color: var(--dq-muted);
+    margin-bottom: 0.75rem;
+}
+
+.dq-task-meta {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.dq-task-grid {
+    display: grid;
+    gap: 0.5rem;
+    color: var(--dq-muted);
+    font-size: 0.9rem;
+}
+
+.dq-task-grid ul {
+    padding-left: 1rem;
+    margin: 0.3rem 0 0;
+}
+
+.dq-task-button {
+    background: linear-gradient(120deg, var(--dq-accent), var(--dq-accent-strong));
+    border: none;
+    color: #0b1020;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dq-task-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--dq-glow);
+}
+
+.reward-modal {
+    background-color: rgba(8, 11, 24, 0.8);
+    backdrop-filter: blur(6px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.reward-content {
+    background: var(--dq-surface-elevated);
+    color: var(--dq-text);
+    border-radius: 20px;
+    border: 1px solid var(--dq-border);
+    box-shadow: var(--dq-glow);
+    padding: 24px;
+    min-width: 320px;
+    text-align: center;
+}
+
+.reward-content button {
+    margin-top: 1rem;
+    background: linear-gradient(120deg, var(--dq-accent), var(--dq-accent-strong));
+    border: none;
+    color: #0b1020;
+    padding: 0.5rem 1.2rem;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.reward-item {
+    background: var(--dq-reward);
+    border: 1px solid var(--dq-border);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.45);
+    min-width: 120px;
+    padding: 10px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.reward-item img {
+    filter: drop-shadow(0 4px 10px rgba(250, 204, 21, 0.4));
+    width: 50px;
+    height: 50px;
+    margin-bottom: 5px;
+}
+
+.reward-items {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.unclaimed-rewards-indicator {
+    background: rgba(250, 204, 21, 0.2);
+    color: var(--dq-accent);
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(250, 204, 21, 0.4);
+    margin-left: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.unclaimed-rewards-indicator .badge {
+    background: var(--dq-accent);
+    color: #0b1020;
+    font-weight: 700;
+}
+
+.dq-registry-card {
+    background: var(--dq-surface-elevated);
+    border: 1px solid var(--dq-border);
+    border-radius: 16px;
+    padding: 16px;
+    height: 100%;
+    box-shadow: var(--dq-card-glow);
+}
+
+.dq-registry-card__meta {
+    color: var(--dq-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.dq-empty-state {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px dashed var(--dq-border);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    color: var(--dq-muted);
+}
+
+.dq-table thead th {
+    color: var(--dq-muted);
+    font-weight: 600;
+}
+
+.dq-table tbody tr {
+    background: var(--dq-surface-elevated);
+}
+
+.dq-table tbody td,
+.dq-table tbody th {
+    vertical-align: middle;
+}
+
+.dq-pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.dq-pill {
+    background: rgba(148, 163, 184, 0.2);
+    color: var(--dq-text);
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    border: 1px solid var(--dq-border);
+}
