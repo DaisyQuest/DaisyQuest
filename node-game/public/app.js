@@ -1,10 +1,14 @@
 import {
   createCombatant,
   ACTIONS,
+  ACTION_CONFIG,
+  GLOBAL_COOLDOWN_MS,
   DEFAULT_PLAYER,
   getNpcById,
   NPCS,
-  performTurn,
+  getEnemyActionDelay,
+  performEnemyAction,
+  performPlayerAction,
   isDefeated
 } from "./battle.js";
 import {
@@ -73,6 +77,13 @@ const newRecipeButton = document.getElementById("new-recipe");
 const addIngredientButton = document.getElementById("add-ingredient");
 const tabButtons = document.querySelectorAll(".tab-button");
 const registryPanes = document.querySelectorAll(".registry-pane");
+const actionButtons = Array.from(document.querySelectorAll("button.action")).filter(
+  (button) => !["craft-button", "claim-reward"].includes(button.id)
+);
+
+actionButtons.forEach((button) => {
+  button.dataset.baseLabel = button.textContent;
+});
 
 const progressionSystem = createProgressionSystem({
   thresholds: [0, 120, 280, 480, 720, 1000, 1400, 1900]
@@ -119,6 +130,14 @@ let state = {
   progression: progressionSystem.getProgressSnapshot(0),
   pendingReward: null,
   claimedRewards: new Set()
+};
+
+const combatTimers = {
+  globalCooldownUntil: 0,
+  actionCooldowns: Object.fromEntries(Object.keys(ACTION_CONFIG).map((action) => [action, 0])),
+  queuedAction: null,
+  enemyNextActionAt: 0,
+  loopId: null
 };
 
 function populateNpcSelect() {
@@ -174,138 +193,155 @@ function updateMeters() {
   }
 }
 
-function renderProgression() {
-  const nextLevelXp = progressionSystem.experienceForNextLevel(state.playerData.progression.level);
-  levelValue.textContent = `${state.playerData.progression.level}`;
-  experienceValue.textContent = `${state.playerData.progression.experience}`;
-  nextLevelValue.textContent = `${nextLevelXp}`;
-  statPointsValue.textContent = `${state.playerData.progression.statPoints}`;
-  statList.innerHTML = "";
-  Object.entries(state.playerData.progression.attributes).forEach(([key, value]) => {
-    const row = document.createElement("div");
-    row.className = "stat-row";
-    row.innerHTML = `
-      <span class="stat-name">${key}</span>
-      <span class="stat-value">${value}</span>
-      <button type="button" class="secondary" data-attribute="${key}">+</button>
-    `;
-    const button = row.querySelector("button");
-    button.disabled = state.playerData.progression.statPoints <= 0;
-    button.addEventListener("click", () => {
-      const updated = playerSystem.allocateStatPoint(state.playerData, key, 1);
-      if (updated.progression.error) {
-        pushLog([updated.progression.error]);
-        return;
-      }
-      state.playerData = updated;
-      renderProgression();
-    });
-    statList.appendChild(row);
-  });
+function getActionLabel(action) {
+  return ACTION_CONFIG[action]?.label ?? action;
 }
 
-function renderSpellbook() {
-  spellbookList.innerHTML = "";
-  spellSlots.innerHTML = "";
-  spellbookMessage.textContent = "";
-  const spells = listSpells();
-  spells.forEach((spell) => {
-    const item = document.createElement("div");
-    item.className = "spell-entry";
-    const known = state.playerData.knownSpells.includes(spell.id);
-    const requirementResult = unlockSystem.evaluateRequirements(spell.unlockRequirements, {
-      attributes: state.playerData.progression.attributes,
-      inventory: state.playerData.inventory,
-      consumedItems: state.playerData.consumedItems
-    });
-    item.innerHTML = `
-      <div>
-        <strong>${spell.name}</strong>
-        <p>${spell.description}</p>
-        <p>Mana: ${spell.manaCost} • Cooldown: ${spell.cooldown}</p>
-        ${
-          !known && spell.unlockRequirements.length > 0
-            ? `<p class="spell-requirement">${requirementResult.ok ? "Requirements met." : requirementResult.reason}</p>`
-            : ""
-        }
-      </div>
-      <button type="button" class="secondary" data-spell-id="${spell.id}">
-        ${known ? "Equip" : "Learn"}
-      </button>
-    `;
-    const button = item.querySelector("button");
-    if (!known && !requirementResult.ok) {
+function isActionReady(action, now) {
+  return (combatTimers.actionCooldowns[action] ?? 0) <= now;
+}
+
+function updateActionButtons(now = Date.now()) {
+  const gcdRemaining = Math.max(0, combatTimers.globalCooldownUntil - now);
+  const combatLocked = isDefeated(state.player) || isDefeated(state.enemy);
+
+  actionButtons.forEach((button) => {
+    const action = button.dataset.action;
+    const baseLabel = button.dataset.baseLabel ?? button.textContent;
+    const actionRemaining = Math.max(0, (combatTimers.actionCooldowns[action] ?? 0) - now);
+    let suffix = "";
+
+    if (actionRemaining > 0) {
+      suffix = ` (${Math.ceil(actionRemaining / 1000)}s)`;
       button.disabled = true;
+    } else {
+      if (combatTimers.queuedAction === action) {
+        suffix = " (queued)";
+      } else if (gcdRemaining > 0) {
+        suffix = ` (${Math.ceil(gcdRemaining / 1000)}s)`;
+      }
+      button.disabled = combatLocked;
     }
-    button.addEventListener("click", () => {
-      if (!known) {
-        const learned = playerSystem.learnSpell(state.playerData, spell.id);
-        if (learned.error) {
-          spellbookMessage.textContent = learned.error;
-          return;
-        }
-        state.playerData = learned;
-        renderInventory();
-        renderProgression();
-        renderSpellbook();
-        return;
-      }
-      const slotIndex = state.playerData.spellbook.equippedSlots.findIndex((slot) => slot === null);
-      const targetIndex = slotIndex === -1 ? 0 : slotIndex;
-      const updated = playerSystem.equipSpell(state.playerData, spell.id, targetIndex);
-      if (updated.error) {
-        spellbookMessage.textContent = updated.error;
-        return;
-      }
-      state.playerData = updated;
-      renderSpellbook();
-    });
-    spellbookList.appendChild(item);
-  });
 
-  for (let i = 0; i < SPELLBOOK_SLOTS; i += 1) {
-    const slot = document.createElement("div");
-    slot.className = "spell-slot";
-    const spellId = state.playerData.spellbook.equippedSlots[i];
-    const spell = spellId ? spells.find((entry) => entry.id === spellId) : null;
-    slot.innerHTML = `
-      <div class="spell-slot-info">
-        <span>Slot ${i + 1}</span>
-        <span>${spell ? spell.name : "Empty"}</span>
-      </div>
-    `;
-    if (spell) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "secondary";
-      button.textContent = "Unequip";
-      button.addEventListener("click", () => {
-        const updated = playerSystem.unequipSpell(state.playerData, i);
-        if (updated.error) {
-          spellbookMessage.textContent = updated.error;
-          return;
-        }
-        state.playerData = updated;
-        renderSpellbook();
-      });
-      slot.appendChild(button);
-    }
-    spellSlots.appendChild(slot);
-  }
+    button.textContent = `${baseLabel}${suffix}`;
+  });
 }
 
-function setActiveTab(tabId) {
-  tabPanels.forEach((panel) => {
-    panel.classList.toggle("is-active", panel.dataset.tabPanel === tabId);
+function setActionCooldowns(action, now) {
+  const config = ACTION_CONFIG[action];
+  if (!config) {
+    return;
+  }
+  combatTimers.actionCooldowns[action] = now + config.cooldownMs;
+  combatTimers.globalCooldownUntil = now + GLOBAL_COOLDOWN_MS;
+}
+
+function scheduleEnemyAction(now) {
+  combatTimers.enemyNextActionAt = now + getEnemyActionDelay(state.enemy);
+}
+
+function resolveVictory(enemy) {
+  const reward = getVictoryReward(enemy);
+  applyProgressionGain(reward.xp, reward.label);
+  const lootDrops = runtime.lootSystem.rollLoot(enemy.id);
+  if (lootDrops.length > 0) {
+    const lootLines = lootDrops.map((drop) => {
+      const item = runtime.itemRegistry.getItem(drop.itemId);
+      state.inventory = runtime.inventoryManager.addItem(
+        state.inventory,
+        drop.itemId,
+        drop.quantity
+      );
+      return `Looted ${item ? item.name : drop.itemId} x${drop.quantity}.`;
+    });
+    pushLoot(lootLines);
+    renderInventory();
+  }
+  updateActionButtons();
+}
+
+function executePlayerAction(action, now) {
+  const result = performPlayerAction({
+    player: state.player,
+    enemy: state.enemy,
+    action
   });
-  tabButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.tabButton === tabId);
+  state = { ...state, player: result.player, enemy: result.enemy };
+  pushLog(result.log);
+  setActionCooldowns(action, now);
+  combatTimers.queuedAction = null;
+
+  if (result.victory) {
+    resolveVictory(result.enemy);
+    updateMeters();
+    return;
+  }
+
+  updateMeters();
+  scheduleEnemyAction(now);
+}
+
+function executeEnemyAction(now) {
+  if (isDefeated(state.enemy) || isDefeated(state.player)) {
+    return;
+  }
+  const result = performEnemyAction({
+    player: state.player,
+    enemy: state.enemy
   });
+  state = { ...state, player: result.player, enemy: result.enemy };
+  pushLog(result.log);
+  updateMeters();
+  scheduleEnemyAction(now);
+}
+
+function queueAction(action) {
+  if (isDefeated(state.player) || isDefeated(state.enemy)) {
+    return;
+  }
+  const now = Date.now();
+  if (!ACTION_CONFIG[action]) {
+    pushLog([`${state.player.name} fumbles an unfamiliar action.`]);
+    return;
+  }
+  if (!isActionReady(action, now)) {
+    pushLog([`${getActionLabel(action)} is recharging.`]);
+    return;
+  }
+  if (combatTimers.globalCooldownUntil > now) {
+    combatTimers.queuedAction = action;
+    pushLog([`${getActionLabel(action)} queued.`]);
+    updateActionButtons(now);
+    return;
+  }
+  executePlayerAction(action, now);
+  updateActionButtons(now);
+}
+
+function processCombatTick() {
+  const now = Date.now();
+  if (combatTimers.queuedAction && now >= combatTimers.globalCooldownUntil) {
+    const queued = combatTimers.queuedAction;
+    if (isActionReady(queued, now)) {
+      executePlayerAction(queued, now);
+    }
+  }
+  if (combatTimers.enemyNextActionAt && now >= combatTimers.enemyNextActionAt) {
+    executeEnemyAction(now);
+  }
+  updateActionButtons(now);
+}
+
+function startCombatLoop() {
+  if (combatTimers.loopId) {
+    return;
+  }
+  combatTimers.loopId = window.setInterval(processCombatTick, 250);
 }
 
 function renderInventory() {
   inventoryList.innerHTML = "";
-  const entries = Object.entries(state.playerData.inventory);
+  const entries = Object.entries(state.inventory);
   if (entries.length === 0) {
     const empty = document.createElement("p");
     empty.textContent = "Your satchel is empty.";
@@ -339,7 +375,8 @@ function renderInventory() {
           pushLog([result.error]);
           return;
         }
-        state.playerData = updated;
+        state.inventory = result.inventory;
+        state.equipment = result.equipment;
         pushLog([`Equipped ${item.name}.`]);
         renderInventory();
         renderEquipment();
@@ -374,7 +411,8 @@ function renderEquipment() {
           pushLog([result.error]);
           return;
         }
-        state.playerData = updated;
+        state.inventory = result.inventory;
+        state.equipment = result.equipment;
         pushLog([`Unequipped ${item.name}.`]);
         renderInventory();
         renderEquipment();
@@ -442,7 +480,15 @@ function resetBattle() {
   enemyName.textContent = npc.name;
   npcDescription.textContent = npc.description;
   pushLog([`A new duel begins against ${npc.name}. Choose your opening move.`]);
+  combatTimers.globalCooldownUntil = 0;
+  combatTimers.queuedAction = null;
+  Object.keys(combatTimers.actionCooldowns).forEach((action) => {
+    combatTimers.actionCooldowns[action] = 0;
+  });
+  scheduleEnemyAction(Date.now());
   updateMeters();
+  updateActionButtons();
+  startCombatLoop();
 }
 
 function getVictoryReward(enemy) {
@@ -526,39 +572,6 @@ function claimReward() {
   renderProgression();
 }
 
-function handleAction(action) {
-  const result = performTurn({
-    player: state.player,
-    enemy: state.enemy,
-    action
-  });
-  state = { ...state, player: result.player, enemy: result.enemy };
-  pushLog(result.log);
-  if (isDefeated(result.enemy)) {
-    const reward = getVictoryReward(result.enemy);
-    applyProgressionGain(reward.xp, reward.label);
-    const lootDrops = runtime.lootSystem.rollLoot(result.enemy.id);
-    if (lootDrops.length > 0) {
-      const lootLines = lootDrops.map((drop) => {
-        const item = runtime.itemRegistry.getItem(drop.itemId);
-        state.inventory = runtime.inventoryManager.addItem(
-          state.inventory,
-          drop.itemId,
-          drop.quantity
-        );
-        return `Looted ${item ? item.name : drop.itemId} x${drop.quantity}.`;
-      });
-      pushLoot(lootLines);
-      renderInventory();
-    }
-  }
-  if (result.experienceGained) {
-    state.playerData = playerSystem.applyExperience(state.playerData, result.experienceGained);
-    pushLog([`Gained ${result.experienceGained} experience.`]);
-    renderProgression();
-  }
-  updateMeters();
-}
 
 function renderRegistryItems() {
   itemRegistryList.innerHTML = "";
@@ -789,13 +802,9 @@ function wireTabs() {
   });
 }
 
-const actions = document.querySelectorAll("button.action");
-actions.forEach((button) => {
-  if (button.id === "craft-button" || button.id === "claim-reward") {
-    return;
-  }
+actionButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    handleAction(button.dataset.action);
+    queueAction(button.dataset.action);
   });
 });
 
@@ -803,11 +812,6 @@ document.getElementById("reset").addEventListener("click", resetBattle);
 npcSelect.addEventListener("change", resetBattle);
 recipeSelect.addEventListener("change", renderRecipeDetails);
 craftButton.addEventListener("click", attemptCraft);
-tabButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    setActiveTab(button.dataset.tabButton);
-  });
-});
 
 populateNpcSelect();
 populateRarityOptions();

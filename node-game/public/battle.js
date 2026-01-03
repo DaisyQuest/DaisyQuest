@@ -84,6 +84,23 @@ export const ACTIONS = Object.freeze({
   HEAL: "heal"
 });
 
+export const ACTION_CONFIG = Object.freeze({
+  [ACTIONS.ATTACK]: Object.freeze({
+    label: "Swift Strike",
+    cooldownMs: 1500
+  }),
+  [ACTIONS.SPECIAL]: Object.freeze({
+    label: "Ember Surge",
+    cooldownMs: 5500
+  }),
+  [ACTIONS.HEAL]: Object.freeze({
+    label: "Serenity Bloom",
+    cooldownMs: 8000
+  })
+});
+
+export const GLOBAL_COOLDOWN_MS = 1200;
+
 export function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -147,6 +164,16 @@ export function applyFocusCost(combatant, cost) {
   }
   const nextFocus = clamp((combatant.focus ?? 0) - cost, 0, combatant.maxFocus);
   return { ...combatant, focus: nextFocus };
+}
+
+export function getActionConfig(action) {
+  return ACTION_CONFIG[action] ?? null;
+}
+
+export function getEnemyActionDelay(enemy, rng = Math.random) {
+  const baseDelay = clamp(2200 - enemy.attack * 20, 1200, 2600);
+  const jitter = Math.round((rng() - 0.5) * 400);
+  return clamp(baseDelay + jitter, 900, 3000);
 }
 
 export function performAttack(attacker, defender, rng) {
@@ -232,6 +259,112 @@ export function performFocusStrike(attacker, defender, rng) {
   };
 }
 
+export function performPlayerAction({ player, enemy, action, rng = Math.random }) {
+  let log = [];
+  let updatedPlayer = player;
+  let updatedEnemy = enemy;
+  let actionDamage = 0;
+  let healed = 0;
+  let failed = false;
+
+  if (action === ACTIONS.ATTACK) {
+    const result = performAttack(updatedPlayer, updatedEnemy, rng);
+    updatedEnemy = result.defender;
+    log.push(result.log);
+    actionDamage = result.damage;
+  } else if (action === ACTIONS.SPECIAL) {
+    const result = performSpecial(updatedPlayer, updatedEnemy, rng);
+    updatedPlayer = result.attacker;
+    updatedEnemy = result.defender;
+    log.push(result.log);
+    actionDamage = result.damage;
+    failed = Boolean(result.failed);
+  } else if (action === ACTIONS.HEAL) {
+    const result = performHeal(updatedPlayer);
+    updatedPlayer = result.combatant;
+    log.push(result.log);
+    healed = result.healed;
+    failed = Boolean(result.failed);
+  } else {
+    log.push(`${updatedPlayer.name} hesitates.`);
+    failed = true;
+  }
+
+  if (isDefeated(updatedEnemy)) {
+    log.push(`${updatedEnemy.name} collapses. Victory!`);
+    const loot = rollLoot(updatedEnemy.id, rng);
+    const experienceGained = updatedEnemy.experienceReward ?? 0;
+    return {
+      player: updatedPlayer,
+      enemy: updatedEnemy,
+      log,
+      loot,
+      experienceGained,
+      actionResult: { action, damage: actionDamage, healed, failed },
+      victory: true
+    };
+  }
+
+  if (typeof updatedEnemy.maxFocus === "number" && typeof updatedEnemy.focus !== "number") {
+    updatedEnemy = { ...updatedEnemy, focus: 0 };
+  }
+
+  if (typeof updatedEnemy.maxFocus === "number") {
+    updatedEnemy = applyFocusGain(
+      updatedEnemy,
+      calculateFocusGain({ action, damage: actionDamage })
+    );
+  }
+
+  return {
+    player: updatedPlayer,
+    enemy: updatedEnemy,
+    log,
+    actionResult: { action, damage: actionDamage, healed, failed },
+    victory: false
+  };
+}
+
+export function performEnemyAction({ player, enemy, rng = Math.random }) {
+  if (isDefeated(enemy)) {
+    return { player, enemy, log: [], action: null };
+  }
+
+  let updatedEnemy = enemy;
+  let updatedPlayer = player;
+  const log = [];
+
+  if (typeof updatedEnemy.maxFocus === "number" && typeof updatedEnemy.focus !== "number") {
+    updatedEnemy = { ...updatedEnemy, focus: 0 };
+  }
+
+  const shouldUseFocusStrike =
+    typeof updatedEnemy.maxFocus === "number" && updatedEnemy.focus >= 50;
+  const shouldUseSpecial = updatedEnemy.mana >= 10 && rng() < 0.3;
+
+  if (shouldUseFocusStrike) {
+    const result = performFocusStrike(updatedEnemy, updatedPlayer, rng);
+    updatedEnemy = result.attacker;
+    updatedPlayer = result.defender;
+    log.push(result.log);
+    return { player: updatedPlayer, enemy: updatedEnemy, log, action: "focus" };
+  }
+
+  if (shouldUseSpecial) {
+    const result = performSpecial(updatedEnemy, updatedPlayer, rng);
+    updatedEnemy = result.attacker;
+    updatedPlayer = result.defender;
+    log.push(result.log);
+    return { player: updatedPlayer, enemy: updatedEnemy, log, action: ACTIONS.SPECIAL };
+  }
+
+  const result = performAttack(updatedEnemy, updatedPlayer, rng);
+  updatedEnemy = result.attacker;
+  updatedPlayer = result.defender;
+  log.push(result.log);
+  return { player: updatedPlayer, enemy: updatedEnemy, log, action: ACTIONS.ATTACK };
+}
+
 export function isDefeated(combatant) {
   return combatant.health <= 0;
 }
@@ -248,68 +381,25 @@ export function calculateFocusGain({ action, damage = 0 }) {
 }
 
 export function performTurn({ player, enemy, action, rng = Math.random }) {
-  let log = [];
-  let updatedPlayer = player;
-  let updatedEnemy = enemy;
-  let actionDamage = 0;
+  const playerResult = performPlayerAction({ player, enemy, action, rng });
+  let updatedPlayer = playerResult.player;
+  let updatedEnemy = playerResult.enemy;
+  let log = [...playerResult.log];
 
-  if (action === ACTIONS.ATTACK) {
-    const result = performAttack(updatedPlayer, updatedEnemy, rng);
-    updatedEnemy = result.defender;
-    log.push(result.log);
-    actionDamage = result.damage;
-  } else if (action === ACTIONS.SPECIAL) {
-    const result = performSpecial(updatedPlayer, updatedEnemy, rng);
-    updatedPlayer = result.attacker;
-    updatedEnemy = result.defender;
-    log.push(result.log);
-    actionDamage = result.damage;
-  } else if (action === ACTIONS.HEAL) {
-    const result = performHeal(updatedPlayer);
-    updatedPlayer = result.combatant;
-    log.push(result.log);
-  } else {
-    log.push(`${updatedPlayer.name} hesitates.`);
+  if (playerResult.victory) {
+    return {
+      player: updatedPlayer,
+      enemy: updatedEnemy,
+      log,
+      loot: playerResult.loot,
+      experienceGained: playerResult.experienceGained
+    };
   }
 
-  if (isDefeated(updatedEnemy)) {
-    log.push(`${updatedEnemy.name} collapses. Victory!`);
-    const loot = rollLoot(updatedEnemy.id, rng);
-    const experienceGained = updatedEnemy.experienceReward ?? 0;
-    return { player: updatedPlayer, enemy: updatedEnemy, log, loot, experienceGained };
-  }
-
-  if (typeof updatedEnemy.maxFocus === "number" && typeof updatedEnemy.focus !== "number") {
-    updatedEnemy = { ...updatedEnemy, focus: 0 };
-  }
-
-  if (typeof updatedEnemy.maxFocus === "number") {
-    updatedEnemy = applyFocusGain(updatedEnemy, calculateFocusGain({ action, damage: actionDamage }));
-  }
-
-  const shouldUseFocusStrike =
-    typeof updatedEnemy.maxFocus === "number" && updatedEnemy.focus >= 50;
-  const enemyAction =
-    shouldUseFocusStrike || (updatedEnemy.mana >= 10 && rng() < 0.3)
-      ? ACTIONS.SPECIAL
-      : ACTIONS.ATTACK;
-
-  if (shouldUseFocusStrike) {
-    const result = performFocusStrike(updatedEnemy, updatedPlayer, rng);
-    updatedEnemy = result.attacker;
-    updatedPlayer = result.defender;
-    log.push(result.log);
-  } else if (enemyAction === ACTIONS.SPECIAL) {
-    const result = performSpecial(updatedEnemy, updatedPlayer, rng);
-    updatedEnemy = result.attacker;
-    updatedPlayer = result.defender;
-    log.push(result.log);
-  } else {
-    const result = performAttack(updatedEnemy, updatedPlayer, rng);
-    updatedEnemy = result.attacker;
-    updatedPlayer = result.defender;
-    log.push(result.log);
-  }
+  const enemyResult = performEnemyAction({ player: updatedPlayer, enemy: updatedEnemy, rng });
+  updatedPlayer = enemyResult.player;
+  updatedEnemy = enemyResult.enemy;
+  log = log.concat(enemyResult.log);
 
   if (isDefeated(updatedPlayer)) {
     log.push(`${updatedPlayer.name} falls. Defeat.`);
