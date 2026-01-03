@@ -1,5 +1,7 @@
 import {
   ACTIONS,
+  ACTION_CONFIG,
+  GLOBAL_COOLDOWN_MS,
   applyDamage,
   applyHeal,
   applyFocusCost,
@@ -11,12 +13,16 @@ import {
   createCombatant,
   DEFAULT_ENEMY,
   DEFAULT_PLAYER,
+  getActionConfig,
+  getEnemyActionDelay,
   getNpcById,
   isDefeated,
   NPCS,
   performAttack,
+  performEnemyAction,
   performFocusStrike,
   performHeal,
+  performPlayerAction,
   performSpecial,
   performTurn
 } from "../src/battle.js";
@@ -58,6 +64,32 @@ describe("battle helpers", () => {
   test("createCombatant initializes focus for non-enemy with focus cap", () => {
     const combatant = createCombatant({ maxFocus: 50 });
     expect(combatant.focus).toBe(0);
+  });
+
+  test("getActionConfig returns configured actions", () => {
+    expect(getActionConfig(ACTIONS.ATTACK)).toEqual(ACTION_CONFIG[ACTIONS.ATTACK]);
+    expect(getActionConfig("unknown")).toBeNull();
+  });
+
+  test("global cooldown is shorter than ability cooldowns", () => {
+    const cooldowns = Object.values(ACTION_CONFIG).map((config) => config.cooldownMs);
+    expect(GLOBAL_COOLDOWN_MS).toBeLessThanOrEqual(Math.min(...cooldowns));
+  });
+
+  test("getEnemyActionDelay scales with enemy attack", () => {
+    const fastEnemy = { ...DEFAULT_ENEMY, attack: 50 };
+    const slowEnemy = { ...DEFAULT_ENEMY, attack: 5 };
+    const fastDelay = getEnemyActionDelay(fastEnemy, fixedRng(1));
+    const slowDelay = getEnemyActionDelay(slowEnemy, fixedRng(0));
+    expect(fastDelay).toBeGreaterThanOrEqual(900);
+    expect(fastDelay).toBeLessThanOrEqual(3000);
+    expect(slowDelay).toBeGreaterThan(fastDelay);
+  });
+
+  test("getEnemyActionDelay uses default rng", () => {
+    const delay = getEnemyActionDelay(DEFAULT_ENEMY);
+    expect(delay).toBeGreaterThanOrEqual(900);
+    expect(delay).toBeLessThanOrEqual(3000);
   });
 
   test("getNpcById returns a matching NPC", () => {
@@ -255,6 +287,88 @@ describe("battle helpers", () => {
 
   test("isDefeated returns true at zero health", () => {
     expect(isDefeated({ health: 0 })).toBe(true);
+  });
+});
+
+describe("action resolution", () => {
+  test("performPlayerAction applies focus gain and logs", () => {
+    const player = { ...DEFAULT_PLAYER, attack: 22 };
+    const enemy = { ...DEFAULT_ENEMY, focus: 0, maxFocus: 60, defense: 0 };
+    const result = performPlayerAction({ player, enemy, action: ACTIONS.ATTACK, rng: fixedRng(1) });
+    expect(result.log[0]).toContain(player.name);
+    expect(result.enemy.focus).toBeGreaterThan(0);
+    expect(result.victory).toBe(false);
+  });
+
+  test("performPlayerAction defaults rng for non-random actions", () => {
+    const player = { ...DEFAULT_PLAYER, mana: 20, health: 50 };
+    const enemy = { ...DEFAULT_ENEMY };
+    const result = performPlayerAction({ player, enemy, action: ACTIONS.HEAL });
+    expect(result.player.health).toBeGreaterThan(player.health);
+  });
+
+  test("performPlayerAction returns victory payload", () => {
+    const player = { ...DEFAULT_PLAYER, attack: 200 };
+    const enemy = { ...DEFAULT_ENEMY, health: 5, defense: 0 };
+    const result = performPlayerAction({ player, enemy, action: ACTIONS.ATTACK, rng: fixedRng(1) });
+    expect(result.victory).toBe(true);
+    expect(result.loot).toBeDefined();
+    expect(result.experienceGained).toBe(DEFAULT_ENEMY.experienceReward);
+  });
+
+  test("performPlayerAction flags unknown actions as failed", () => {
+    const player = { ...DEFAULT_PLAYER };
+    const enemy = { ...DEFAULT_ENEMY };
+    const result = performPlayerAction({ player, enemy, action: "unknown", rng: fixedRng(1) });
+    expect(result.actionResult.failed).toBe(true);
+    expect(result.log[0]).toContain("hesitates");
+  });
+
+  test("performEnemyAction selects focus strike when focus is high", () => {
+    const player = { ...DEFAULT_PLAYER, health: 120 };
+    const enemy = { ...DEFAULT_ENEMY, focus: 60, maxFocus: 60, attack: 20, defense: 0 };
+    const result = performEnemyAction({ player, enemy, rng: fixedRng(1) });
+    expect(result.action).toBe("focus");
+    expect(result.log[0]).toContain("focused strike");
+  });
+
+  test("performEnemyAction selects special when mana and rng allow", () => {
+    const player = { ...DEFAULT_PLAYER };
+    const enemy = { ...DEFAULT_ENEMY, mana: 20, maxMana: 20, focus: 0 };
+    const result = performEnemyAction({ player, enemy, rng: fixedRng(0.1) });
+    expect(result.action).toBe(ACTIONS.SPECIAL);
+    expect(result.log[0]).toContain("channels power");
+  });
+
+  test("performEnemyAction defaults to attack", () => {
+    const player = { ...DEFAULT_PLAYER };
+    const enemy = { ...DEFAULT_ENEMY, mana: 0, focus: 0 };
+    const result = performEnemyAction({ player, enemy, rng: fixedRng(0.9) });
+    expect(result.action).toBe(ACTIONS.ATTACK);
+    expect(result.log[0]).toContain("strikes");
+  });
+
+  test("performEnemyAction uses default rng when omitted", () => {
+    const player = { ...DEFAULT_PLAYER };
+    const enemy = { ...DEFAULT_ENEMY, mana: 0, focus: 0 };
+    const result = performEnemyAction({ player, enemy });
+    expect(result.action).toBe(ACTIONS.ATTACK);
+  });
+
+  test("performEnemyAction initializes missing focus meter", () => {
+    const player = { ...DEFAULT_PLAYER };
+    const enemy = { ...DEFAULT_ENEMY, maxFocus: 60 };
+    delete enemy.focus;
+    const result = performEnemyAction({ player, enemy, rng: fixedRng(0.9) });
+    expect(result.enemy.focus).toBe(0);
+  });
+
+  test("performEnemyAction skips defeated enemies", () => {
+    const player = { ...DEFAULT_PLAYER };
+    const enemy = { ...DEFAULT_ENEMY, health: 0 };
+    const result = performEnemyAction({ player, enemy, rng: fixedRng(1) });
+    expect(result.action).toBeNull();
+    expect(result.log).toHaveLength(0);
   });
 });
 

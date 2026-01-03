@@ -7,6 +7,12 @@ describe("progression system", () => {
     expect(Object.keys(state.attributes)).toEqual(DND_ATTRIBUTES);
   });
 
+  test("createProgressionSystem falls back when baseAttributes sanitize empty", () => {
+    const system = createProgressionSystem({ baseAttributes: [" ", ""] });
+    const state = system.createPlayerProgression();
+    expect(Object.keys(state.attributes)).toEqual(DND_ATTRIBUTES);
+  });
+
   const progressionSystem = createProgressionSystem({
     linearBaseXp: 100,
     linearIncrement: 50,
@@ -17,6 +23,21 @@ describe("progression system", () => {
     const attributes = progressionSystem.createAttributes({ strength: 12 });
     expect(attributes.strength).toBe(12);
     expect(attributes.dexterity).toBe(10);
+  });
+
+  test("createAttributes uses defaults when omitted", () => {
+    const attributes = progressionSystem.createAttributes();
+    expect(attributes.strength).toBe(10);
+  });
+
+  test("createAttributes handles non-object overrides", () => {
+    const attributes = progressionSystem.createAttributes(null);
+    expect(attributes.strength).toBe(10);
+  });
+
+  test("createAttributes ignores non-object types", () => {
+    const attributes = progressionSystem.createAttributes("invalid");
+    expect(attributes.strength).toBe(10);
   });
 
   test("createPlayerProgression uses defaults", () => {
