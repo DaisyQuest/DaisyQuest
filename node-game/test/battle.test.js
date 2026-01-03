@@ -310,6 +310,18 @@ describe("battle flow", () => {
     expect(result.experienceGained).toBe(0);
   });
 
+  test("performTurn awards loot on victory", () => {
+    const player = { ...DEFAULT_PLAYER, attack: 250 };
+    const enemyTemplate = getNpcById("ember_wyrmling");
+    const enemy = createCombatant({ ...enemyTemplate, isEnemy: true, health: 5, defense: 0 });
+    const rng = sequenceRng([1, 0.1, 0, 0.1]);
+    const result = performTurn({ player, enemy, action: ACTIONS.ATTACK, rng });
+    expect(result.loot).toEqual([
+      { itemId: "ember_scale", quantity: 1 },
+      { itemId: "wyrmling_helm", quantity: 1 }
+    ]);
+  });
+
   test("performTurn resolves player defeat", () => {
     const player = { ...DEFAULT_PLAYER, health: 10 };
     const enemy = { ...DEFAULT_ENEMY, attack: 50, defense: 0 };
