@@ -1,0 +1,39 @@
+:root {
+    --dq-bg: #0b1020;
+    --dq-surface: #111827;
+    --dq-surface-elevated: #1f2937;
+    --dq-border: #27324a;
+    --dq-text: #f8fafc;
+    --dq-muted: #94a3b8;
+    --dq-accent: #facc15;
+    --dq-accent-strong: #f97316;
+    --dq-accent-soft: #fde68a;
+    --dq-success: #22c55e;
+    --dq-danger: #ef4444;
+    --dq-focus: #38bdf8;
+    --dq-progress-track: rgba(148, 163, 184, 0.25);
+    --dq-progress-fill: linear-gradient(90deg, #facc15, #fb7185, #f97316);
+    --dq-glow: 0 0 25px rgba(250, 204, 21, 0.4);
+    --dq-card-glow: 0 20px 40px rgba(15, 23, 42, 0.45);
+    --dq-reward: radial-gradient(circle at top, rgba(250, 204, 21, 0.28), rgba(15, 23, 42, 0.92));
+    --dq-font: "Roboto", "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+    background: radial-gradient(circle at top, rgba(30, 64, 175, 0.25), transparent 55%), var(--dq-bg);
+    color: var(--dq-text);
+    font-family: var(--dq-font);
+}
+
+a {
+    color: var(--dq-accent);
+}
+
+a:hover {
+    color: var(--dq-accent-strong);
+}
+
+:focus-visible {
+    outline: 2px solid var(--dq-focus);
+    outline-offset: 2px;
+}

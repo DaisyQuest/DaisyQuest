@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>DaisyQuest</title>
+    <link th:href="@{/css/theme.css}" rel="stylesheet">
+    <link th:href="@{/css/components.css}" rel="stylesheet">
     <link th:href="@{/css/inventory.css}" rel = "stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
         body {
-            background-color: #f8f9fa;
+            background-color: transparent;
         }
         .status-effects {
             display: flex;
@@ -378,49 +380,6 @@
         /*    width: 80%;*/
         /*}*/
 
-        .reward-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .reward-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .reward-items {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .reward-item {
-            background-color: #f0f0f0;
-            padding: 10px;
-            border-radius: 5px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .reward-item img {
-            width: 50px;
-            height: 50px;
-            margin-bottom: 5px;
-        }
-
         @keyframes pop-in {
             0% {
                 transform: scale(0);
@@ -596,16 +555,19 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="#">DaisyQuest</a>
         <div id = interactiveMapPlayButton></div>
-        <div id="unclaimedRewardsIndicator" class="unclaimed-rewards-indicator">
-            Unclaimed Rewards <span id="unclaimedRewardsCount" class="badge">0</span>
+        <div class="ms-auto d-flex align-items-center gap-3">
+            <div id="themePicker"></div>
+            <div id="unclaimedRewardsIndicator" class="unclaimed-rewards-indicator">
+                Unclaimed Rewards <span id="unclaimedRewardsCount" class="badge">0</span>
+            </div>
+            <button id="claimDailyRewardBtn" class="btn btn-warning btn-sm dq-task-button" style="display: none;" onclick="claimDailyReward()">Claim Daily Reward</button>
         </div>
-        <button id="claimDailyRewardBtn" style="display: none;" onclick="claimDailyReward()">Claim Daily Reward</button>
     </div>
 </nav>
 
 <div class="container-fluid game-container">
     <div id="sidebar">
-        <div class="card">
+        <div class="card dq-card">
             <div class="card-header" id="playerInfoHeader">
                 <h5 class="mb-0">
                     <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#playerInfoCollapse" aria-expanded="true" aria-controls="playerInfoCollapse">
@@ -708,7 +670,7 @@
             </ul>
             <div class="tab-content" id="myTabContent">
                 <div class="tab-pane fade show active" id="quests" role="tabpanel" aria-labelledby="quests-tab">
-                    <div class="card">
+                    <div class="card dq-card">
                         <div class="card-body">
                             <h5 class="card-title">Available Quests</h5>
                             <ul class="nav nav-tabs attribute-tabs" id="questAttributeTabs" role="tablist">
@@ -728,7 +690,7 @@
                 };</script>
 
                 <div class="tab-pane fade" id="inventory-management" role="tabpanel" aria-labelledby="inventory-management-tab">
-                    <div class="card">
+                    <div class="card dq-card">
                         <div class="card-body">
                             <h5 class="card-title">Inventory Management</h5>
                             <div class="row">
@@ -748,7 +710,7 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="talent-trees" role="tabpanel" aria-labelledby="talent-trees-tab">
-                    <div class="card">
+                    <div class="card dq-card">
                         <div class="card-body">
                             <h5 class="card-title">Talent Trees</h5>
                             <div id="talentTreesContainer"></div>
@@ -759,7 +721,7 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="activities" role="tabpanel" aria-labelledby="activities-tab">
-                    <div class="card">
+                    <div class="card dq-card">
                         <div class="card-body">
                             <h5 class="card-title">Available Activities</h5>
                             <ul class="nav nav-tabs attribute-tabs" id="activityAttributeTabs" role="tablist">
@@ -770,7 +732,7 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="shops" role="tabpanel" aria-labelledby="shops-tab">
-                    <div class="card">
+                    <div class="card dq-card">
                         <div class="card-body">
                             <h5 class="card-title">Available Shops</h5>
                             <div id="shopList"></div>
@@ -778,7 +740,7 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="my-shop" role="tabpanel" aria-labelledby="my-shop-tab">
-                    <div class="card">
+                    <div class="card dq-card">
                         <div class="card-body">
                             <h5 class="card-title">My Shop</h5>
                             <div id="playerShopList"></div>
@@ -786,7 +748,7 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="combat" role="tabpanel" aria-labelledby="combat-tab">
-                    <div class="card combat-container">
+                    <div class="card dq-card combat-container">
                         <div class="card-body">
                             <h5 class="card-title text-center">DaisyQuest World Map</h5>
 
@@ -862,7 +824,7 @@
 <!--                </div>-->
 
                 <div class="tab-pane fade" id="worldMapH" role="tabpanel" aria-labelledby="world-tab">
-                    <div class="card">
+                    <div class="card dq-card">
                         <div class="card-body">
                             <h5 class="card-title">World Map</h5>
                             <div id="worldMaps"></div>
@@ -932,13 +894,13 @@
 
 
                 <!-- Active Task future: Task(s) -->
-                <div class="card mt-3">
+                <div class="card dq-card mt-3">
                     <div class="card-body">
                         <h5 class="card-title">Active Task</h5>
                         <div id="activeTask"></div>
                     </div>
                 </div>
-                <div class="card mt-3">
+                <div class="card dq-card mt-3">
                     <div class="card-body">
                 <form action="https://www.paypal.com/donate" method="post" target="_top">
                     <input type="hidden" name="hosted_button_id" value="4HUFMKCUUSV9L" />
@@ -1236,6 +1198,15 @@
                 playerInfoCollapse.classList.add('show');
             }
         });
+    });
+</script>
+
+<script th:src="@{/js/themeEngine.js}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.ThemeEngine) {
+            window.ThemeEngine.init({ containerId: 'themePicker' });
+        }
     });
 </script>
 

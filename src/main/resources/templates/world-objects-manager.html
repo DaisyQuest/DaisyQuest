@@ -4,39 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>World Objects Manager</title>
+    <link th:href="@{/css/theme.css}" rel="stylesheet">
+    <link th:href="@{/css/components.css}" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .filters {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .object-card {
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .object-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .coordinate-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-    </style>
 </head>
 <body>
 <div class="container-fluid mt-4">
-    <h1 class="mb-4">World Objects Manager</h1>
+    <div class="dq-topbar">
+        <div>
+            <h1 class="dq-topbar__title">World Objects Manager</h1>
+            <p class="dq-topbar__subtitle">Search, reset, and spawn world objects with fast filters.</p>
+        </div>
+        <div class="dq-toolbar">
+            <div id="themePicker"></div>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createObjectModal">
+                <i class="fas fa-plus"></i> Create New Object
+            </button>
+            <button type="button" class="btn btn-info" onclick="createObjectGrid()">
+                <i class="fas fa-th"></i> Create Grid
+            </button>
+        </div>
+    </div>
 
     <!-- Filters -->
-    <div class="filters">
-        <form id="searchForm" class="row g-3">
+    <div class="dq-panel mb-4">
+        <form id="searchForm" class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">Object Type</label>
                 <select class="form-select" name="type">
@@ -54,13 +47,25 @@
 
             <div class="col-md-6">
                 <label class="form-label">Coordinates</label>
-                <div class="coordinate-group">
-                    <input type="number" class="form-control" name="minX" placeholder="Min X">
-                    <input type="number" class="form-control" name="maxX" placeholder="Max X">
-                    <input type="number" class="form-control" name="minY" placeholder="Min Y">
-                    <input type="number" class="form-control" name="maxY" placeholder="Max Y">
-                    <input type="number" class="form-control" name="minZ" placeholder="Min Z">
-                    <input type="number" class="form-control" name="maxZ" placeholder="Max Z">
+                <div class="row g-2">
+                    <div class="col-6 col-lg-2">
+                        <input type="number" class="form-control" name="minX" placeholder="Min X">
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <input type="number" class="form-control" name="maxX" placeholder="Max X">
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <input type="number" class="form-control" name="minY" placeholder="Min Y">
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <input type="number" class="form-control" name="maxY" placeholder="Max Y">
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <input type="number" class="form-control" name="minZ" placeholder="Min Z">
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <input type="number" class="form-control" name="maxZ" placeholder="Max Z">
+                    </div>
                 </div>
             </div>
 
@@ -83,7 +88,7 @@
                 </select>
             </div>
 
-            <div class="col-12">
+            <div class="col-12 d-flex flex-wrap gap-2">
                 <button type="submit" class="btn btn-primary">Search</button>
                 <button type="reset" class="btn btn-secondary">Reset</button>
             </div>
@@ -91,7 +96,7 @@
     </div>
 
     <!-- Results -->
-    <div id="results" class="row">
+    <div id="results" class="row g-3">
         <!-- Objects will be loaded here -->
     </div>
 
@@ -104,12 +109,8 @@
         </nav>
     </div>
 </div>
-<div class="mb-4">
-    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createObjectModal">
-        <i class="fas fa-plus"></i> Create New Object
-    </button>
-</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/themeEngine.js}"></script>
 <script>
     let currentPage = 0;
     const pageSize = 20;
@@ -139,23 +140,33 @@
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = '';
 
+        if (!objects.length) {
+            resultsDiv.innerHTML = `
+                <div class="col-12">
+                    <div class="dq-empty-state">
+                        <h5>No objects found</h5>
+                        <p>Try adjusting your filters or create a new world object.</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
         objects.forEach(obj => {
             const card = document.createElement('div');
-            card.className = 'col-md-6 col-lg-4 mb-3';
+            card.className = 'col-md-6 col-lg-4';
             card.innerHTML = `
-            <div class="object-card">
-                <h5>${obj.worldObjectType.name}</h5>
-                <p>ID: ${obj.id}</p>
+            <div class="dq-registry-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h5 class="mb-0">${obj.worldObjectType.name}</h5>
+                    <span class="dq-badge ${obj.used ? 'dq-badge--danger' : 'dq-badge--success'}">${obj.used ? 'In Use' : 'Available'}</span>
+                </div>
+                <p class="dq-registry-card__meta">ID: ${obj.id}</p>
                 <p>Position: X:${obj.xPos} Y:${obj.yPos} Z:${obj.zPos}</p>
                 <p>Submap: ${obj.submapId || 'None'}</p>
-                <p>Used: ${obj.used ? 'Yes' : 'No'}</p>
-                <div class="object-actions">
-                    <button onclick="resetObject('${obj.id}')" class="btn btn-warning btn-sm">
-                        Reset
-                    </button>
-                    <button onclick="deleteObject('${obj.id}')" class="btn btn-danger btn-sm">
-                        Delete
-                    </button>
+                <div class="d-flex gap-2 mt-3">
+                    <button onclick="resetObject('${obj.id}')" class="btn btn-warning btn-sm">Reset</button>
+                    <button onclick="deleteObject('${obj.id}')" class="btn btn-danger btn-sm">Delete</button>
                 </div>
             </div>
         `;
@@ -298,13 +309,11 @@
         }
     }
 
-    // Add button for bulk creation
-    document.querySelector('.mb-4').insertAdjacentHTML('beforeend', `
-    <button type="button" class="btn btn-info ms-2" onclick="createObjectGrid()">
-        <i class="fas fa-th"></i> Create Grid
-    </button>
-`);
-
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.ThemeEngine) {
+            window.ThemeEngine.init({ containerId: 'themePicker' });
+        }
+    });
 </script>
 <div class="modal fade" id="createObjectModal" tabindex="-1">
     <div class="modal-dialog modal-lg">

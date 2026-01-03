@@ -1151,11 +1151,13 @@ function updatePlayerInfoUI(player, currencyDetails) {
                     <img src="/sprites/${player.subspriteEyes || 'eyes_0'}.png">
                     <img src="/sprites/${player.subspriteHairHat || 'hairhat_0'}.png">
                 </div>
-                <button class="btn btn-primary btn-sm mb-3" onclick="openSpriteSelectionModal()">Customize Sprite</button>
+                <button class="btn btn-primary btn-sm mb-3 dq-task-button" onclick="openSpriteSelectionModal()">Customize Sprite</button>
             </div>
             <div class="col-md-8">
-                <h6>Player: ${player.username}</h6>
-                <p>Level: ${player.level}</p>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <h6 class="mb-0">Player: ${player.username}</h6>
+                    <span class="dq-badge dq-badge--success">Level ${player.level}</span>
+                </div>
                 <p>Total Experience: ${player.totalExperience}</p>
                 <p>Mana: ${player.currentMana} / ${player.maxMana}</p>
                 <h6 class="mt-4 mb-3">Attributes:</h6>
@@ -1304,35 +1306,44 @@ function createAttributeTabs(taskType) {
 
 function createTaskList(tasks, taskType) {
     return `
-        <ul class="list-group">
+        <div class="dq-task-list">
             ${tasks.map(task => `
-                <li class="list-group-item">
-                    <h6>${task.name}</h6>
-                    <p>${task.description}</p>
-                    <div class="task-info">
-                        <strong>Rewards:</strong>
-                        <ul>
-                            <li>Experience: ${task.experienceReward}</li>
-                            ${Object.entries(task.attributeRewards || {}).map(([attr, value]) =>
+                <div class="dq-task-card">
+                    <div class="dq-task-header">
+                        <div>
+                            <h6 class="dq-task-title">${task.name}</h6>
+                            <p class="dq-task-desc">${task.description}</p>
+                        </div>
+                        <span class="dq-badge">XP ${task.experienceReward}</span>
+                    </div>
+                    <div class="dq-task-meta">
+                        <div class="dq-task-grid">
+                            <strong>Rewards</strong>
+                            <ul>
+                                <li>Experience: ${task.experienceReward}</li>
+                                ${Object.entries(task.attributeRewards || {}).map(([attr, value]) =>
         `<li>${attr}: +${value}</li>`
     ).join('')}
-                            ${Object.entries(task.itemRewards || {}).map(([item, quantity]) =>
+                                ${Object.entries(task.itemRewards || {}).map(([item, quantity]) =>
         `<li>${item}: ${quantity}</li>`
     ).join('')}
-                        </ul>
-                        <strong>Requirements:</strong>
-                        <ul>
-                            ${Object.entries(task.requirements || {}).map(([attr, value]) =>
+                            </ul>
+                        </div>
+                        <div class="dq-task-grid">
+                            <strong>Requirements</strong>
+                            <ul>
+                                ${Object.entries(task.requirements || {}).map(([attr, value]) =>
         `<li>${attr}: ${value}</li>`
     ).join('')}
-                        </ul>
+                            </ul>
+                        </div>
                     </div>
-                    <button class="btn btn-primary btn-sm mt-2" onclick="start${taskType === 'quest' ? 'Quest' : 'Activity'}('${task.id}')">
+                    <button class="dq-task-button mt-3" onclick="start${taskType === 'quest' ? 'Quest' : 'Activity'}('${task.id}')">
                         Start ${taskType === 'quest' ? 'Quest' : 'Activity'}
                     </button>
-                </li>
+                </div>
             `).join('')}
-        </ul>
+        </div>
     `;
 }
 
@@ -1343,11 +1354,23 @@ function startQuest(questId) {
         .then(quest => {
             const activeTask = document.getElementById('activeTask');
             activeTask.innerHTML = `
-                <h6>${quest.name}</h6>
-                <p>${quest.description}</p>
-                <p>Time remaining: <span id="timeRemaining">${quest.duration.toFixed(1)}</span> seconds</p>
-                <div class="progress">
-                    <div id="questProgress" class="progress-bar smooth-progress" role="progressbar" style="width: 0%"></div>
+                <div class="dq-task-card">
+                    <div class="dq-task-header">
+                        <div>
+                            <h6 class="dq-task-title">${quest.name}</h6>
+                            <p class="dq-task-desc">${quest.description}</p>
+                        </div>
+                        <span class="dq-badge dq-badge--success">Active Quest</span>
+                    </div>
+                    <div class="dq-task-meta">
+                        <div class="dq-task-grid">
+                            <strong>Time remaining</strong>
+                            <span id="timeRemaining">${quest.duration.toFixed(1)}</span> seconds
+                        </div>
+                        <div class="dq-progress">
+                            <div id="questProgress" class="dq-progress__fill smooth-progress" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
                 </div>
             `;
             startQuestTimer(quest.duration, questId)});
@@ -1358,11 +1381,23 @@ function startActivity(activityId) {
         .then(activity => {
             const activeTask = document.getElementById('activeTask');
             activeTask.innerHTML = `
-                <h6>${activity.name}</h6>
-                <p>${activity.description}</p>
-                <p>Time remaining: <span id="timeRemaining">${activity.duration.toFixed(1)}</span> seconds</p>
-                <div class="progress">
-                    <div id="questProgress" class="progress-bar smooth-progress" role="progressbar" style="width: 0%"></div>
+                <div class="dq-task-card">
+                    <div class="dq-task-header">
+                        <div>
+                            <h6 class="dq-task-title">${activity.name}</h6>
+                            <p class="dq-task-desc">${activity.description}</p>
+                        </div>
+                        <span class="dq-badge dq-badge--success">Active Activity</span>
+                    </div>
+                    <div class="dq-task-meta">
+                        <div class="dq-task-grid">
+                            <strong>Time remaining</strong>
+                            <span id="timeRemaining">${activity.duration.toFixed(1)}</span> seconds
+                        </div>
+                        <div class="dq-progress">
+                            <div id="questProgress" class="dq-progress__fill smooth-progress" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
                 </div>
             `;
             startQuestTimer(activity.duration, activityId);
@@ -1662,9 +1697,15 @@ function displayUnclaimedRewards() {
             const rewardsList = document.getElementById('unclaimedRewardsList');
 
             rewardsList.innerHTML = unclaimedRewards.map(container => `
-                <div class="unclaimed-reward">
-                    <h6>Unclaimed Reward</h6>
-                    <button class="btn btn-sm btn-primary" onclick="claimReward('${container.id}')">Claim</button>
+                <div class="dq-task-card">
+                    <div class="dq-task-header">
+                        <div>
+                            <h6 class="dq-task-title">Unclaimed Reward</h6>
+                            <p class="dq-task-desc">Your next boost is ready to collect.</p>
+                        </div>
+                        <span class="dq-badge">Reward</span>
+                    </div>
+                    <button class="dq-task-button mt-2" onclick="claimReward('${container.id}')">Claim</button>
                 </div>
             `).join('');
              unclaimedRewardCount = unclaimedRewards.length;

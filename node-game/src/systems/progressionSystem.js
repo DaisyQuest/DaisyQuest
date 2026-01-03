@@ -1,109 +1,83 @@
-export const DND_ATTRIBUTES = Object.freeze([
-  "strength",
-  "dexterity",
-  "constitution",
-  "intelligence",
-  "wisdom",
-  "charisma"
-]);
+const DEFAULT_THRESHOLDS = [0, 120, 280, 480, 720, 1000];
 
-export function createProgressionSystem({
-  baseAttributes = DND_ATTRIBUTES,
-  startingAttributeValue = 10,
-  statPointsPerLevel = 2,
-  linearLevelCap = 20,
-  linearBaseXp = 100,
-  linearIncrement = 50,
-  logarithmicScale = 500
-} = {}) {
-  function createAttributes(overrides = {}) {
-    return baseAttributes.reduce((acc, attribute) => {
-      acc[attribute] = overrides[attribute] ?? startingAttributeValue;
-      return acc;
-    }, {});
+function sanitizeThresholds(thresholds) {
+  if (!Array.isArray(thresholds) || thresholds.length < 2) {
+    return DEFAULT_THRESHOLDS;
+  }
+  const sorted = [...thresholds]
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value >= 0)
+    .sort((a, b) => a - b);
+
+  if (sorted.length < 2) {
+    return DEFAULT_THRESHOLDS;
+  }
+  if (sorted[0] !== 0) {
+    sorted.unshift(0);
+  }
+  return sorted;
+}
+
+function resolveLevel(thresholds, totalXp) {
+  const xp = Math.max(0, totalXp);
+  let level = 1;
+  for (let index = 1; index < thresholds.length; index += 1) {
+    if (xp >= thresholds[index]) {
+      level = index + 1;
+    } else {
+      break;
+    }
+  }
+  return level;
+}
+
+function getLevelBounds(thresholds, level) {
+  const clampedLevel = Math.max(1, Math.floor(level));
+  const maxIndex = thresholds.length - 1;
+  const thresholdIndex = Math.min(clampedLevel - 1, maxIndex);
+  const current = thresholds[thresholdIndex];
+  const next = thresholds[Math.min(thresholdIndex + 1, maxIndex)];
+  return { current, next };
+}
+
+function createSnapshot(thresholds, totalXp) {
+  const level = resolveLevel(thresholds, totalXp);
+  const { current, next } = getLevelBounds(thresholds, level);
+  const clampedTotal = Math.max(0, totalXp);
+  const span = Math.max(1, next - current);
+  const progress = Math.min(1, (clampedTotal - current) / span);
+  return {
+    level,
+    totalXp: clampedTotal,
+    currentXp: clampedTotal - current,
+    nextLevelXp: next - current,
+    progress
+  };
+}
+
+export function createProgressionSystem({ thresholds } = {}) {
+  const xpThresholds = sanitizeThresholds(thresholds);
+
+  function getProgressSnapshot(totalXp) {
+    return createSnapshot(xpThresholds, totalXp ?? 0);
   }
 
-  function experienceForLevel(level) {
-    if (level <= 1) {
-      return 0;
+  function awardXp(state, amount) {
+    if (!state || typeof state.totalXp !== "number") {
+      return { error: "Invalid progression state." };
     }
-    if (level <= linearLevelCap) {
-      return linearBaseXp + (level - 1) * linearIncrement;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { state, leveledUp: false, gained: 0 };
     }
-    const linearEnd = linearBaseXp + (linearLevelCap - 1) * linearIncrement;
-    const postLinearLevel = level - linearLevelCap + 1;
-    return Math.round(linearEnd + logarithmicScale * postLinearLevel * Math.log10(postLinearLevel + 1));
-  }
-
-  function experienceForNextLevel(currentLevel) {
-    return experienceForLevel(currentLevel + 1);
-  }
-
-  function applyExperience(state, amount) {
-    if (amount <= 0) {
-      return { ...state };
-    }
-    let level = state.level;
-    let experience = state.experience + amount;
-    let statPoints = state.statPoints;
-    let nextLevelXp = experienceForNextLevel(level);
-
-    while (experience >= nextLevelXp) {
-      level += 1;
-      statPoints += statPointsPerLevel;
-      nextLevelXp = experienceForNextLevel(level);
-    }
-
-    return {
-      ...state,
-      level,
-      experience,
-      statPoints
-    };
-  }
-
-  function allocateStatPoint(state, attribute, amount = 1) {
-    if (!baseAttributes.includes(attribute)) {
-      return { ...state, error: "Unknown attribute." };
-    }
-    if (amount <= 0) {
-      return { ...state, error: "Invalid point amount." };
-    }
-    if (state.statPoints < amount) {
-      return { ...state, error: "Not enough stat points." };
-    }
-    const attributes = {
-      ...state.attributes,
-      [attribute]: state.attributes[attribute] + amount
-    };
-    return {
-      ...state,
-      attributes,
-      statPoints: state.statPoints - amount
-    };
-  }
-
-  function createPlayerProgression({
-    level = 1,
-    experience = 0,
-    statPoints = 0,
-    attributes = createAttributes()
-  } = {}) {
-    return {
-      level,
-      experience,
-      statPoints,
-      attributes
-    };
+    const updatedTotal = state.totalXp + amount;
+    const snapshot = getProgressSnapshot(updatedTotal);
+    const leveledUp = snapshot.level > state.level;
+    return { state: snapshot, leveledUp, gained: amount };
   }
 
   return Object.freeze({
-    createPlayerProgression,
-    createAttributes,
-    experienceForLevel,
-    experienceForNextLevel,
-    applyExperience,
-    allocateStatPoint,
-    baseAttributes
+    thresholds: [...xpThresholds],
+    getProgressSnapshot,
+    awardXp
   });
 }

@@ -3,6 +3,8 @@
 <head>
     <title>NPC Template Manager</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link th:href="@{/css/theme.css}" rel="stylesheet">
+    <link th:href="@{/css/components.css}" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -48,42 +50,55 @@
 </head>
 <body>
 <div class="container mt-5">
-    <h1>NPC Template Manager</h1>
-    <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#templateModal">Create New Template</button>
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>Name</th>
-            <th>Sprite</th>
-            <th>Items</th>
-            <th>Spells</th>
-            <th>Current Mana</th>
-            <th>Max Mana</th>
-            <th>Duelable</th>
-            <th>Actions</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="template : ${templates}">
-            <td th:text="${template.name}"></td>
-            <td th:text="${template.sprite}"></td>
-            <td>
-                <span th:each="item, iterStat : ${template.items}">
-                    <span th:text="${item.key + ': ' + item.value}"></span>
-                    <span th:if="${!iterStat.last}">, </span>
-                </span>
-            </td>
-            <td th:text="${#strings.listJoin(template.spells, ', ')}"></td>
-            <td th:text="${template.currentMana}"></td>
-            <td th:text="${template.maxMana}"></td>
-            <td th:text="${template.duelable ? 'Yes' : 'No'}"></td>
-            <td>
-                <button class="btn btn-sm btn-warning edit-btn" th:data-id="${template.id}">Edit</button>
-                <button class="btn btn-sm btn-danger delete-btn" th:data-id="${template.id}">Delete</button>
-            </td>
-        </tr>
-        </tbody>
-    </table>
+    <div class="dq-topbar">
+        <div>
+            <h1 class="dq-topbar__title">NPC Template Manager</h1>
+            <p class="dq-topbar__subtitle">Quickly edit NPCs, loot tables, and spell kits.</p>
+        </div>
+        <div class="dq-toolbar">
+            <div id="themePicker"></div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal">Create New Template</button>
+        </div>
+    </div>
+    <div class="dq-panel">
+        <table class="table table-striped table-hover dq-table">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Sprite</th>
+                <th>Items</th>
+                <th>Spells</th>
+                <th>Current Mana</th>
+                <th>Max Mana</th>
+                <th>Duelable</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="template : ${templates}">
+                <td th:text="${template.name}"></td>
+                <td th:text="${template.sprite}"></td>
+                <td>
+                    <div class="dq-pill-list">
+                        <span class="dq-pill" th:each="item : ${template.items}" th:text="${item.key + ': ' + item.value}"></span>
+                    </div>
+                </td>
+                <td>
+                    <div class="dq-pill-list">
+                        <span class="dq-pill" th:each="spell : ${template.spells}" th:text="${spell}"></span>
+                    </div>
+                </td>
+                <td th:text="${template.currentMana}"></td>
+                <td th:text="${template.maxMana}"></td>
+                <td th:text="${template.duelable ? 'Yes' : 'No'}"></td>
+                <td>
+                    <button class="btn btn-sm btn-warning edit-btn" th:data-id="${template.id}">Edit</button>
+                    <button class="btn btn-sm btn-danger delete-btn" th:data-id="${template.id}">Delete</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 
     <!-- Modal -->
     <div class="modal fade" id="templateModal" tabindex="-1">
@@ -140,8 +155,12 @@
     </div>
 </div>
 
+<script th:src="@{/js/themeEngine.js}"></script>
 <script th:inline="javascript">
     $(document).ready(function() {
+        if (window.ThemeEngine) {
+            window.ThemeEngine.init({ containerId: 'themePicker' });
+        }
         let itemOptions = /*[[${allItems}]]*/ [];
 
         function addItemEntry(itemName = '', dropRate = '') {
