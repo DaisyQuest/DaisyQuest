@@ -36,6 +36,13 @@ export const ITEMS = Object.freeze([
     equippable: false
   }),
   Object.freeze({
+    id: "necrotic_tome",
+    name: "Necrotic Tome",
+    description: "A brittle tome filled with forbidden rites.",
+    rarity: "RARE",
+    equippable: false
+  }),
+  Object.freeze({
     id: "wyrmling_helm",
     name: "Wyrmling Helm",
     description: "A helm forged from ember scales.",
@@ -103,7 +110,8 @@ export const NPC_LOOT_TABLES = Object.freeze({
   ]),
   moonlit_duelist: Object.freeze([
     Object.freeze({ itemId: "moonsteel_ingot", min: 1, max: 2, chance: 0.75 }),
-    Object.freeze({ itemId: "duelist_blade", min: 1, max: 1, chance: 0.15 })
+    Object.freeze({ itemId: "duelist_blade", min: 1, max: 1, chance: 0.15 }),
+    Object.freeze({ itemId: "necrotic_tome", min: 1, max: 1, chance: 0.1 })
   ]),
   crystal_guardian: Object.freeze([
     Object.freeze({ itemId: "crystal_shard", min: 1, max: 2, chance: 0.8 }),

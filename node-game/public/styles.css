@@ -37,6 +37,31 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
+.tab-nav {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.tab-button {
+  border: none;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f6f4ff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tab-button.is-active {
+  background: linear-gradient(135deg, #ff7b7b, #ffae4f);
+  color: #1e0f24;
+}
+
 .panel {
   background: linear-gradient(165deg, var(--dq-surface), rgba(10, 10, 20, 0.9));
   border: 1px solid var(--dq-border);
@@ -514,4 +539,74 @@ button:hover:not(:disabled) {
   .panel {
     padding: 22px;
   }
+}
+
+.progression-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 16px;
+}
+
+.stat-list {
+  display: grid;
+  gap: 12px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spellbook-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.spellbook-list,
+.spell-slots {
+  display: grid;
+  gap: 12px;
+}
+
+.spell-entry {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 8px;
+}
+
+.spell-slot {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 8px;
+}
+
+.spell-slot-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.spellbook-message {
+  margin-top: 8px;
+  color: rgba(246, 244, 255, 0.7);
+}
+
+.spell-requirement {
+  margin: 6px 0 0;
+  color: rgba(246, 244, 255, 0.7);
+  font-size: 0.85rem;
 }

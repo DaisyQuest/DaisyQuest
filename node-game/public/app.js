@@ -174,9 +174,138 @@ function updateMeters() {
   }
 }
 
+function renderProgression() {
+  const nextLevelXp = progressionSystem.experienceForNextLevel(state.playerData.progression.level);
+  levelValue.textContent = `${state.playerData.progression.level}`;
+  experienceValue.textContent = `${state.playerData.progression.experience}`;
+  nextLevelValue.textContent = `${nextLevelXp}`;
+  statPointsValue.textContent = `${state.playerData.progression.statPoints}`;
+  statList.innerHTML = "";
+  Object.entries(state.playerData.progression.attributes).forEach(([key, value]) => {
+    const row = document.createElement("div");
+    row.className = "stat-row";
+    row.innerHTML = `
+      <span class="stat-name">${key}</span>
+      <span class="stat-value">${value}</span>
+      <button type="button" class="secondary" data-attribute="${key}">+</button>
+    `;
+    const button = row.querySelector("button");
+    button.disabled = state.playerData.progression.statPoints <= 0;
+    button.addEventListener("click", () => {
+      const updated = playerSystem.allocateStatPoint(state.playerData, key, 1);
+      if (updated.progression.error) {
+        pushLog([updated.progression.error]);
+        return;
+      }
+      state.playerData = updated;
+      renderProgression();
+    });
+    statList.appendChild(row);
+  });
+}
+
+function renderSpellbook() {
+  spellbookList.innerHTML = "";
+  spellSlots.innerHTML = "";
+  spellbookMessage.textContent = "";
+  const spells = listSpells();
+  spells.forEach((spell) => {
+    const item = document.createElement("div");
+    item.className = "spell-entry";
+    const known = state.playerData.knownSpells.includes(spell.id);
+    const requirementResult = unlockSystem.evaluateRequirements(spell.unlockRequirements, {
+      attributes: state.playerData.progression.attributes,
+      inventory: state.playerData.inventory,
+      consumedItems: state.playerData.consumedItems
+    });
+    item.innerHTML = `
+      <div>
+        <strong>${spell.name}</strong>
+        <p>${spell.description}</p>
+        <p>Mana: ${spell.manaCost} • Cooldown: ${spell.cooldown}</p>
+        ${
+          !known && spell.unlockRequirements.length > 0
+            ? `<p class="spell-requirement">${requirementResult.ok ? "Requirements met." : requirementResult.reason}</p>`
+            : ""
+        }
+      </div>
+      <button type="button" class="secondary" data-spell-id="${spell.id}">
+        ${known ? "Equip" : "Learn"}
+      </button>
+    `;
+    const button = item.querySelector("button");
+    if (!known && !requirementResult.ok) {
+      button.disabled = true;
+    }
+    button.addEventListener("click", () => {
+      if (!known) {
+        const learned = playerSystem.learnSpell(state.playerData, spell.id);
+        if (learned.error) {
+          spellbookMessage.textContent = learned.error;
+          return;
+        }
+        state.playerData = learned;
+        renderInventory();
+        renderProgression();
+        renderSpellbook();
+        return;
+      }
+      const slotIndex = state.playerData.spellbook.equippedSlots.findIndex((slot) => slot === null);
+      const targetIndex = slotIndex === -1 ? 0 : slotIndex;
+      const updated = playerSystem.equipSpell(state.playerData, spell.id, targetIndex);
+      if (updated.error) {
+        spellbookMessage.textContent = updated.error;
+        return;
+      }
+      state.playerData = updated;
+      renderSpellbook();
+    });
+    spellbookList.appendChild(item);
+  });
+
+  for (let i = 0; i < SPELLBOOK_SLOTS; i += 1) {
+    const slot = document.createElement("div");
+    slot.className = "spell-slot";
+    const spellId = state.playerData.spellbook.equippedSlots[i];
+    const spell = spellId ? spells.find((entry) => entry.id === spellId) : null;
+    slot.innerHTML = `
+      <div class="spell-slot-info">
+        <span>Slot ${i + 1}</span>
+        <span>${spell ? spell.name : "Empty"}</span>
+      </div>
+    `;
+    if (spell) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "secondary";
+      button.textContent = "Unequip";
+      button.addEventListener("click", () => {
+        const updated = playerSystem.unequipSpell(state.playerData, i);
+        if (updated.error) {
+          spellbookMessage.textContent = updated.error;
+          return;
+        }
+        state.playerData = updated;
+        renderSpellbook();
+      });
+      slot.appendChild(button);
+    }
+    spellSlots.appendChild(slot);
+  }
+}
+
+function setActiveTab(tabId) {
+  tabPanels.forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.tabPanel === tabId);
+  });
+  tabButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.tabButton === tabId);
+  });
+}
+
 function renderInventory() {
   inventoryList.innerHTML = "";
-  const entries = Object.entries(state.inventory);
+  const entries = Object.entries(state.playerData.inventory);
   if (entries.length === 0) {
     const empty = document.createElement("p");
     empty.textContent = "Your satchel is empty.";
@@ -210,8 +339,7 @@ function renderInventory() {
           pushLog([result.error]);
           return;
         }
-        state.inventory = result.inventory;
-        state.equipment = result.equipment;
+        state.playerData = updated;
         pushLog([`Equipped ${item.name}.`]);
         renderInventory();
         renderEquipment();
@@ -246,8 +374,7 @@ function renderEquipment() {
           pushLog([result.error]);
           return;
         }
-        state.inventory = result.inventory;
-        state.equipment = result.equipment;
+        state.playerData = updated;
         pushLog([`Unequipped ${item.name}.`]);
         renderInventory();
         renderEquipment();
@@ -424,6 +551,11 @@ function handleAction(action) {
       pushLoot(lootLines);
       renderInventory();
     }
+  }
+  if (result.experienceGained) {
+    state.playerData = playerSystem.applyExperience(state.playerData, result.experienceGained);
+    pushLog([`Gained ${result.experienceGained} experience.`]);
+    renderProgression();
   }
   updateMeters();
 }
@@ -671,6 +803,11 @@ document.getElementById("reset").addEventListener("click", resetBattle);
 npcSelect.addEventListener("change", resetBattle);
 recipeSelect.addEventListener("change", renderRecipeDetails);
 craftButton.addEventListener("click", attemptCraft);
+tabButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setActiveTab(button.dataset.tabButton);
+  });
+});
 
 populateNpcSelect();
 populateRarityOptions();
