@@ -14,11 +14,23 @@
   </head>
   <body>
     <main class="app">
-      <section class="panel hero">
+      <nav class="tab-nav">
+        <button type="button" data-tab-button="battle" class="tab-button">Battle</button>
+        <button type="button" data-tab-button="inventory" class="tab-button">Inventory</button>
+        <button type="button" data-tab-button="crafting" class="tab-button">Crafting</button>
+        <button type="button" data-tab-button="progression" class="tab-button">Progression</button>
+        <button type="button" data-tab-button="spellbook" class="tab-button">Spellbook</button>
+      </nav>
+      <section class="panel hero tab-panel" data-tab-panel="battle">
         <header>
           <h1>DaisyQuest: Ember Duel</h1>
           <p class="subtitle">A refined combat encounter for the next-generation DaisyQuest.</p>
         </header>
+        <div class="npc-selector">
+          <label for="npc-select">Choose a challenger</label>
+          <select id="npc-select" aria-label="Select a challenger"></select>
+          <p class="npc-description" id="npc-description"></p>
+        </div>
         <div class="battlefield">
           <div class="combatant" id="player-card">
             <h2 id="player-name">Hero</h2>
@@ -46,7 +58,7 @@
               </div>
               <span class="value" id="enemy-health-value"></span>
             </div>
-            <div class="bar">
+            <div class="bar" id="enemy-focus-row">
               <span>Focus</span>
               <div class="meter focus">
                 <div class="fill" id="enemy-focus"></div>
@@ -62,9 +74,67 @@
           <button class="secondary" id="reset">Reset Battle</button>
         </div>
       </section>
-      <section class="panel log">
+      <section class="panel log tab-panel" data-tab-panel="battle">
         <h3>Battle Chronicle</h3>
         <ul id="log"></ul>
+      </section>
+      <section class="panel inventory tab-panel" data-tab-panel="inventory">
+        <h3>Inventory & Equipment</h3>
+        <div class="inventory-grid">
+          <div>
+            <h4>Satchel</h4>
+            <div id="inventory-list" class="inventory-list"></div>
+          </div>
+          <div>
+            <h4>Equipped</h4>
+            <div id="equipment-list" class="equipment-list"></div>
+          </div>
+        </div>
+        <div class="loot-log">
+          <h4>Recent Loot</h4>
+          <ul id="loot-list"></ul>
+        </div>
+      </section>
+      <section class="panel crafting tab-panel" data-tab-panel="crafting">
+        <h3>Crafting Atelier</h3>
+        <label for="recipe-select">Recipe</label>
+        <select id="recipe-select" aria-label="Select a recipe"></select>
+        <p id="recipe-details" class="crafting-details"></p>
+        <button class="action" id="craft-button" type="button">Craft</button>
+        <p id="crafting-result" class="crafting-result"></p>
+      </section>
+      <section class="panel progression tab-panel" data-tab-panel="progression">
+        <h3>Adventurer Progression</h3>
+        <div class="progression-summary">
+          <div>
+            <strong>Level</strong>
+            <span id="level-value"></span>
+          </div>
+          <div>
+            <strong>Experience</strong>
+            <span><span id="experience-value"></span> / <span id="next-level-value"></span></span>
+          </div>
+          <div>
+            <strong>Stat Points</strong>
+            <span id="stat-points-value"></span>
+          </div>
+        </div>
+        <div id="stat-list" class="stat-list"></div>
+      </section>
+      <section class="panel spellbook tab-panel" data-tab-panel="spellbook">
+        <h3>Spellbook</h3>
+        <p class="subtitle">Equip spells for quick access during combat.</p>
+        <div class="spellbook-grid">
+          <div>
+            <h4>Known Spells</h4>
+            <div id="spellbook-list" class="spellbook-list"></div>
+          </div>
+          <div>
+            <h4>Equipped Spells</h4>
+            <div id="spell-slots" class="spell-slots"></div>
+            <p id="spellbook-message" class="spellbook-message"></p>
+          </div>
+        </div>
       </section>
     </main>
     <script type="module" src="app.js"></script>

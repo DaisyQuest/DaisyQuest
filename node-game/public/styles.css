@@ -25,12 +25,45 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
+.tab-nav {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.tab-button {
+  border: none;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f6f4ff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tab-button.is-active {
+  background: linear-gradient(135deg, #ff7b7b, #ffae4f);
+  color: #1e0f24;
+}
+
 .panel {
   background: linear-gradient(160deg, rgba(24, 20, 46, 0.95), rgba(15, 13, 30, 0.9));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   padding: 28px;
   box-shadow: 0 20px 50px rgba(4, 4, 12, 0.6);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.is-active {
+  display: block;
 }
 
 .hero header {
@@ -52,6 +85,41 @@ body {
   gap: 20px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   margin-bottom: 24px;
+}
+
+.npc-selector {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.npc-selector label {
+  font-weight: 600;
+}
+
+.npc-selector select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: inherit;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.crafting select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: inherit;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  margin: 8px 0 4px;
+}
+
+.npc-description {
+  margin: 0;
+  color: rgba(246, 244, 255, 0.7);
+  font-size: 0.95rem;
 }
 
 .combatant {
@@ -155,4 +223,160 @@ button:hover {
 
 #log li.system {
   color: #ffd8a8;
+}
+
+.is-hidden {
+  display: none;
+}
+
+.inventory-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.inventory-list,
+.equipment-list {
+  display: grid;
+  gap: 12px;
+}
+
+.inventory-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inventory-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-item-description {
+  margin: 6px 0 10px;
+  color: rgba(246, 244, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.inventory-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.equipment-slot {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 8px;
+}
+
+.equipment-slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.equipment-slot-name {
+  text-transform: capitalize;
+}
+
+.loot-log {
+  margin-top: 20px;
+}
+
+#loot-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+#loot-list li {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.crafting-details,
+.crafting-result {
+  margin: 10px 0;
+  color: rgba(246, 244, 255, 0.7);
+}
+
+.progression-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: 16px;
+}
+
+.stat-list {
+  display: grid;
+  gap: 12px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spellbook-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.spellbook-list,
+.spell-slots {
+  display: grid;
+  gap: 12px;
+}
+
+.spell-entry {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 8px;
+}
+
+.spell-slot {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 8px;
+}
+
+.spell-slot-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.spellbook-message {
+  margin-top: 8px;
+  color: rgba(246, 244, 255, 0.7);
+}
+
+.spell-requirement {
+  margin: 6px 0 0;
+  color: rgba(246, 244, 255, 0.7);
+  font-size: 0.85rem;
 }
