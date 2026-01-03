@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DaisyQuest: Ember Duel</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel hero">
+        <header>
+          <h1>DaisyQuest: Ember Duel</h1>
+          <p class="subtitle">A refined combat encounter for the next-generation DaisyQuest.</p>
+        </header>
+        <div class="battlefield">
+          <div class="combatant" id="player-card">
+            <h2 id="player-name">Hero</h2>
+            <div class="bar">
+              <span>Health</span>
+              <div class="meter">
+                <div class="fill" id="player-health"></div>
+              </div>
+              <span class="value" id="player-health-value"></span>
+            </div>
+            <div class="bar">
+              <span>Mana</span>
+              <div class="meter mana">
+                <div class="fill" id="player-mana"></div>
+              </div>
+              <span class="value" id="player-mana-value"></span>
+            </div>
+          </div>
+          <div class="combatant" id="enemy-card">
+            <h2 id="enemy-name">Otherworldly Beast</h2>
+            <div class="bar">
+              <span>Health</span>
+              <div class="meter">
+                <div class="fill" id="enemy-health"></div>
+              </div>
+              <span class="value" id="enemy-health-value"></span>
+            </div>
+            <div class="bar">
+              <span>Focus</span>
+              <div class="meter focus">
+                <div class="fill" id="enemy-focus"></div>
+              </div>
+              <span class="value" id="enemy-focus-value"></span>
+            </div>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="action" data-action="attack">Swift Strike</button>
+          <button class="action" data-action="special">Ember Surge</button>
+          <button class="action" data-action="heal">Serenity Bloom</button>
+          <button class="secondary" id="reset">Reset Battle</button>
+        </div>
+      </section>
+      <section class="panel log">
+        <h3>Battle Chronicle</h3>
+        <ul id="log"></ul>
+      </section>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,158 @@
+:root {
+  color-scheme: dark;
+  font-family: "Josefin Sans", system-ui, sans-serif;
+  background: radial-gradient(circle at top, #2b1f3d, #0d0f1a 70%);
+  color: #f6f4ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.app {
+  width: min(1100px, 100%);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.panel {
+  background: linear-gradient(160deg, rgba(24, 20, 46, 0.95), rgba(15, 13, 30, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 20px 50px rgba(4, 4, 12, 0.6);
+}
+
+.hero header {
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-size: clamp(1.9rem, 2vw + 1rem, 2.6rem);
+  margin: 0 0 8px;
+}
+
+.subtitle {
+  margin: 0;
+  color: rgba(246, 244, 255, 0.7);
+}
+
+.battlefield {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 24px;
+}
+
+.combatant {
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.combatant h2 {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+}
+
+.bar {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.bar span.value {
+  font-size: 0.9rem;
+  color: rgba(246, 244, 255, 0.7);
+}
+
+.meter {
+  height: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter .fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #ffb347, #ff6a88);
+  transition: width 0.4s ease;
+}
+
+.meter.mana .fill {
+  background: linear-gradient(90deg, #5ee7ff, #4d8dff);
+}
+
+.meter.focus .fill {
+  background: linear-gradient(90deg, #c6ffdd, #fbd786, #f7797d);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+button {
+  border: none;
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button.action {
+  background: linear-gradient(135deg, #ff7b7b, #ffae4f);
+  color: #1e0f24;
+  box-shadow: 0 10px 20px rgba(255, 123, 123, 0.2);
+}
+
+button.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f6f4ff;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(255, 255, 255, 0.18);
+}
+
+.log h3 {
+  margin-top: 0;
+  font-size: 1.3rem;
+}
+
+#log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+#log li {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#log li.system {
+  color: #ffd8a8;
+}

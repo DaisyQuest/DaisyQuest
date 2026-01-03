@@ -1,0 +1,19 @@
+{
+  "name": "daisyquest-node-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node-based DaisyQuest battle prototype",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "jest --coverage"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

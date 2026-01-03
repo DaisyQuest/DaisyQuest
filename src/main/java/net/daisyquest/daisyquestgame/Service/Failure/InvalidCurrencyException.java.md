@@ -1,0 +1,9 @@
+# InvalidCurrencyException
+
+**Package:** `net.daisyquest.daisyquestgame.Service.Failure`
+
+**Type:** `class`
+
+**Summary:**
+
+- Custom exception type for signaling invalid currency exception error conditions in service flows.
