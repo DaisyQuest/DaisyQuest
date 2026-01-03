@@ -1,29 +1,4 @@
-import {
-  createCombatant,
-  ACTIONS,
-  ACTION_CONFIG,
-  GLOBAL_COOLDOWN_MS,
-  DEFAULT_PLAYER,
-  getNpcById,
-  NPCS,
-  getEnemyActionDelay,
-  performEnemyAction,
-  performPlayerAction,
-  isDefeated
-} from "./battle.js";
-import {
-  ITEMS,
-  RECIPES,
-  NPC_LOOT_TABLES,
-  RARITY_COLORS,
-  EQUIPMENT_SLOTS
-} from "./items.js";
-import { createCraftingSystem } from "./systems/craftingSystem.js";
-import { createInventoryManager } from "./systems/inventorySystem.js";
 import { createItemRegistry } from "./systems/itemRegistry.js";
-import { createLootSystem } from "./systems/lootSystem.js";
-import { createProgressionSystem } from "./systems/progressionSystem.js";
-import { createRegistryEditor } from "./systems/registryEditor.js";
 import { initializeThemeEngine } from "./themeEngine.js";
 
 const logList = document.getElementById("log");
@@ -81,83 +56,99 @@ const actionButtons = Array.from(document.querySelectorAll("button.action")).fil
   (button) => !["craft-button", "claim-reward"].includes(button.id)
 );
 
-actionButtons.forEach((button) => {
-  button.dataset.baseLabel = button.textContent;
-});
+const authStatus = document.getElementById("auth-status");
+const authForm = document.getElementById("auth-form");
+const authMessage = document.getElementById("auth-message");
+const authUsername = document.getElementById("auth-username");
+const authPassword = document.getElementById("auth-password");
+const logoutButton = document.getElementById("logout-button");
 
-const progressionSystem = createProgressionSystem({
-  thresholds: [0, 120, 280, 480, 720, 1000, 1400, 1900]
-});
+const API_TOKEN_KEY = "dq-auth-token";
 
-const registryEditor = createRegistryEditor({
-  items: ITEMS,
-  recipes: RECIPES
-});
+let sessionToken = localStorage.getItem(API_TOKEN_KEY);
+let config = null;
+let registrySnapshot = { items: [], recipes: [] };
+let runtime = null;
+let state = null;
+let combatTimers = {
+  globalCooldownUntil: 0,
+  actionCooldowns: {},
+  queuedAction: null,
+  enemyNextActionAt: 0,
+  loopId: null,
+  enemyPollId: null
+};
+let pendingAction = false;
 
-const rewardMilestones = [
-  { level: 2, reward: { itemId: "ember_scale", quantity: 2 }, label: "Ember Cache" },
-  { level: 3, reward: { itemId: "moonsteel_ingot", quantity: 1 }, label: "Moonsteel Shard" },
-  { level: 4, reward: { itemId: "crystal_shard", quantity: 2 }, label: "Guardian Crystal" },
-  { level: 5, reward: { itemId: "wyrmling_helm", quantity: 1 }, label: "Wyrmling Relic" }
-];
-
-function buildRuntimeSystems(snapshot) {
-  const itemRegistry = createItemRegistry({
-    items: snapshot.items,
-    recipes: snapshot.recipes,
-    lootTables: NPC_LOOT_TABLES,
-    rarityColors: RARITY_COLORS,
-    equipmentSlots: EQUIPMENT_SLOTS
+function apiRequest(path, options = {}) {
+  const headers = { "Content-Type": "application/json", ...(options.headers ?? {}) };
+  if (sessionToken) {
+    headers.Authorization = `Bearer ${sessionToken}`;
+  }
+  return fetch(path, {
+    ...options,
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  }).then(async (response) => {
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = payload.error || `Request failed (${response.status}).`;
+      throw new Error(message);
+    }
+    return payload;
   });
-  const inventoryManager = createInventoryManager({ itemRegistry });
-  const craftingSystem = createCraftingSystem({ itemRegistry, inventoryManager });
-  const lootSystem = createLootSystem({ itemRegistry });
+}
+
+function buildRuntime(snapshot) {
+  if (!config) {
+    return null;
+  }
   return {
-    itemRegistry,
-    inventoryManager,
-    craftingSystem,
-    lootSystem
+    itemRegistry: createItemRegistry({
+      items: snapshot.items,
+      recipes: snapshot.recipes,
+      lootTables: {},
+      rarityColors: config.rarityColors ?? {},
+      equipmentSlots: config.equipmentSlots ?? []
+    })
   };
 }
 
-let runtime = buildRuntimeSystems(registryEditor.getSnapshot());
-
-let state = {
-  player: createCombatant(DEFAULT_PLAYER),
-  enemy: createCombatant({ ...getNpcById(), isEnemy: true }),
-  inventory: {},
-  equipment: {},
-  progression: progressionSystem.getProgressSnapshot(0),
-  pendingReward: null,
-  claimedRewards: new Set()
-};
-
-const combatTimers = {
-  globalCooldownUntil: 0,
-  actionCooldowns: Object.fromEntries(Object.keys(ACTION_CONFIG).map((action) => [action, 0])),
-  queuedAction: null,
-  enemyNextActionAt: 0,
-  loopId: null
-};
-
-function populateNpcSelect() {
-  npcSelect.innerHTML = "";
-  NPCS.forEach((npc, index) => {
-    const option = document.createElement("option");
-    option.value = npc.id;
-    option.textContent = npc.name;
-    if (index === 0) {
-      option.selected = true;
-    }
-    npcSelect.appendChild(option);
-  });
-}
-
-function getSelectedNpc() {
-  return getNpcById(npcSelect.value);
+function applySessionSnapshot(payload) {
+  if (!payload) {
+    return;
+  }
+  if (payload.token) {
+    sessionToken = payload.token;
+    localStorage.setItem(API_TOKEN_KEY, sessionToken);
+  }
+  if (payload.config) {
+    config = payload.config;
+  }
+  if (payload.registry) {
+    registrySnapshot = payload.registry;
+  }
+  if (payload.state) {
+    state = {
+      ...payload.state,
+      claimedRewards: new Set(payload.state.claimedRewards ?? [])
+    };
+  }
+  if (payload.timers) {
+    combatTimers = {
+      ...combatTimers,
+      ...payload.timers
+    };
+  }
+  if (config && registrySnapshot) {
+    runtime = buildRuntime(registrySnapshot);
+  }
 }
 
 function pushLog(lines) {
+  if (!lines || lines.length === 0) {
+    return;
+  }
   lines.forEach((line) => {
     const li = document.createElement("li");
     li.textContent = line;
@@ -166,6 +157,9 @@ function pushLog(lines) {
 }
 
 function pushLoot(lines) {
+  if (!lines || lines.length === 0) {
+    return;
+  }
   lines.forEach((line) => {
     const li = document.createElement("li");
     li.textContent = line;
@@ -174,6 +168,9 @@ function pushLoot(lines) {
 }
 
 function updateMeters() {
+  if (!state) {
+    return;
+  }
   const enemyFocusCurrent = state.enemy.focus ?? 0;
   const enemyFocusMax = state.enemy.maxFocus ?? 0;
   playerHealth.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
@@ -193,17 +190,9 @@ function updateMeters() {
   }
 }
 
-function getActionLabel(action) {
-  return ACTION_CONFIG[action]?.label ?? action;
-}
-
-function isActionReady(action, now) {
-  return (combatTimers.actionCooldowns[action] ?? 0) <= now;
-}
-
 function updateActionButtons(now = Date.now()) {
   const gcdRemaining = Math.max(0, combatTimers.globalCooldownUntil - now);
-  const combatLocked = isDefeated(state.player) || isDefeated(state.enemy);
+  const combatLocked = !state || state.player.health <= 0 || state.enemy.health <= 0;
 
   actionButtons.forEach((button) => {
     const action = button.dataset.action;
@@ -227,121 +216,29 @@ function updateActionButtons(now = Date.now()) {
   });
 }
 
-function setActionCooldowns(action, now) {
-  const config = ACTION_CONFIG[action];
-  if (!config) {
-    return;
-  }
-  combatTimers.actionCooldowns[action] = now + config.cooldownMs;
-  combatTimers.globalCooldownUntil = now + GLOBAL_COOLDOWN_MS;
-}
-
-function scheduleEnemyAction(now) {
-  combatTimers.enemyNextActionAt = now + getEnemyActionDelay(state.enemy);
-}
-
-function resolveVictory(enemy) {
-  const reward = getVictoryReward(enemy);
-  applyProgressionGain(reward.xp, reward.label);
-  const lootDrops = runtime.lootSystem.rollLoot(enemy.id);
-  if (lootDrops.length > 0) {
-    const lootLines = lootDrops.map((drop) => {
-      const item = runtime.itemRegistry.getItem(drop.itemId);
-      state.inventory = runtime.inventoryManager.addItem(
-        state.inventory,
-        drop.itemId,
-        drop.quantity
-      );
-      return `Looted ${item ? item.name : drop.itemId} x${drop.quantity}.`;
-    });
-    pushLoot(lootLines);
-    renderInventory();
-  }
-  updateActionButtons();
-}
-
-function executePlayerAction(action, now) {
-  const result = performPlayerAction({
-    player: state.player,
-    enemy: state.enemy,
-    action
-  });
-  state = { ...state, player: result.player, enemy: result.enemy };
-  pushLog(result.log);
-  setActionCooldowns(action, now);
-  combatTimers.queuedAction = null;
-
-  if (result.victory) {
-    resolveVictory(result.enemy);
-    updateMeters();
-    return;
-  }
-
-  updateMeters();
-  scheduleEnemyAction(now);
-}
-
-function executeEnemyAction(now) {
-  if (isDefeated(state.enemy) || isDefeated(state.player)) {
-    return;
-  }
-  const result = performEnemyAction({
-    player: state.player,
-    enemy: state.enemy
-  });
-  state = { ...state, player: result.player, enemy: result.enemy };
-  pushLog(result.log);
-  updateMeters();
-  scheduleEnemyAction(now);
-}
-
-function queueAction(action) {
-  if (isDefeated(state.player) || isDefeated(state.enemy)) {
-    return;
-  }
-  const now = Date.now();
-  if (!ACTION_CONFIG[action]) {
-    pushLog([`${state.player.name} fumbles an unfamiliar action.`]);
-    return;
-  }
-  if (!isActionReady(action, now)) {
-    pushLog([`${getActionLabel(action)} is recharging.`]);
-    return;
-  }
-  if (combatTimers.globalCooldownUntil > now) {
-    combatTimers.queuedAction = action;
-    pushLog([`${getActionLabel(action)} queued.`]);
-    updateActionButtons(now);
-    return;
-  }
-  executePlayerAction(action, now);
-  updateActionButtons(now);
-}
-
-function processCombatTick() {
-  const now = Date.now();
-  if (combatTimers.queuedAction && now >= combatTimers.globalCooldownUntil) {
-    const queued = combatTimers.queuedAction;
-    if (isActionReady(queued, now)) {
-      executePlayerAction(queued, now);
+function populateNpcSelect() {
+  npcSelect.innerHTML = "";
+  (config?.npcs ?? []).forEach((npc, index) => {
+    const option = document.createElement("option");
+    option.value = npc.id;
+    option.textContent = npc.name;
+    if (index === 0) {
+      option.selected = true;
     }
-  }
-  if (combatTimers.enemyNextActionAt && now >= combatTimers.enemyNextActionAt) {
-    executeEnemyAction(now);
-  }
-  updateActionButtons(now);
+    npcSelect.appendChild(option);
+  });
 }
 
-function startCombatLoop() {
-  if (combatTimers.loopId) {
-    return;
-  }
-  combatTimers.loopId = window.setInterval(processCombatTick, 250);
+function getSelectedNpc() {
+  return (config?.npcs ?? []).find((npc) => npc.id === npcSelect.value) ?? config?.npcs?.[0];
 }
 
 function renderInventory() {
   inventoryList.innerHTML = "";
-  const entries = Object.entries(state.inventory);
+  if (!state || !runtime) {
+    return;
+  }
+  const entries = Object.entries(state.inventory ?? {});
   if (entries.length === 0) {
     const empty = document.createElement("p");
     empty.textContent = "Your satchel is empty.";
@@ -355,31 +252,32 @@ function renderInventory() {
     const rarityColor = item ? runtime.itemRegistry.getRarityColor(item.rarity) : "#fff";
     row.innerHTML = `
       <div class="inventory-item-main">
-        <span class="inventory-item-name" style="color: ${rarityColor};">${
-          item ? item.name : "Unknown Item"
-        }</span>
+        <span class="inventory-item-name" style="color: ${rarityColor};"></span>
         <span class="inventory-item-quantity">x${quantity}</span>
       </div>
       <p class="inventory-item-description">${item ? item.description : "No description"}</p>
       <div class="inventory-item-actions"></div>
     `;
+    row.querySelector(".inventory-item-name").textContent = item ? item.name : "Unknown Item";
     const actions = row.querySelector(".inventory-item-actions");
     if (item?.equippable) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "secondary";
       button.textContent = "Equip";
-      button.addEventListener("click", () => {
-        const result = runtime.inventoryManager.equipItem(state.inventory, state.equipment, itemId);
-        if (result.error) {
-          pushLog([result.error]);
-          return;
+      button.addEventListener("click", async () => {
+        try {
+          const payload = await apiRequest("/api/inventory/equip", {
+            method: "POST",
+            body: { itemId }
+          });
+          applySessionSnapshot(payload);
+          pushLog(payload.log);
+          renderInventory();
+          renderEquipment();
+        } catch (error) {
+          pushLog([error.message]);
         }
-        state.inventory = result.inventory;
-        state.equipment = result.equipment;
-        pushLog([`Equipped ${item.name}.`]);
-        renderInventory();
-        renderEquipment();
       });
       actions.appendChild(button);
     }
@@ -389,10 +287,13 @@ function renderInventory() {
 
 function renderEquipment() {
   equipmentList.innerHTML = "";
-  EQUIPMENT_SLOTS.forEach((slot) => {
+  if (!state || !config || !runtime) {
+    return;
+  }
+  (config.equipmentSlots ?? []).forEach((slot) => {
     const wrapper = document.createElement("div");
     wrapper.className = "equipment-slot";
-    const equippedId = state.equipment[slot];
+    const equippedId = state.equipment?.[slot];
     const item = equippedId ? runtime.itemRegistry.getItem(equippedId) : null;
     wrapper.innerHTML = `
       <div class="equipment-slot-header">
@@ -405,17 +306,19 @@ function renderEquipment() {
       button.type = "button";
       button.className = "secondary";
       button.textContent = "Unequip";
-      button.addEventListener("click", () => {
-        const result = runtime.inventoryManager.unequipItem(state.inventory, state.equipment, slot);
-        if (result.error) {
-          pushLog([result.error]);
-          return;
+      button.addEventListener("click", async () => {
+        try {
+          const payload = await apiRequest("/api/inventory/unequip", {
+            method: "POST",
+            body: { slot }
+          });
+          applySessionSnapshot(payload);
+          pushLog(payload.log);
+          renderInventory();
+          renderEquipment();
+        } catch (error) {
+          pushLog([error.message]);
         }
-        state.inventory = result.inventory;
-        state.equipment = result.equipment;
-        pushLog([`Unequipped ${item.name}.`]);
-        renderInventory();
-        renderEquipment();
       });
       wrapper.appendChild(button);
     }
@@ -425,7 +328,7 @@ function renderEquipment() {
 
 function populateRecipes() {
   recipeSelect.innerHTML = "";
-  registryEditor.listRecipes().forEach((recipe, index) => {
+  registrySnapshot.recipes.forEach((recipe, index) => {
     const option = document.createElement("option");
     option.value = recipe.id;
     option.textContent = recipe.name;
@@ -437,6 +340,10 @@ function populateRecipes() {
 }
 
 function renderRecipeDetails() {
+  if (!runtime) {
+    recipeDetails.textContent = "Select a recipe to see ingredients.";
+    return;
+  }
   const recipe = runtime.itemRegistry.getRecipe(recipeSelect.value);
   if (!recipe) {
     recipeDetails.textContent = "Select a recipe to see ingredients.";
@@ -452,92 +359,63 @@ function renderRecipeDetails() {
   recipeDetails.textContent = `${result ? result.name : "Unknown"} requires ${ingredients}.`;
 }
 
-function attemptCraft() {
+async function attemptCraft() {
   const recipeId = recipeSelect.value;
-  const result = runtime.craftingSystem.craftItem(state.inventory, recipeId);
-  if (result.error) {
-    craftingResult.textContent = result.error;
-    return;
+  try {
+    const payload = await apiRequest("/api/crafting/attempt", {
+      method: "POST",
+      body: { recipeId }
+    });
+    applySessionSnapshot(payload);
+    craftingResult.textContent = payload.log?.[0] ?? "Crafting complete.";
+    pushLog(payload.log);
+    renderInventory();
+    renderProgression();
+  } catch (error) {
+    craftingResult.textContent = error.message;
   }
-  const craftedItem = runtime.itemRegistry.getItem(result.crafted);
-  state.inventory = result.inventory;
-  craftingResult.textContent = craftedItem
-    ? `Crafted ${craftedItem.name}.`
-    : "Crafting complete.";
-  renderInventory();
-  applyProgressionGain(40, "Crafting mastery");
 }
 
-function resetBattle() {
+async function resetBattle() {
   const npc = getSelectedNpc();
-  state = {
-    ...state,
-    player: createCombatant(DEFAULT_PLAYER),
-    enemy: createCombatant({ ...npc, isEnemy: true })
-  };
+  if (!npc) {
+    return;
+  }
   logList.innerHTML = "";
   lootList.innerHTML = "";
-  enemyName.textContent = npc.name;
-  npcDescription.textContent = npc.description;
-  pushLog([`A new duel begins against ${npc.name}. Choose your opening move.`]);
-  combatTimers.globalCooldownUntil = 0;
-  combatTimers.queuedAction = null;
-  Object.keys(combatTimers.actionCooldowns).forEach((action) => {
-    combatTimers.actionCooldowns[action] = 0;
-  });
-  scheduleEnemyAction(Date.now());
-  updateMeters();
-  updateActionButtons();
-  startCombatLoop();
-}
-
-function getVictoryReward(enemy) {
-  const base = Math.max(40, Math.round(enemy.maxHealth / 2));
-  return {
-    xp: base,
-    label: `${enemy.name} defeated (+${base} XP)`
-  };
-}
-
-function getMilestoneForLevel(level) {
-  return rewardMilestones.find(
-    (reward) => reward.level <= level && !state.claimedRewards.has(reward.level)
-  ) || null;
-}
-
-function applyProgressionGain(amount, sourceLabel) {
-  const result = progressionSystem.awardXp(state.progression, amount);
-  if (result.error) {
-    pushLog([result.error]);
-    return;
+  try {
+    const payload = await apiRequest("/api/battle/reset", {
+      method: "POST",
+      body: { npcId: npc.id }
+    });
+    applySessionSnapshot(payload);
+    enemyName.textContent = npc.name;
+    npcDescription.textContent = npc.description;
+    pushLog(payload.log);
+    updateMeters();
+    updateActionButtons();
+    startCombatLoop();
+  } catch (error) {
+    pushLog([error.message]);
   }
-  state.progression = result.state;
-  if (sourceLabel) {
-    pushLog([`${sourceLabel} earned.`]);
-  }
-  if (result.leveledUp) {
-    pushLog([`Level up! You reached level ${state.progression.level}.`]);
-    const milestone = getMilestoneForLevel(state.progression.level);
-    if (milestone && !state.claimedRewards.has(milestone.level)) {
-      state.pendingReward = milestone;
-    }
-  }
-  renderProgression();
 }
 
 function renderProgression() {
+  if (!state || !config) {
+    return;
+  }
   const { level, currentXp, nextLevelXp, progress, totalXp } = state.progression;
   progressLevelBadge.textContent = `Level ${level}`;
   progressXpLabel.textContent = `${totalXp} XP`;
   progressFill.style.width = `${progress * 100}%`;
   progressCurrent.textContent = `${currentXp} / ${nextLevelXp} XP`;
-  const nextMilestone = rewardMilestones.find((reward) => reward.level > level);
+  const nextMilestone = (config.rewardMilestones ?? []).find((reward) => reward.level > level);
   progressNext.textContent = nextMilestone
     ? `Next reward at Level ${nextMilestone.level}`
     : "All rewards claimed";
 
   milestoneList.innerHTML = "";
-  rewardMilestones.forEach((milestone) => {
+  (config.rewardMilestones ?? []).forEach((milestone) => {
     const li = document.createElement("li");
     const claimed = state.claimedRewards.has(milestone.level);
     li.textContent = `Level ${milestone.level}: ${milestone.label} ${
@@ -555,27 +433,21 @@ function renderProgression() {
   }
 }
 
-function claimReward() {
-  if (!state.pendingReward) {
-    return;
+async function claimReward() {
+  try {
+    const payload = await apiRequest("/api/rewards/claim", { method: "POST" });
+    applySessionSnapshot(payload);
+    pushLog(payload.log);
+    renderInventory();
+    renderProgression();
+  } catch (error) {
+    pushLog([error.message]);
   }
-  const { reward, label, level } = state.pendingReward;
-  state.inventory = runtime.inventoryManager.addItem(
-    state.inventory,
-    reward.itemId,
-    reward.quantity
-  );
-  state.claimedRewards.add(level);
-  state.pendingReward = null;
-  pushLog([`Reward claimed: ${label}.`]);
-  renderInventory();
-  renderProgression();
 }
-
 
 function renderRegistryItems() {
   itemRegistryList.innerHTML = "";
-  registryEditor.listItems().forEach((item) => {
+  registrySnapshot.items.forEach((item) => {
     const card = document.createElement("div");
     card.className = "registry-card";
     card.innerHTML = `
@@ -595,7 +467,7 @@ function renderRegistryItems() {
 
 function renderRegistryRecipes() {
   recipeRegistryList.innerHTML = "";
-  registryEditor.listRecipes().forEach((recipe) => {
+  registrySnapshot.recipes.forEach((recipe) => {
     const card = document.createElement("div");
     card.className = "registry-card";
     const ingredients = Object.entries(recipe.ingredients)
@@ -668,7 +540,7 @@ function addIngredientRow(selectedId = "", amount = 1) {
   const row = document.createElement("div");
   row.className = "ingredient-row";
   const select = document.createElement("select");
-  registryEditor.listItems().forEach((item) => {
+  registrySnapshot.items.forEach((item) => {
     const option = document.createElement("option");
     option.value = item.id;
     option.textContent = item.name;
@@ -693,7 +565,7 @@ function addIngredientRow(selectedId = "", amount = 1) {
 }
 
 function refreshRuntime() {
-  runtime = buildRuntimeSystems(registryEditor.getSnapshot());
+  runtime = buildRuntime(registrySnapshot);
   populateRecipes();
   renderRecipeDetails();
   renderInventory();
@@ -704,8 +576,8 @@ function refreshRuntime() {
 }
 
 function populateRarityOptions() {
-  itemRarityField.innerHTML = "<option value=\"\">Select rarity</option>";
-  Object.keys(RARITY_COLORS).forEach((rarity) => {
+  itemRarityField.innerHTML = '<option value="">Select rarity</option>';
+  Object.keys(config?.rarityColors ?? {}).forEach((rarity) => {
     const option = document.createElement("option");
     option.value = rarity;
     option.textContent = rarity;
@@ -714,8 +586,8 @@ function populateRarityOptions() {
 }
 
 function populateSlotOptions() {
-  itemSlotField.innerHTML = "<option value=\"\">Select slot</option>";
-  EQUIPMENT_SLOTS.forEach((slot) => {
+  itemSlotField.innerHTML = '<option value="">Select slot</option>';
+  (config?.equipmentSlots ?? []).forEach((slot) => {
     const option = document.createElement("option");
     option.value = slot;
     option.textContent = slot.replace("_", " ");
@@ -724,8 +596,8 @@ function populateSlotOptions() {
 }
 
 function populateRecipeResultOptions() {
-  recipeResultField.innerHTML = "<option value=\"\">Select item</option>";
-  registryEditor.listItems().forEach((item) => {
+  recipeResultField.innerHTML = '<option value="">Select item</option>';
+  registrySnapshot.items.forEach((item) => {
     const option = document.createElement("option");
     option.value = item.id;
     option.textContent = item.name;
@@ -733,7 +605,7 @@ function populateRecipeResultOptions() {
   });
 }
 
-itemEditor.addEventListener("submit", (event) => {
+itemEditor.addEventListener("submit", async (event) => {
   event.preventDefault();
   const payload = {
     id: itemIdField.value.trim(),
@@ -743,20 +615,19 @@ itemEditor.addEventListener("submit", (event) => {
     equippable: itemEquippableField.checked,
     equipmentSlotTypeString: itemEquippableField.checked ? itemSlotField.value : ""
   };
-  const result = itemIdField.disabled
-    ? registryEditor.updateItem(payload.id, payload)
-    : registryEditor.addItem(payload);
-  if (result.error) {
-    itemFormMessage.textContent = result.error;
+  try {
+    const result = await apiRequest("/api/registry/items", { method: "POST", body: payload });
+    registrySnapshot = result.registry;
+    itemFormMessage.textContent = "Item saved.";
+    itemFormMessage.classList.remove("error");
+    refreshRuntime();
+  } catch (error) {
+    itemFormMessage.textContent = error.message;
     itemFormMessage.classList.add("error");
-    return;
   }
-  itemFormMessage.textContent = "Item saved.";
-  itemFormMessage.classList.remove("error");
-  refreshRuntime();
 });
 
-recipeEditor.addEventListener("submit", (event) => {
+recipeEditor.addEventListener("submit", async (event) => {
   event.preventDefault();
   const ingredients = {};
   ingredientsList.querySelectorAll(".ingredient-row").forEach((row) => {
@@ -772,17 +643,16 @@ recipeEditor.addEventListener("submit", (event) => {
     resultItemId: recipeResultField.value,
     ingredients
   };
-  const result = recipeIdField.disabled
-    ? registryEditor.updateRecipe(payload.id, payload)
-    : registryEditor.addRecipe(payload);
-  if (result.error) {
-    recipeFormMessage.textContent = result.error;
+  try {
+    const result = await apiRequest("/api/registry/recipes", { method: "POST", body: payload });
+    registrySnapshot = result.registry;
+    recipeFormMessage.textContent = "Recipe saved.";
+    recipeFormMessage.classList.remove("error");
+    refreshRuntime();
+  } catch (error) {
+    recipeFormMessage.textContent = error.message;
     recipeFormMessage.classList.add("error");
-    return;
   }
-  recipeFormMessage.textContent = "Recipe saved.";
-  recipeFormMessage.classList.remove("error");
-  refreshRuntime();
 });
 
 newItemButton.addEventListener("click", () => populateItemForm(null));
@@ -802,6 +672,180 @@ function wireTabs() {
   });
 }
 
+async function executePlayerAction(action) {
+  if (pendingAction) {
+    return;
+  }
+  pendingAction = true;
+  try {
+    const payload = await apiRequest("/api/battle/action", { method: "POST", body: { action } });
+    applySessionSnapshot(payload);
+    pushLog(payload.log);
+    pushLoot(payload.loot);
+    updateMeters();
+    renderInventory();
+    renderProgression();
+  } catch (error) {
+    pushLog([error.message]);
+  } finally {
+    pendingAction = false;
+  }
+}
+
+function queueAction(action) {
+  if (!state || state.player.health <= 0 || state.enemy.health <= 0) {
+    return;
+  }
+  const now = Date.now();
+  if (!config?.actions?.[action]) {
+    pushLog([`${state.player.name} fumbles an unfamiliar action.`]);
+    return;
+  }
+  if ((combatTimers.actionCooldowns[action] ?? 0) > now) {
+    pushLog([`${config.actions[action].label} is recharging.`]);
+    return;
+  }
+  if (combatTimers.globalCooldownUntil > now) {
+    combatTimers.queuedAction = action;
+    pushLog([`${config.actions[action].label} queued.`]);
+    updateActionButtons(now);
+    return;
+  }
+  executePlayerAction(action);
+  updateActionButtons(now);
+}
+
+async function pollEnemyAction() {
+  try {
+    const payload = await apiRequest("/api/battle/tick", { method: "POST" });
+    applySessionSnapshot(payload);
+    if (payload.log?.length) {
+      pushLog(payload.log);
+      updateMeters();
+      renderProgression();
+    }
+    updateActionButtons();
+  } catch (error) {
+    pushLog([error.message]);
+  }
+}
+
+function processCombatTick() {
+  const now = Date.now();
+  if (combatTimers.queuedAction && now >= combatTimers.globalCooldownUntil) {
+    const queued = combatTimers.queuedAction;
+    if ((combatTimers.actionCooldowns[queued] ?? 0) <= now) {
+      combatTimers.queuedAction = null;
+      executePlayerAction(queued);
+    }
+  }
+  updateActionButtons(now);
+}
+
+function startCombatLoop() {
+  if (combatTimers.loopId) {
+    return;
+  }
+  combatTimers.loopId = window.setInterval(processCombatTick, 250);
+  combatTimers.enemyPollId = window.setInterval(pollEnemyAction, 900);
+}
+
+function updateAuthStatus(profile) {
+  if (profile) {
+    authStatus.textContent = `Signed in as ${profile.username}`;
+    logoutButton.disabled = false;
+  } else {
+    authStatus.textContent = "Offline";
+    logoutButton.disabled = true;
+  }
+}
+
+function updateActionLabels() {
+  actionButtons.forEach((button) => {
+    const action = button.dataset.action;
+    const label = config?.actions?.[action]?.label ?? button.textContent;
+    button.dataset.baseLabel = label;
+    button.textContent = label;
+  });
+}
+
+async function bootstrapSession() {
+  if (!sessionToken) {
+    return false;
+  }
+  try {
+    const payload = await apiRequest("/api/bootstrap");
+    applySessionSnapshot(payload);
+    updateAuthStatus(payload.profile);
+    return true;
+  } catch (error) {
+    localStorage.removeItem(API_TOKEN_KEY);
+    sessionToken = null;
+    updateAuthStatus(null);
+    authMessage.textContent = error.message;
+    authMessage.classList.add("error");
+    return false;
+  }
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const mode = event.submitter?.dataset.mode ?? "login";
+  authMessage.textContent = "";
+  authMessage.classList.remove("error");
+  try {
+    const payload = await apiRequest(`/api/auth/${mode}`, {
+      method: "POST",
+      body: { username: authUsername.value.trim(), password: authPassword.value }
+    });
+    applySessionSnapshot(payload);
+    updateAuthStatus(payload.profile);
+    initializeGameUI();
+  } catch (error) {
+    authMessage.textContent = error.message;
+    authMessage.classList.add("error");
+  }
+}
+
+async function handleLogout() {
+  try {
+    await apiRequest("/api/auth/logout", { method: "POST" });
+  } finally {
+    localStorage.removeItem(API_TOKEN_KEY);
+    sessionToken = null;
+    updateAuthStatus(null);
+  }
+}
+
+function initializeGameUI() {
+  if (!config || !state) {
+    return;
+  }
+  populateNpcSelect();
+  if (state.enemy.id) {
+    npcSelect.value = state.enemy.id;
+  }
+  updateActionLabels();
+  populateRarityOptions();
+  populateSlotOptions();
+  populateRecipeResultOptions();
+  wireTabs();
+  populateRecipes();
+  renderRecipeDetails();
+  populateItemForm(null);
+  populateRecipeForm(null);
+  renderRegistryItems();
+  renderRegistryRecipes();
+  renderProgression();
+  renderInventory();
+  renderEquipment();
+  npcDescription.textContent = getSelectedNpc()?.description ?? "";
+  enemyName.textContent = state.enemy.name;
+  updateMeters();
+  updateActionButtons();
+  startCombatLoop();
+}
+
 actionButtons.forEach((button) => {
   button.addEventListener("click", () => {
     queueAction(button.dataset.action);
@@ -813,19 +857,13 @@ npcSelect.addEventListener("change", resetBattle);
 recipeSelect.addEventListener("change", renderRecipeDetails);
 craftButton.addEventListener("click", attemptCraft);
 
-populateNpcSelect();
-populateRarityOptions();
-populateSlotOptions();
-populateRecipeResultOptions();
-wireTabs();
-populateRecipes();
-renderRecipeDetails();
-populateItemForm(null);
-populateRecipeForm(null);
-renderRegistryItems();
-renderRegistryRecipes();
-renderProgression();
-resetBattle();
-renderInventory();
-renderEquipment();
+authForm.addEventListener("submit", handleAuthSubmit);
+logoutButton.addEventListener("click", handleLogout);
+
 initializeThemeEngine();
+
+bootstrapSession().then((ready) => {
+  if (ready) {
+    initializeGameUI();
+  }
+});
