@@ -54,6 +54,41 @@ body {
   margin-bottom: 24px;
 }
 
+.npc-selector {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.npc-selector label {
+  font-weight: 600;
+}
+
+.npc-selector select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: inherit;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.crafting select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: inherit;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  margin: 8px 0 4px;
+}
+
+.npc-description {
+  margin: 0;
+  color: rgba(246, 244, 255, 0.7);
+  font-size: 0.95rem;
+}
+
 .combatant {
   padding: 20px;
   border-radius: 18px;
@@ -155,4 +190,90 @@ button:hover {
 
 #log li.system {
   color: #ffd8a8;
+}
+
+.is-hidden {
+  display: none;
+}
+
+.inventory-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.inventory-list,
+.equipment-list {
+  display: grid;
+  gap: 12px;
+}
+
+.inventory-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inventory-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-item-description {
+  margin: 6px 0 10px;
+  color: rgba(246, 244, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.inventory-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.equipment-slot {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 8px;
+}
+
+.equipment-slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.equipment-slot-name {
+  text-transform: capitalize;
+}
+
+.loot-log {
+  margin-top: 20px;
+}
+
+#loot-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+#loot-list li {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.crafting-details,
+.crafting-result {
+  margin: 10px 0;
+  color: rgba(246, 244, 255, 0.7);
 }
