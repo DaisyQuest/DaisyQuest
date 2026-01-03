@@ -23,7 +23,8 @@ export const DEFAULT_ENEMY = Object.freeze({
   mana: 0,
   maxMana: 0,
   critChance: 0.05,
-  critMultiplier: 1.3
+  critMultiplier: 1.3,
+  experienceReward: 45
 });
 
 export const NPCS = Object.freeze([
@@ -40,7 +41,8 @@ export const NPCS = Object.freeze([
     mana: 0,
     maxMana: 0,
     critChance: 0.08,
-    critMultiplier: 1.4
+    critMultiplier: 1.4,
+    experienceReward: 30
   }),
   Object.freeze({
     id: "moonlit_duelist",
@@ -55,7 +57,8 @@ export const NPCS = Object.freeze([
     mana: 15,
     maxMana: 15,
     critChance: 0.12,
-    critMultiplier: 1.5
+    critMultiplier: 1.5,
+    experienceReward: 55
   }),
   Object.freeze({
     id: "crystal_guardian",
@@ -70,7 +73,8 @@ export const NPCS = Object.freeze([
     mana: 0,
     maxMana: 0,
     critChance: 0.04,
-    critMultiplier: 1.2
+    critMultiplier: 1.2,
+    experienceReward: 70
   })
 ]);
 
@@ -271,7 +275,8 @@ export function performTurn({ player, enemy, action, rng = Math.random }) {
   if (isDefeated(updatedEnemy)) {
     log.push(`${updatedEnemy.name} collapses. Victory!`);
     const loot = rollLoot(updatedEnemy.id, rng);
-    return { player: updatedPlayer, enemy: updatedEnemy, log, loot };
+    const experienceGained = updatedEnemy.experienceReward ?? 0;
+    return { player: updatedPlayer, enemy: updatedEnemy, log, loot, experienceGained };
   }
 
   if (typeof updatedEnemy.maxFocus === "number" && typeof updatedEnemy.focus !== "number") {

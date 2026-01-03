@@ -288,6 +288,26 @@ describe("battle flow", () => {
     const result = performTurn({ player, enemy, action: ACTIONS.ATTACK, rng: fixedRng(1) });
     expect(result.log[result.log.length - 1]).toContain("Victory");
     expect(result.enemy.health).toBe(0);
+    expect(result.experienceGained).toBe(DEFAULT_ENEMY.experienceReward);
+  });
+
+  test("performTurn awards loot on victory", () => {
+    const player = { ...DEFAULT_PLAYER, attack: 250 };
+    const enemyTemplate = getNpcById("ember_wyrmling");
+    const enemy = createCombatant({ ...enemyTemplate, isEnemy: true, health: 5, defense: 0 });
+    const rng = sequenceRng([1, 0.1, 0, 0.1]);
+    const result = performTurn({ player, enemy, action: ACTIONS.ATTACK, rng });
+    expect(result.loot).toEqual([
+      { itemId: "ember_scale", quantity: 1 },
+      { itemId: "wyrmling_helm", quantity: 1 }
+    ]);
+  });
+
+  test("performTurn defaults experience reward when missing", () => {
+    const player = { ...DEFAULT_PLAYER, attack: 200 };
+    const enemy = createCombatant({ ...DEFAULT_ENEMY, experienceReward: undefined, health: 5 });
+    const result = performTurn({ player, enemy, action: ACTIONS.ATTACK, rng: fixedRng(1) });
+    expect(result.experienceGained).toBe(0);
   });
 
   test("performTurn awards loot on victory", () => {
