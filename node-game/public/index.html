@@ -14,6 +14,35 @@
   </head>
   <body>
     <main class="app">
+      <section class="panel auth-panel">
+        <header class="panel-header">
+          <div>
+            <h2>Command Station</h2>
+            <p class="subtitle">Secure your account before stepping into the realm.</p>
+          </div>
+          <div class="auth-status">
+            <span id="auth-status">Offline</span>
+            <button class="secondary" id="logout-button" type="button" disabled>Logout</button>
+          </div>
+        </header>
+        <form id="auth-form" class="auth-form">
+          <label for="auth-username">Username</label>
+          <input id="auth-username" name="username" type="text" autocomplete="username" required />
+          <label for="auth-password">Password</label>
+          <input
+            id="auth-password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+          <div class="auth-actions">
+            <button class="action" type="submit" data-mode="login">Login</button>
+            <button class="secondary" type="submit" data-mode="register">Create Account</button>
+          </div>
+          <p class="form-message" id="auth-message"></p>
+        </form>
+      </section>
       <section class="panel hero">
         <header class="hero-header">
           <div>
@@ -33,6 +62,11 @@
         <div class="battlefield">
           <div class="combatant" id="player-card">
             <h2 id="player-name">Hero</h2>
+            <div class="sprite-frame">
+              <div class="sprite-placeholder" id="player-sprite">
+                <span>Hero Sprite</span>
+              </div>
+            </div>
             <div class="bar">
               <span>Health</span>
               <div class="meter">
@@ -50,6 +84,11 @@
           </div>
           <div class="combatant" id="enemy-card">
             <h2 id="enemy-name">Otherworldly Beast</h2>
+            <div class="sprite-frame">
+              <div class="sprite-placeholder" id="enemy-sprite">
+                <span>Enemy Sprite</span>
+              </div>
+            </div>
             <div class="bar">
               <span>Health</span>
               <div class="meter">

@@ -78,6 +78,39 @@ body {
   margin-bottom: 16px;
 }
 
+.auth-panel {
+  grid-column: 1 / -1;
+  backdrop-filter: blur(8px);
+}
+
+.auth-status {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--dq-muted);
+}
+
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-form input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: inherit;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .hero-header {
   display: flex;
   align-items: flex-start;
@@ -144,6 +177,27 @@ body {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sprite-frame {
+  margin-bottom: 16px;
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sprite-placeholder {
+  height: 140px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(14, 165, 233, 0.35));
+  border: 1px dashed rgba(255, 255, 255, 0.35);
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
 }
 
 .combatant h2 {
