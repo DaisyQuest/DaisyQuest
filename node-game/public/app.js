@@ -50,6 +50,8 @@ const ingredientsList = document.getElementById("ingredients-list");
 const newItemButton = document.getElementById("new-item");
 const newRecipeButton = document.getElementById("new-recipe");
 const addIngredientButton = document.getElementById("add-ingredient");
+const layoutTabButtons = document.querySelectorAll(".layout-tab-button");
+const layoutPanels = document.querySelectorAll("[data-tab-panel]");
 const tabButtons = document.querySelectorAll(".tab-button");
 const registryPanes = document.querySelectorAll(".registry-pane");
 const actionButtons = Array.from(document.querySelectorAll("button.action")).filter(
@@ -62,14 +64,20 @@ const authMessage = document.getElementById("auth-message");
 const authUsername = document.getElementById("auth-username");
 const authPassword = document.getElementById("auth-password");
 const logoutButton = document.getElementById("logout-button");
+const tradeRequestForm = document.getElementById("trade-request-form");
+const tradeTarget = document.getElementById("trade-target");
+const tradeRequestMessage = document.getElementById("trade-request-message");
+const tradeList = document.getElementById("trade-list");
 
 const API_TOKEN_KEY = "dq-auth-token";
 
 let sessionToken = localStorage.getItem(API_TOKEN_KEY);
+let profile = null;
 let config = null;
 let registrySnapshot = { items: [], recipes: [] };
 let runtime = null;
 let state = null;
+let currentTrades = [];
 let combatTimers = {
   globalCooldownUntil: 0,
   actionCooldowns: {},
@@ -122,6 +130,9 @@ function applySessionSnapshot(payload) {
     sessionToken = payload.token;
     localStorage.setItem(API_TOKEN_KEY, sessionToken);
   }
+  if (payload.profile) {
+    profile = payload.profile;
+  }
   if (payload.config) {
     config = payload.config;
   }
@@ -139,6 +150,9 @@ function applySessionSnapshot(payload) {
       ...combatTimers,
       ...payload.timers
     };
+  }
+  if (payload.trades) {
+    currentTrades = payload.trades;
   }
   if (config && registrySnapshot) {
     runtime = buildRuntime(registrySnapshot);
@@ -216,6 +230,249 @@ function updateActionButtons(now = Date.now()) {
   });
 }
 
+function setActiveLayoutTab(tab) {
+  layoutTabButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.tabTarget === tab);
+  });
+  layoutPanels.forEach((panel) => {
+    panel.classList.toggle("is-active", panel.dataset.tabPanel === tab);
+  });
+}
+
+function formatOfferLines(offer) {
+  const entries = Object.entries(offer ?? {});
+  if (entries.length === 0) {
+    return ["No items offered."];
+  }
+  return entries.map(([itemId, quantity]) => {
+    const item = runtime?.itemRegistry.getItem(itemId);
+    return `${item ? item.name : itemId} x${quantity}`;
+  });
+}
+
+function buildInventoryOptions(select) {
+  select.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select item";
+  select.appendChild(placeholder);
+  if (!state || !runtime) {
+    return;
+  }
+  Object.entries(state.inventory ?? {}).forEach(([itemId, quantity]) => {
+    if (quantity <= 0) {
+      return;
+    }
+    const item = runtime.itemRegistry.getItem(itemId);
+    const option = document.createElement("option");
+    option.value = itemId;
+    option.textContent = `${item ? item.name : itemId} (${quantity})`;
+    select.appendChild(option);
+  });
+}
+
+function renderTrades(trades) {
+  tradeList.innerHTML = "";
+  currentTrades = trades ?? [];
+  if (!profile) {
+    return;
+  }
+  if (!currentTrades.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "No active trades. Invite someone to begin.";
+    tradeList.appendChild(empty);
+    return;
+  }
+  currentTrades.forEach((trade) => {
+    const card = document.createElement("div");
+    card.className = "trade-card";
+    const other = trade.participants.find((name) => name !== profile.username) ?? "Unknown";
+    card.innerHTML = `
+      <div>
+        <h4>Trade with ${other}</h4>
+        <p class="trade-meta">Status: ${trade.status}</p>
+      </div>
+    `;
+    const myOffer = document.createElement("div");
+    myOffer.className = "trade-offer";
+    const myOfferLines = formatOfferLines(trade.offers?.[profile.username]);
+    myOffer.innerHTML = `
+      <strong>Your Offer</strong>
+      <ul>${myOfferLines.map((line) => `<li>${line}</li>`).join("")}</ul>
+    `;
+    const theirOffer = document.createElement("div");
+    theirOffer.className = "trade-offer";
+    const theirOfferLines = formatOfferLines(trade.offers?.[other]);
+    theirOffer.innerHTML = `
+      <strong>${other}'s Offer</strong>
+      <ul>${theirOfferLines.map((line) => `<li>${line}</li>`).join("")}</ul>
+    `;
+    card.appendChild(myOffer);
+    card.appendChild(theirOffer);
+
+    const actions = document.createElement("div");
+    actions.className = "trade-actions";
+
+    if (trade.status === "requested" && trade.participants[1] === profile.username) {
+      const acceptButton = document.createElement("button");
+      acceptButton.type = "button";
+      acceptButton.className = "action";
+      acceptButton.textContent = "Accept";
+      acceptButton.addEventListener("click", () => handleTradeRespond(trade.id, true));
+      const declineButton = document.createElement("button");
+      declineButton.type = "button";
+      declineButton.className = "secondary";
+      declineButton.textContent = "Decline";
+      declineButton.addEventListener("click", () => handleTradeRespond(trade.id, false));
+      actions.appendChild(acceptButton);
+      actions.appendChild(declineButton);
+    }
+
+    if (trade.status === "active") {
+      const form = document.createElement("form");
+      form.className = "trade-form-inline";
+      form.innerHTML = `
+        <label>
+          Item
+          <select name="item"></select>
+        </label>
+        <label>
+          Quantity
+          <input name="quantity" type="number" min="1" value="1" />
+        </label>
+        <label>
+          Action
+          <select name="mode">
+            <option value="add">Add</option>
+            <option value="remove">Remove</option>
+          </select>
+        </label>
+        <button class="secondary" type="submit">Update Offer</button>
+      `;
+      const select = form.querySelector("select[name='item']");
+      buildInventoryOptions(select);
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const itemId = select.value;
+        const quantity = Number(form.querySelector("input[name='quantity']").value);
+        const mode = form.querySelector("select[name='mode']").value;
+        if (!itemId || !Number.isFinite(quantity) || quantity <= 0) {
+          pushLog(["Select an item and quantity."]);
+          return;
+        }
+        handleTradeOffer(trade.id, itemId, mode === "remove" ? -quantity : quantity);
+      });
+      card.appendChild(form);
+
+      const confirmButton = document.createElement("button");
+      confirmButton.type = "button";
+      confirmButton.className = "action";
+      confirmButton.textContent = trade.confirmations?.[profile.username]
+        ? "Confirmed"
+        : "Confirm Trade";
+      confirmButton.disabled = Boolean(trade.confirmations?.[profile.username]);
+      confirmButton.addEventListener("click", () => handleTradeConfirm(trade.id));
+      const cancelButton = document.createElement("button");
+      cancelButton.type = "button";
+      cancelButton.className = "secondary";
+      cancelButton.textContent = "Cancel";
+      cancelButton.addEventListener("click", () => handleTradeCancel(trade.id));
+      actions.appendChild(confirmButton);
+      actions.appendChild(cancelButton);
+    }
+
+    if (actions.childElementCount > 0) {
+      card.appendChild(actions);
+    }
+    tradeList.appendChild(card);
+  });
+}
+
+async function refreshTrades() {
+  if (!sessionToken) {
+    return;
+  }
+  try {
+    const payload = await apiRequest("/api/trades");
+    renderTrades(payload.trades ?? []);
+  } catch (error) {
+    pushLog([error.message]);
+  }
+}
+
+async function handleTradeRequest(targetUsername) {
+  try {
+    const payload = await apiRequest("/api/trades/request", {
+      method: "POST",
+      body: { targetUsername }
+    });
+    tradeRequestMessage.textContent = "Trade request sent.";
+    tradeRequestMessage.classList.remove("error");
+    renderTrades([...currentTrades, payload.trade]);
+  } catch (error) {
+    tradeRequestMessage.textContent = error.message;
+    tradeRequestMessage.classList.add("error");
+  }
+}
+
+async function handleTradeRespond(tradeId, accept) {
+  try {
+    const payload = await apiRequest("/api/trades/respond", {
+      method: "POST",
+      body: { tradeId, accept }
+    });
+    renderTrades(
+      currentTrades.map((trade) => (trade.id === payload.trade.id ? payload.trade : trade))
+    );
+  } catch (error) {
+    pushLog([error.message]);
+  }
+}
+
+async function handleTradeOffer(tradeId, itemId, quantity) {
+  try {
+    const payload = await apiRequest("/api/trades/offer", {
+      method: "POST",
+      body: { tradeId, itemId, quantity }
+    });
+    applySessionSnapshot(payload);
+    renderTrades(
+      currentTrades.map((trade) => (trade.id === payload.trade.id ? payload.trade : trade))
+    );
+    renderInventory();
+  } catch (error) {
+    pushLog([error.message]);
+  }
+}
+
+async function handleTradeConfirm(tradeId) {
+  try {
+    const payload = await apiRequest("/api/trades/confirm", {
+      method: "POST",
+      body: { tradeId }
+    });
+    applySessionSnapshot(payload);
+    await refreshTrades();
+    renderInventory();
+  } catch (error) {
+    pushLog([error.message]);
+  }
+}
+
+async function handleTradeCancel(tradeId) {
+  try {
+    const payload = await apiRequest("/api/trades/cancel", {
+      method: "POST",
+      body: { tradeId }
+    });
+    renderTrades(
+      currentTrades.map((trade) => (trade.id === payload.trade.id ? payload.trade : trade))
+    );
+  } catch (error) {
+    pushLog([error.message]);
+  }
+}
+
 function populateNpcSelect() {
   npcSelect.innerHTML = "";
   (config?.npcs ?? []).forEach((npc, index) => {
@@ -283,6 +540,7 @@ function renderInventory() {
     }
     inventoryList.appendChild(row);
   });
+  renderTrades(currentTrades);
 }
 
 function renderEquipment() {
@@ -570,6 +828,7 @@ function refreshRuntime() {
   renderRecipeDetails();
   renderInventory();
   renderEquipment();
+  renderTrades(currentTrades);
   renderRegistryItems();
   renderRegistryRecipes();
   populateRecipeResultOptions();
@@ -668,6 +927,14 @@ function wireTabs() {
       registryPanes.forEach((pane) => {
         pane.classList.toggle("is-active", pane.dataset.pane === button.dataset.tab);
       });
+    });
+  });
+}
+
+function wireLayoutTabs() {
+  layoutTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setActiveLayoutTab(button.dataset.tabTarget);
     });
   });
 }
@@ -813,6 +1080,12 @@ async function handleLogout() {
   } finally {
     localStorage.removeItem(API_TOKEN_KEY);
     sessionToken = null;
+    profile = null;
+    config = null;
+    runtime = null;
+    state = null;
+    currentTrades = [];
+    tradeList.innerHTML = "";
     updateAuthStatus(null);
   }
 }
@@ -830,6 +1103,8 @@ function initializeGameUI() {
   populateSlotOptions();
   populateRecipeResultOptions();
   wireTabs();
+  wireLayoutTabs();
+  setActiveLayoutTab("battle");
   populateRecipes();
   renderRecipeDetails();
   populateItemForm(null);
@@ -839,6 +1114,7 @@ function initializeGameUI() {
   renderProgression();
   renderInventory();
   renderEquipment();
+  refreshTrades();
   npcDescription.textContent = getSelectedNpc()?.description ?? "";
   enemyName.textContent = state.enemy.name;
   updateMeters();
@@ -859,6 +1135,19 @@ craftButton.addEventListener("click", attemptCraft);
 
 authForm.addEventListener("submit", handleAuthSubmit);
 logoutButton.addEventListener("click", handleLogout);
+tradeRequestForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  tradeRequestMessage.textContent = "";
+  tradeRequestMessage.classList.remove("error");
+  const target = tradeTarget.value.trim();
+  if (!target) {
+    tradeRequestMessage.textContent = "Enter a player name.";
+    tradeRequestMessage.classList.add("error");
+    return;
+  }
+  handleTradeRequest(target);
+  tradeTarget.value = "";
+});
 
 initializeThemeEngine();
 

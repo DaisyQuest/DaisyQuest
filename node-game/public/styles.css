@@ -37,19 +37,49 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
-.tab-nav {
+.layout-tabs {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
+  padding: 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
-.tab-button {
+.layout-tab-button {
   border: none;
   padding: 10px 18px;
   border-radius: 999px;
   font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f6f4ff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.layout-tab-button.is-active {
+  background: linear-gradient(135deg, #ff7b7b, #ffae4f);
+  color: #1e0f24;
+  box-shadow: var(--dq-glow);
+}
+
+[data-tab-panel] {
+  display: none;
+}
+
+[data-tab-panel].is-active {
+  display: block;
+}
+
+.tab-button {
+  border: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   background: rgba(255, 255, 255, 0.1);
@@ -58,9 +88,10 @@ body {
 }
 
 .tab-button.is-active {
-  background: linear-gradient(135deg, #ff7b7b, #ffae4f);
+  background: linear-gradient(135deg, #93c5fd, #fbbf24);
   color: #1e0f24;
 }
+
 
 .panel {
   background: linear-gradient(165deg, var(--dq-surface), rgba(10, 10, 20, 0.9));
@@ -175,8 +206,9 @@ body {
 .combatant {
   padding: 20px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 65%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 24px rgba(15, 23, 42, 0.45);
 }
 
 .sprite-frame {
@@ -198,6 +230,89 @@ body {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.12em;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.controls button {
+  min-width: 150px;
+}
+
+.trading .trade-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.trading input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: inherit;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.trade-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.trade-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.trade-card h4 {
+  margin: 0;
+}
+
+.trade-meta {
+  font-size: 0.85rem;
+  color: var(--dq-muted);
+}
+
+.trade-offer {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.trade-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trade-form-inline {
+  display: grid;
+  gap: 8px;
+}
+
+.trade-form-inline select,
+.trade-form-inline input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: inherit;
+  padding: 8px 10px;
 }
 
 .combatant h2 {

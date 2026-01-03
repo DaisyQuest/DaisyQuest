@@ -11,7 +11,8 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "mongodb": "^6.5.0"
   },
   "devDependencies": {
     "jest": "^29.7.0",
