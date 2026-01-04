@@ -106,20 +106,56 @@ function formatLootLines(lootDrops, itemRegistry) {
   });
 }
 
-export function createGameSession({ username, nowFn = Date.now, rng = Math.random } = {}) {
-  const registryEditor = createRegistryEditor({ items: ITEMS, recipes: RECIPES });
-  const progressionSystem = createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS });
-  let runtime = buildRuntimeSystems(registryEditor.getSnapshot());
-  let state = {
+function hydrateState(snapshot) {
+  if (!snapshot) {
+    return null;
+  }
+  return {
+    ...snapshot,
+    claimedRewards: new Set(snapshot.claimedRewards ?? [])
+  };
+}
+
+function buildInitialState(snapshot) {
+  const defaultState = {
     player: createCombatant(DEFAULT_PLAYER),
     enemy: createCombatant({ ...getNpcById(NPCS[0]?.id), isEnemy: true }),
     inventory: {},
     equipment: {},
-    progression: progressionSystem.getProgressSnapshot(0),
+    progression: createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS }).getProgressSnapshot(0),
     pendingReward: null,
     claimedRewards: new Set()
   };
-  let timers = createCombatTimers();
+  const hydrated = hydrateState(snapshot);
+  if (!hydrated) {
+    return defaultState;
+  }
+  return {
+    ...defaultState,
+    ...hydrated,
+    claimedRewards: hydrated.claimedRewards
+  };
+}
+
+export function createGameSession({
+  username,
+  nowFn = Date.now,
+  rng = Math.random,
+  initialState,
+  initialTimers,
+  registrySnapshot
+} = {}) {
+  const registryEditor = createRegistryEditor({
+    items: registrySnapshot?.items ?? ITEMS,
+    recipes: registrySnapshot?.recipes ?? RECIPES
+  });
+  const progressionSystem = createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS });
+  let runtime = buildRuntimeSystems(registryEditor.getSnapshot());
+  let state = buildInitialState(initialState);
+  if (!state.progression) {
+    state = { ...state, progression: progressionSystem.getProgressSnapshot(0) };
+  }
+  let timers = initialTimers ? { ...createCombatTimers(), ...initialTimers } : createCombatTimers();
 
   function refreshRuntime() {
     runtime = buildRuntimeSystems(registryEditor.getSnapshot());
@@ -134,6 +170,14 @@ export function createGameSession({ username, nowFn = Date.now, rng = Math.rando
 
   function getRegistrySnapshot() {
     return registryEditor.getSnapshot();
+  }
+
+  function getPersistenceSnapshot() {
+    return {
+      state: serializeState(state),
+      timers: { ...timers },
+      registry: getRegistrySnapshot()
+    };
   }
 
   function getConfig() {
@@ -376,6 +420,46 @@ export function createGameSession({ username, nowFn = Date.now, rng = Math.rando
     return { state: serializeState(state) };
   }
 
+  function getInventorySnapshot() {
+    return { ...state.inventory };
+  }
+
+  function canAffordItems(items = {}) {
+    return Object.entries(items).every(([itemId, quantity]) => {
+      if (!itemId || !Number.isFinite(quantity) || quantity <= 0) {
+        return false;
+      }
+      return (state.inventory[itemId] ?? 0) >= quantity;
+    });
+  }
+
+  function removeItems(items = {}) {
+    if (!canAffordItems(items)) {
+      return { error: "Insufficient inventory for trade." };
+    }
+    let nextInventory = { ...state.inventory };
+    Object.entries(items).forEach(([itemId, quantity]) => {
+      nextInventory = runtime.inventoryManager.removeItem(nextInventory, itemId, quantity).inventory;
+    });
+    state = { ...state, inventory: nextInventory };
+    return { inventory: getInventorySnapshot() };
+  }
+
+  function addItems(items = {}) {
+    const invalid = Object.entries(items).some(
+      ([itemId, quantity]) => !itemId || !Number.isFinite(quantity) || quantity <= 0
+    );
+    if (invalid) {
+      return { error: "Invalid trade item quantities." };
+    }
+    let nextInventory = { ...state.inventory };
+    Object.entries(items).forEach(([itemId, quantity]) => {
+      nextInventory = runtime.inventoryManager.addItem(nextInventory, itemId, quantity);
+    });
+    state = { ...state, inventory: nextInventory };
+    return { inventory: getInventorySnapshot() };
+  }
+
   function unsafeSetState(nextState) {
     state = { ...state, ...nextState };
   }
@@ -388,6 +472,7 @@ export function createGameSession({ username, nowFn = Date.now, rng = Math.rando
     username,
     getSnapshot,
     getRegistrySnapshot,
+    getPersistenceSnapshot,
     getConfig,
     resetBattle,
     attemptAction,
@@ -400,6 +485,10 @@ export function createGameSession({ username, nowFn = Date.now, rng = Math.rando
     updateItem,
     updateRecipe,
     grantItem,
+    getInventorySnapshot,
+    canAffordItems,
+    removeItems,
+    addItems,
     unsafeSetState,
     unsafeSetTimers
   });

@@ -43,7 +43,24 @@
           <p class="form-message" id="auth-message"></p>
         </form>
       </section>
-      <section class="panel hero">
+      <nav class="layout-tabs" aria-label="Primary navigation">
+        <button class="layout-tab-button is-active" type="button" data-tab-target="battle">
+          Battle
+        </button>
+        <button class="layout-tab-button" type="button" data-tab-target="inventory">
+          Inventory
+        </button>
+        <button class="layout-tab-button" type="button" data-tab-target="crafting">
+          Crafting
+        </button>
+        <button class="layout-tab-button" type="button" data-tab-target="trading">
+          Trading
+        </button>
+        <button class="layout-tab-button" type="button" data-tab-target="registry">
+          Registry
+        </button>
+      </nav>
+      <section class="panel hero" data-tab-panel="battle">
         <header class="hero-header">
           <div>
             <h1>DaisyQuest: Ember Duel</h1>
@@ -116,7 +133,7 @@
         <h3>Battle Chronicle</h3>
         <ul id="log"></ul>
       </section>
-      <section class="panel progression">
+      <section class="panel progression" data-tab-panel="battle">
         <header class="panel-header">
           <div>
             <h3>Reward Track</h3>
@@ -149,7 +166,7 @@
         </div>
         <ul class="milestone-list" id="milestone-list"></ul>
       </section>
-      <section class="panel inventory">
+      <section class="panel inventory" data-tab-panel="inventory">
         <h3>Inventory & Equipment</h3>
         <div class="inventory-grid">
           <div>
@@ -166,6 +183,22 @@
           <ul id="loot-list"></ul>
         </div>
       </section>
+      <section class="panel trading" data-tab-panel="trading">
+        <header class="panel-header">
+          <div>
+            <h3>Trade Hall</h3>
+            <p class="subtitle">Open secure, server-driven trades with fellow adventurers.</p>
+          </div>
+          <span class="badge">Server Authoritative</span>
+        </header>
+        <form class="trade-form" id="trade-request-form">
+          <label for="trade-target">Invite player</label>
+          <input id="trade-target" type="text" placeholder="Player name" required />
+          <button class="action" type="submit">Send Trade Request</button>
+          <p class="form-message" id="trade-request-message"></p>
+        </form>
+        <div class="trade-grid" id="trade-list"></div>
+      </section>
       <section class="panel crafting tab-panel" data-tab-panel="crafting">
         <h3>Crafting Atelier</h3>
         <label for="recipe-select">Recipe</label>
@@ -174,7 +207,7 @@
         <button class="action" id="craft-button" type="button">Craft</button>
         <p id="crafting-result" class="crafting-result"></p>
       </section>
-      <section class="panel registry">
+      <section class="panel registry" data-tab-panel="registry">
         <header class="panel-header">
           <div>
             <h3>Registry Workshop</h3>

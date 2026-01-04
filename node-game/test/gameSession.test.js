@@ -19,6 +19,41 @@ describe("game session", () => {
     expect(session.getSnapshot().state.player.name).toBe("Hero");
   });
 
+  test("persists and hydrates snapshots", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    session.grantItem("ember_scale", 2);
+    const persisted = session.getPersistenceSnapshot();
+    const hydrated = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: persisted.state,
+      initialTimers: persisted.timers,
+      registrySnapshot: persisted.registry
+    });
+    expect(hydrated.getSnapshot().state.inventory.ember_scale).toBe(2);
+  });
+
+  test("defaults progression when hydration is incomplete", () => {
+    const session = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: { progression: null, claimedRewards: [] }
+    });
+    expect(session.getSnapshot().state.progression.level).toBe(1);
+  });
+
+  test("hydrates missing claimed rewards to empty set", () => {
+    const session = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: { progression: null }
+    });
+    expect(session.getSnapshot().state.claimedRewards).toEqual([]);
+  });
+
   test("resets battles and schedules enemy action", () => {
     let now = 5000;
     const session = createGameSession({ username: "hero", nowFn: () => now, rng });
@@ -137,6 +172,11 @@ describe("game session", () => {
     const claimed = session.claimReward();
     expect(claimed.state.pendingReward).toBeNull();
     expect(claimed.state.claimedRewards).toContain(reward.level);
+
+    const secondReward = REWARD_MILESTONES[1];
+    session.unsafeSetState({ pendingReward: secondReward, claimedRewards: new Set() });
+    const claimedSecond = session.claimReward();
+    expect(claimedSecond.state.claimedRewards).toContain(secondReward.level);
   });
 
   test("awards xp and tracks milestones", () => {
@@ -215,5 +255,35 @@ describe("game session", () => {
     const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
 
     expect(session.grantItem().error).toBe("Invalid grant request.");
+  });
+
+  test("validates and transfers trade items", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    session.grantItem("ember_scale", 3);
+    expect(session.canAffordItems({ ember_scale: 2 })).toBe(true);
+    expect(session.canAffordItems({ ember_scale: 5 })).toBe(false);
+    expect(session.canAffordItems({ ember_scale: -1 })).toBe(false);
+    expect(session.canAffordItems({ "": 1 })).toBe(false);
+    expect(session.canAffordItems({ ember_scale: Number.NaN })).toBe(false);
+
+    const remove = session.removeItems({ ember_scale: 2 });
+    expect(remove.error).toBeUndefined();
+    expect(session.getSnapshot().state.inventory.ember_scale).toBe(1);
+
+    const invalidRemove = session.removeItems({ ember_scale: 5 });
+    expect(invalidRemove.error).toBe("Insufficient inventory for trade.");
+
+    const add = session.addItems({ ember_scale: 2 });
+    expect(add.error).toBeUndefined();
+    expect(session.getSnapshot().state.inventory.ember_scale).toBe(3);
+
+    expect(session.addItems({ ember_scale: -1 }).error).toBe(
+      "Invalid trade item quantities."
+    );
+    expect(session.addItems({ "": 1 }).error).toBe("Invalid trade item quantities.");
+
+    expect(session.canAffordItems()).toBe(true);
+    expect(session.removeItems().error).toBeUndefined();
+    expect(session.addItems().error).toBeUndefined();
   });
 });
