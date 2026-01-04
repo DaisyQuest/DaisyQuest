@@ -13,4 +13,7 @@ public interface WorldObjectRepository extends MongoRepository<WorldObject, Stri
 
     // Helper methods for specific locations
     List<WorldObject> findByXPosAndYPos(int x, int y);
+
+    List<WorldObject> findBySubmapIdAndXPosBetweenAndYPosBetween(
+            String submapId, int minX, int maxX, int minY, int maxY);
 }
