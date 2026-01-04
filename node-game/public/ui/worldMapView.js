@@ -87,12 +87,16 @@ export function buildWorldMarkers({ world, playerId, doc = document } = {}) {
     marker.className = `world-panel__target world-panel__target--${
       isSelf ? "self" : player.isNpc ? "npc" : "player"
     }`;
+    if (player.isNpc && player.isHostile) {
+      marker.classList.add("world-panel__target--hostile");
+    }
     marker.style.setProperty("--x", `${projectToPercent(player.position.x, bounds.maxX)}%`);
     marker.style.setProperty("--y", `${projectToPercent(player.position.y, bounds.maxY)}%`);
     marker.textContent = isSelf ? "You" : player.name;
     marker.dataset.interactionType = player.isNpc ? "npc" : "player";
     marker.dataset.interactionId = player.id;
     marker.dataset.interactionLabel = player.name;
+    marker.dataset.interactionHostile = player.isHostile ? "true" : "false";
     marker.dataset.interactionLayer = String(
       isSelf ? MARKER_LAYER.self : player.isNpc ? MARKER_LAYER.npc : MARKER_LAYER.player
     );

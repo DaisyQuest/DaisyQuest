@@ -281,7 +281,7 @@ describe("server app", () => {
     expect(action.status).toBe(200);
     expect(action.body).toEqual({
       action: "interact",
-      resolvedTarget: { id: "enemy", type: "npc", layer: 5 }
+      resolvedTarget: { id: "enemy", type: "npc", layer: 5, isHostile: false }
     });
 
     const badAction = await request(app)

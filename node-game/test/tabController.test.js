@@ -173,6 +173,34 @@ describe("tab controller", () => {
     controller.setActive("battle");
   });
 
+  it("keeps persistent panels visible while switching tabs", () => {
+    const dom = new JSDOM(
+      `
+        <button class="layout-tab-button" data-tab-target="battle"></button>
+        <button class="layout-tab-button" data-tab-target="map"></button>
+        <section data-tab-panel="battle"></section>
+        <section data-tab-panel="map" data-tab-persistent="true"></section>
+      `
+    );
+    const doc = dom.window.document;
+    const buttons = doc.querySelectorAll(".layout-tab-button");
+    const panels = doc.querySelectorAll("[data-tab-panel]");
+
+    const controller = createTabController({
+      buttons,
+      panels,
+      buttonKey: "tabTarget",
+      panelKey: "tabPanel"
+    });
+
+    controller.setActive("battle");
+
+    const mapPanel = panels[1];
+    expect(mapPanel.classList.contains("is-active")).toBe(true);
+    expect(mapPanel.hidden).toBe(false);
+    expect(mapPanel.getAttribute("aria-hidden")).toBe("false");
+  });
+
   it("delegates selection to a custom handler when provided", () => {
     const dom = new JSDOM(
       `

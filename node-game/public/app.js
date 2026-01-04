@@ -9,6 +9,7 @@ import { createFlowOrchestrator, FlowEvent, FlowState } from "./ui/flowOrchestra
 import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createFlowState, FLOW_SCREENS, getFlowScreenFromTab } from "./ui/flowState.js";
+import { renderInteractionPanel, resolveInteractionPanelState } from "./ui/interactionPanel.js";
 import {
   createCombatScreenAdapter,
   createLootScreenAdapter,
@@ -62,6 +63,9 @@ const worldMapEntities = worldMapPanel?.querySelector("[data-world-map-entities]
 const worldMapCoordinates =
   worldMapPanel?.querySelector("[data-world-map-coordinates]") ?? null;
 const worldMapRegion = worldMapPanel?.querySelector("[data-world-map-region]") ?? null;
+const interactionDetails = document.getElementById("interaction-details");
+const interactionEngageButton = document.getElementById("interaction-engage");
+const interactionInteractButton = document.getElementById("interaction-interact");
 const captionGlobal = document.getElementById("caption-global");
 const captionPlayer = document.getElementById("caption-player");
 const captionEnemy = document.getElementById("caption-enemy");
@@ -141,6 +145,7 @@ let pendingAction = false;
 let battleSceneInitialized = false;
 let worldInteractionClient = null;
 let gameFlowState = GameFlowState.MAP;
+let interactionSelection = { target: null, candidates: [] };
 const logFeed = createFeedPanel({ listElement: logList });
 const lootFeed = createFeedPanel({ listElement: lootList });
 const combatMeters = createCombatMeterPanel({
@@ -598,14 +603,43 @@ function initializeWorldInteractions() {
     onDecision: handleInteractionDecision,
     onContextAction: handleContextActionResult
   });
+  setInteractionSelection(null, []);
+}
+
+function resolveInteractionCandidate(target, candidates) {
+  if (!target) {
+    return null;
+  }
+  return candidates.find(
+    (candidate) => candidate.id === target.id && candidate.type === target.type
+  );
+}
+
+function setInteractionSelection(target, candidates) {
+  interactionSelection = {
+    target: target ?? null,
+    candidates: candidates ?? []
+  };
+  const state = resolveInteractionPanelState({
+    target: interactionSelection.target,
+    candidates: interactionSelection.candidates
+  });
+  renderInteractionPanel({
+    detailsElement: interactionDetails,
+    engageButton: interactionEngageButton,
+    interactButton: interactionInteractButton,
+    state
+  });
 }
 
 async function handleInteractionDecision(payload, meta) {
   if (!payload) {
     return;
   }
+  setInteractionSelection(payload.resolvedTarget, meta?.candidates ?? []);
   const summary = describeInteractionTarget(payload.resolvedTarget);
   if (payload.action === "move") {
+    setInteractionSelection(null, []);
     const percent = getSurfacePercentFromEvent({
       event: meta?.event,
       surface: worldMapSurface
@@ -638,6 +672,11 @@ function handleContextActionResult(payload) {
   if (!payload) {
     return;
   }
+  const candidates = worldInteractionClient?.getLastCandidates?.() ?? [];
+  setInteractionSelection(payload.resolvedTarget, candidates);
+  if (payload.selectedOption === "combat") {
+    startCombatForTarget(payload.resolvedTarget, candidates);
+  }
   const summary = describeInteractionTarget(payload.resolvedTarget);
   pushLog([`Context action "${payload.selectedOption}" sent to ${summary}.`]);
 }
@@ -647,8 +686,96 @@ function describeInteractionTarget(target) {
     return "the terrain";
   }
   const candidates = worldInteractionClient?.getLastCandidates?.() ?? [];
-  const match = candidates.find((candidate) => candidate.id === target.id);
+  const match = candidates.find(
+    (candidate) => candidate.id === target.id && candidate.type === target.type
+  );
   return match?.label || target.id || target.type || "unknown target";
+}
+
+function getNpcByTarget(target, candidates) {
+  if (!target || target.type !== "npc") {
+    return null;
+  }
+  const match = resolveInteractionCandidate(target, candidates);
+  const isHostile = Boolean(match?.isHostile ?? target.isHostile);
+  if (!isHostile) {
+    pushLog([`${match?.label ?? target.id} is not hostile.`]);
+    return null;
+  }
+  const npc = (config?.npcs ?? []).find((entry) => entry.id === target.id);
+  if (!npc) {
+    pushLog([`No combat profile found for ${match?.label ?? target.id}.`]);
+    return null;
+  }
+  return npc;
+}
+
+async function startCombatWithNpc(npc, { reason } = {}) {
+  if (!npc) {
+    return;
+  }
+  logList.innerHTML = "";
+  lootList.innerHTML = "";
+  clearBattleOverlays();
+  try {
+    const payload = await apiRequest("/api/battle/reset", {
+      method: "POST",
+      body: { npcId: npc.id }
+    });
+    applySessionSnapshot(payload);
+    enemyName.textContent = npc.name;
+    npcDescription.textContent = npc.description;
+    if (npcSelect) {
+      npcSelect.value = npc.id;
+    }
+    gameFlowActions.combatStarted({ npcId: npc.id, reason });
+    pushLog(payload.log);
+    updateMeters();
+    updateBattleSceneSprites();
+    updateActionButtons();
+    startCombatLoop();
+    requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
+  } catch (error) {
+    pushLog([error.message]);
+  }
+}
+
+function startCombatForTarget(target, candidates) {
+  const npc = getNpcByTarget(target, candidates);
+  if (!npc) {
+    return;
+  }
+  startCombatWithNpc(npc, { reason: "interaction" });
+}
+
+function handleInteractionEngage() {
+  startCombatForTarget(interactionSelection.target, interactionSelection.candidates);
+}
+
+function handleInteractionInteract() {
+  const target = interactionSelection.target;
+  if (!target) {
+    return;
+  }
+  const candidate = resolveInteractionCandidate(target, interactionSelection.candidates);
+  const label = candidate?.label ?? target.id ?? target.type;
+  if (target.type === "object") {
+    pushLog([`You interact with ${label}.`]);
+    return;
+  }
+  if (target.type === "npc") {
+    if (candidate?.isHostile || target.isHostile) {
+      pushLog([`${label} growls. Engage when ready.`]);
+      return;
+    }
+    pushLog([`You speak with ${label}.`]);
+    return;
+  }
+  if (target.type === "player") {
+    pushLog([`You signal ${label} for a trade.`]);
+    return;
+  }
+  pushLog([`You study ${label}.`]);
 }
 
 function updateActionButtons(now = Date.now()) {
@@ -1077,27 +1204,7 @@ async function resetBattle() {
   if (!npc) {
     return;
   }
-  logList.innerHTML = "";
-  lootList.innerHTML = "";
-  clearBattleOverlays();
-  try {
-    const payload = await apiRequest("/api/battle/reset", {
-      method: "POST",
-      body: { npcId: npc.id }
-    });
-    applySessionSnapshot(payload);
-    enemyName.textContent = npc.name;
-    npcDescription.textContent = npc.description;
-    gameFlowActions.combatStarted({ npcId: npc.id });
-    pushLog(payload.log);
-    updateMeters();
-    updateBattleSceneSprites();
-    updateActionButtons();
-    startCombatLoop();
-    requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
-  } catch (error) {
-    pushLog([error.message]);
-  }
+  await startCombatWithNpc(npc, { reason: "manual" });
 }
 
 function renderProgression() {
@@ -1549,6 +1656,7 @@ async function handleLogout() {
       worldInteractionClient.destroy();
       worldInteractionClient = null;
     }
+    setInteractionSelection(null, []);
     flowState.setScreen(FLOW_SCREENS.COMBAT, { source: "logout" });
   }
 }
@@ -1611,6 +1719,8 @@ document.getElementById("reset").addEventListener("click", resetBattle);
 npcSelect.addEventListener("change", resetBattle);
 recipeSelect.addEventListener("change", renderRecipeDetails);
 craftButton.addEventListener("click", attemptCraft);
+interactionEngageButton?.addEventListener("click", handleInteractionEngage);
+interactionInteractButton?.addEventListener("click", handleInteractionInteract);
 
 authForm.addEventListener("submit", handleAuthSubmit);
 logoutButton.addEventListener("click", handleLogout);

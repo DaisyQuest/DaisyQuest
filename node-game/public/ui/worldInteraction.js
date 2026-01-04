@@ -21,7 +21,8 @@ export function collectInteractionTargets(surfaces) {
         id: element.dataset.interactionId ?? "",
         label: element.dataset.interactionLabel ?? element.textContent?.trim() ?? "",
         type,
-        layer: Number.parseInt(element.dataset.interactionLayer ?? "0", 10) || 0
+        layer: Number.parseInt(element.dataset.interactionLayer ?? "0", 10) || 0,
+        isHostile: element.dataset.interactionHostile === "true"
       });
     });
   });
@@ -35,7 +36,8 @@ export function resolveInteractionCandidates({ point, targets, includeTerrain = 
       id: target.id,
       type: target.type,
       layer: target.layer,
-      label: target.label
+      label: target.label,
+      isHostile: Boolean(target.isHostile)
     }))
     .sort((a, b) => b.layer - a.layer);
 

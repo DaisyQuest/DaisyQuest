@@ -4,10 +4,17 @@ export function createTabController({
   buttonKey,
   panelKey,
   activeClass = "is-active",
-  onSelect
+  onSelect,
+  persistentPanels = []
 }) {
   const buttonList = Array.from(buttons ?? []);
   const panelList = Array.from(panels ?? []);
+  const persistentSet = new Set(persistentPanels);
+
+  function isPanelPersistent(panel) {
+    const key = panel?.dataset?.[panelKey];
+    return panel?.dataset?.tabPersistent === "true" || (key && persistentSet.has(key));
+  }
 
   function getActiveValue() {
     const activeButton = buttonList.find((button) => button.classList.contains(activeClass));
@@ -25,10 +32,16 @@ export function createTabController({
   }
 
   function setPanelState(panel, value) {
-    const isActive = panel.dataset[panelKey] === value;
+    const isPersistent = isPanelPersistent(panel);
+    const isActive = panel.dataset[panelKey] === value || isPersistent;
     panel.classList.toggle(activeClass, isActive);
-    panel.hidden = !isActive;
-    panel.setAttribute("aria-hidden", isActive ? "false" : "true");
+    if (isPersistent) {
+      panel.hidden = false;
+      panel.setAttribute("aria-hidden", "false");
+    } else {
+      panel.hidden = !isActive;
+      panel.setAttribute("aria-hidden", isActive ? "false" : "true");
+    }
     return isActive;
   }
 

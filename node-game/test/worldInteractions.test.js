@@ -16,8 +16,8 @@ describe("world interaction service", () => {
     ]);
 
     expect(sanitized).toEqual([
-      { id: "a", type: "npc", layer: 5 },
-      { id: null, type: "player", layer: 0 }
+      { id: "a", type: "npc", layer: 5, isHostile: false },
+      { id: null, type: "player", layer: 0, isHostile: false }
     ]);
   });
 
@@ -34,7 +34,14 @@ describe("world interaction service", () => {
     const cases = [
       { player: false, npc: false, object: false, expected: [] },
       { player: true, npc: false, object: false, expected: ["inspect", "trade", "combat"] },
-      { player: false, npc: true, object: false, expected: ["inspect", "combat"] },
+      { player: false, npc: true, object: false, expected: ["inspect"] },
+      {
+        player: false,
+        npc: true,
+        object: false,
+        hostileNpc: true,
+        expected: ["inspect", "combat"]
+      },
       { player: false, npc: false, object: true, expected: ["inspect", "interact"] },
       {
         player: true,
@@ -48,10 +55,12 @@ describe("world interaction service", () => {
         object: true,
         expected: ["inspect", "trade", "combat", "interact"]
       },
+      { player: false, npc: true, object: true, expected: ["inspect", "interact"] },
       {
         player: false,
         npc: true,
         object: true,
+        hostileNpc: true,
         expected: ["inspect", "combat", "interact"]
       },
       {
@@ -62,16 +71,16 @@ describe("world interaction service", () => {
       }
     ];
 
-    cases.forEach(({ player, npc, object, expected }) => {
+    cases.forEach(({ player, npc, object, hostileNpc, expected }) => {
       const candidates = [];
       if (player) {
-        candidates.push({ id: "player", type: "player", layer: 3 });
+        candidates.push({ id: "player", type: "player", layer: 3, isHostile: false });
       }
       if (npc) {
-        candidates.push({ id: "npc", type: "npc", layer: 3 });
+        candidates.push({ id: "npc", type: "npc", layer: 3, isHostile: Boolean(hostileNpc) });
       }
       if (object) {
-        candidates.push({ id: "object", type: "object", layer: 2 });
+        candidates.push({ id: "object", type: "object", layer: 2, isHostile: false });
       }
       expect(buildContextMenuOptions(candidates)).toEqual(expected);
     });
@@ -84,16 +93,16 @@ describe("world interaction service", () => {
     });
     expect(moveResult).toEqual({
       action: "move",
-      resolvedTarget: { id: "terrain", type: "terrain", layer: 0 }
+      resolvedTarget: { id: "terrain", type: "terrain", layer: 0, isHostile: false }
     });
 
     const interactResult = resolveInteractionAction({
       clickType: "primary",
-      candidates: [{ id: "enemy", type: "npc", layer: 3 }]
+      candidates: [{ id: "enemy", type: "npc", layer: 3, isHostile: true }]
     });
     expect(interactResult).toEqual({
       action: "interact",
-      resolvedTarget: { id: "enemy", type: "npc", layer: 3 }
+      resolvedTarget: { id: "enemy", type: "npc", layer: 3, isHostile: true }
     });
   });
 
@@ -120,20 +129,20 @@ describe("world interaction service", () => {
 
   test("resolves context menu and action for valid options", () => {
     const menu = resolveContextMenu({
-      candidates: [{ id: "player", type: "player", layer: 4 }]
+      candidates: [{ id: "player", type: "player", layer: 4, isHostile: false }]
     });
     expect(menu).toEqual({
-      resolvedTarget: { id: "player", type: "player", layer: 4 },
+      resolvedTarget: { id: "player", type: "player", layer: 4, isHostile: false },
       options: ["inspect", "trade", "combat"]
     });
 
     const action = resolveContextAction({
       option: "inspect",
-      candidates: [{ id: "player", type: "player", layer: 4 }]
+      candidates: [{ id: "player", type: "player", layer: 4, isHostile: false }]
     });
     expect(action).toEqual({
       selectedOption: "inspect",
-      resolvedTarget: { id: "player", type: "player", layer: 4 }
+      resolvedTarget: { id: "player", type: "player", layer: 4, isHostile: false }
     });
   });
 });
