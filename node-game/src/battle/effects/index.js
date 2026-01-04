@@ -5,6 +5,7 @@ export {
   applyComposition,
   sortEffects
 } from "./composition.js";
+export const effectsIndexLoaded = true;
 export {
   FlashEffect,
   LineArcEffect,

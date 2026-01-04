@@ -214,6 +214,39 @@ describe("effect builders", () => {
       "flash",
       "screenShake"
     ]);
+    expect(serialized).toEqual([
+      {
+        type: "lineArc",
+        durationMs: 600,
+        amplitude: 1.2,
+        color: "#b3e5ff",
+        frequency: 3,
+        layer: 2,
+        blendMode: "add",
+        arcCount: 3,
+        thickness: 2
+      },
+      {
+        type: "flash",
+        durationMs: 360,
+        amplitude: 1.32,
+        color: "#ffffff",
+        frequency: 3,
+        layer: 3,
+        blendMode: "screen",
+        fade: "out"
+      },
+      {
+        type: "screenShake",
+        durationMs: 600,
+        amplitude: 4,
+        color: "#ffffff",
+        frequency: 6,
+        layer: 3,
+        blendMode: "normal",
+        axis: "both"
+      }
+    ]);
     expect(serialized).toMatchInlineSnapshot(`
 [
   {
@@ -260,6 +293,29 @@ describe("effect builders", () => {
 
   test("Effects.fireOverlay blends tint and burst", () => {
     const effects = Effects.fireOverlay({ burstColor: "#ff9900" });
+    expect(serializeEffects(effects)).toEqual([
+      {
+        type: "tint",
+        durationMs: 900,
+        amplitude: 0.7,
+        color: "#ff7a33",
+        frequency: 1.1,
+        layer: 0,
+        blendMode: "multiply",
+        intensity: 0.7
+      },
+      {
+        type: "radialBurst",
+        durationMs: 630,
+        amplitude: 0.84,
+        color: "#ff9900",
+        frequency: 1.54,
+        layer: 2,
+        blendMode: "add",
+        radius: 1.2,
+        spokes: 8
+      }
+    ]);
     expect(serializeEffects(effects)).toMatchInlineSnapshot(`
 [
   {

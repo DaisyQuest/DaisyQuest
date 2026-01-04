@@ -76,3 +76,5 @@ export function ScreenShakeEffect({
     { axis }
   );
 }
+
+export const __test = { normalizeParams, buildEffect };
