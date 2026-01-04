@@ -6,6 +6,11 @@ import { createAuthStore } from "./authStore.js";
 import { createInMemoryDataStore } from "./dataStore.js";
 import { createGameSession } from "./gameSession.js";
 import { createTradeManager } from "./tradeManager.js";
+import {
+  resolveContextAction,
+  resolveContextMenu,
+  resolveInteractionAction
+} from "./worldInteractions.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -337,6 +342,33 @@ export function createApp({
 
   app.get("/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/world-interactions/action", requireSession, (req, res) => {
+    try {
+      const result = resolveInteractionAction(req.body ?? {});
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/world-interactions/context-menu", requireSession, (req, res) => {
+    try {
+      const result = resolveContextMenu(req.body ?? {});
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/world-interactions/context-action", requireSession, (req, res) => {
+    try {
+      const result = resolveContextAction(req.body ?? {});
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
   });
 
   return app;
