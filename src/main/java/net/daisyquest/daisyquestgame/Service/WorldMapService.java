@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 @Service
 public class WorldMapService {
     public static final int LAND_SIZE = 10000; // Size of each land tile in pixels
-    public static final int MINIMAP_VISIBILITY_RADIUS = 250;
     @Autowired
     private WorldMapRepository worldMapRepository;
 
@@ -238,144 +237,6 @@ public class WorldMapService {
         int maxY = centerY + (viewportHeight / 2);
 
         return worldObjectRepository.findByxPosBetweenAndyPosBetween(minX, maxX, minY, maxY);
-    }
-
-    public MinimapResponse getMinimapData(String playerId) {
-        return getMinimapData(playerId, MINIMAP_VISIBILITY_RADIUS);
-    }
-
-    MinimapResponse getMinimapData(String playerId, int visibilityRadius) {
-        Player player = playerRepository.findById(playerId)
-                .orElseThrow(() -> new IllegalArgumentException("Player not found"));
-        int radius = Math.max(0, visibilityRadius);
-        int centerX = player.getWorldPositionX();
-        int centerY = player.getWorldPositionY();
-        boolean inSubmap = player.getCurrentSubmapId() != null;
-        String submapId = null;
-        int maxXBound;
-        int maxYBound;
-
-        if (inSubmap) {
-            submapId = player.getCurrentSubmapId();
-            Submap submap = submapRepository.findById(submapId)
-                    .orElseThrow(() -> new IllegalArgumentException("Submap not found"));
-            centerX = player.getSubmapCoordinateX();
-            centerY = player.getSubmapCoordinateY();
-            maxXBound = Math.max(0, submap.getWidth() - 1);
-            maxYBound = Math.max(0, submap.getHeight() - 1);
-        } else {
-            WorldMap worldMap = getWorldMap();
-            maxXBound = (worldMap.getWidth() * LAND_SIZE) - 1;
-            maxYBound = (worldMap.getHeight() * LAND_SIZE) - 1;
-        }
-
-        int minX = Math.max(0, centerX - radius);
-        int maxX = Math.min(maxXBound, centerX + radius);
-        int minY = Math.max(0, centerY - radius);
-        int maxY = Math.min(maxYBound, centerY + radius);
-
-        List<Player> nearbyPlayers = findNearbyPlayers(
-                inSubmap, submapId, minX, maxX, minY, maxY, centerX, centerY, radius);
-        List<WorldObject> nearbyObjects = findNearbyWorldObjects(
-                inSubmap, submapId, minX, maxX, minY, maxY, centerX, centerY, radius);
-
-        List<MinimapEntry> entries = new ArrayList<>();
-        for (Player nearby : nearbyPlayers) {
-            MinimapEntityType type = nearby.getId().equals(player.getId())
-                    ? MinimapEntityType.SELF
-                    : (nearby.isNPC() ? MinimapEntityType.NPC : MinimapEntityType.PLAYER);
-            int x = inSubmap ? nearby.getSubmapCoordinateX() : nearby.getWorldPositionX();
-            int y = inSubmap ? nearby.getSubmapCoordinateY() : nearby.getWorldPositionY();
-            entries.add(new MinimapEntry(nearby.getId(), type, x, y, nearby.getUsername()));
-        }
-
-        for (WorldObject object : nearbyObjects) {
-            entries.add(new MinimapEntry(
-                    object.getId(),
-                    MinimapEntityType.WORLD_OBJECT,
-                    object.getXPos(),
-                    object.getYPos(),
-                    object.getWorldObjectType() != null ? object.getWorldObjectType().getName() : "World Object"));
-        }
-
-        return new MinimapResponse(centerX, centerY, radius, inSubmap, submapId, entries);
-    }
-
-    private List<Player> findNearbyPlayers(boolean inSubmap,
-                                           String submapId,
-                                           int minX,
-                                           int maxX,
-                                           int minY,
-                                           int maxY,
-                                           int centerX,
-                                           int centerY,
-                                           int radius) {
-        List<Player> players;
-        if (inSubmap) {
-            players = playerRepository.findByCurrentSubmapId(submapId);
-            return players.stream()
-                    .filter(player -> isWithinBounds(
-                            player.getSubmapCoordinateX(),
-                            player.getSubmapCoordinateY(),
-                            minX,
-                            maxX,
-                            minY,
-                            maxY))
-                    .filter(player -> isWithinRadius(
-                            player.getSubmapCoordinateX(),
-                            player.getSubmapCoordinateY(),
-                            centerX,
-                            centerY,
-                            radius))
-                    .collect(Collectors.toList());
-        }
-
-        players = playerRepository.findByWorldPositionXBetweenAndWorldPositionYBetween(minX, maxX, minY, maxY);
-        return players.stream()
-                .filter(player -> isWithinRadius(
-                        player.getWorldPositionX(),
-                        player.getWorldPositionY(),
-                        centerX,
-                        centerY,
-                        radius))
-                .collect(Collectors.toList());
-    }
-
-    private List<WorldObject> findNearbyWorldObjects(boolean inSubmap,
-                                                     String submapId,
-                                                     int minX,
-                                                     int maxX,
-                                                     int minY,
-                                                     int maxY,
-                                                     int centerX,
-                                                     int centerY,
-                                                     int radius) {
-        List<WorldObject> objects;
-        if (inSubmap) {
-            objects = worldObjectRepository
-                    .findBySubmapIdAndXPosBetweenAndYPosBetween(submapId, minX, maxX, minY, maxY);
-        } else {
-            objects = worldObjectRepository.findByxPosBetweenAndyPosBetween(minX, maxX, minY, maxY);
-        }
-
-        return objects.stream()
-                .filter(object -> isWithinRadius(
-                        object.getXPos(),
-                        object.getYPos(),
-                        centerX,
-                        centerY,
-                        radius))
-                .collect(Collectors.toList());
-    }
-
-    private boolean isWithinBounds(int x, int y, int minX, int maxX, int minY, int maxY) {
-        return x >= minX && x <= maxX && y >= minY && y <= maxY;
-    }
-
-    private boolean isWithinRadius(int x, int y, int centerX, int centerY, int radius) {
-        long dx = (long) x - centerX;
-        long dy = (long) y - centerY;
-        return (dx * dx + dy * dy) <= (long) radius * radius;
     }
 
     public Player movePlayer(String playerId, int newX, int newY) {
@@ -860,3 +721,5 @@ public class WorldMapService {
     }
 
 }
+
+

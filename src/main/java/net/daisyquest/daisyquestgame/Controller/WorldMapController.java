@@ -50,11 +50,6 @@ public class WorldMapController {
         return ResponseEntity.ok(worldMapService.getPlayersInViewport(centerX, centerY, viewportWidth, viewportHeight));
     }
 
-    @GetMapping("/minimap")
-    public ResponseEntity<MinimapResponse> getMinimapData(@RequestParam String playerId) {
-        return ResponseEntity.ok(worldMapService.getMinimapData(playerId));
-    }
-
     @GetMapping("/land")
     public ResponseEntity<Land> getLandAtPosition(@RequestParam int x, @RequestParam int y) {
         Land land = worldMapService.getLandAtPosition(x, y);
@@ -226,6 +221,7 @@ public class WorldMapController {
         // Getters and setters
     }
 }
+
 
 
 

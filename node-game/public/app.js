@@ -2,6 +2,7 @@ import { createItemRegistry } from "./systems/itemRegistry.js";
 import { initializeThemeEngine } from "./themeEngine.js";
 import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
+import { createMinimapPanel } from "./ui/minimapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 
 const logList = document.getElementById("log");
@@ -23,6 +24,10 @@ const battlePlayerSprite = document.getElementById("player-battle-sprite");
 const battleEnemySprite = document.getElementById("enemy-battle-sprite");
 const playerStatusBanners = document.getElementById("player-status-banners");
 const enemyStatusBanners = document.getElementById("enemy-status-banners");
+const minimapPanelElement = document.getElementById("minimap-panel");
+const minimapCanvas = document.getElementById("minimap-canvas");
+const minimapLegend = document.getElementById("minimap-legend");
+const minimapToggle = document.getElementById("minimap-toggle");
 const captionGlobal = document.getElementById("caption-global");
 const captionPlayer = document.getElementById("caption-player");
 const captionEnemy = document.getElementById("caption-enemy");
@@ -124,6 +129,14 @@ const layoutTabs = createTabController({
   panels: layoutPanels,
   buttonKey: "tabTarget",
   panelKey: "tabPanel"
+});
+
+const minimapPanel = createMinimapPanel({
+  container: minimapPanelElement,
+  canvas: minimapCanvas,
+  toggleButton: minimapToggle,
+  legendContainer: minimapLegend,
+  fetchMinimap: () => apiRequest("/api/world/minimap")
 });
 
 function apiRequest(path, options = {}) {
@@ -1285,6 +1298,7 @@ async function handleLogout() {
     state = null;
     currentTrades = [];
     tradeList.innerHTML = "";
+    minimapPanel.stop();
     updateAuthStatus(null);
   }
 }
@@ -1321,6 +1335,7 @@ function initializeGameUI() {
   updateMeters();
   updateActionButtons();
   startCombatLoop();
+  minimapPanel.start();
 }
 
 actionButtons.forEach((button) => {

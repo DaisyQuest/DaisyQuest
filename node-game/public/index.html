@@ -102,6 +102,16 @@
             <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
           </div>
         </div>
+        <div class="minimap-panel" id="minimap-panel">
+          <div class="minimap-panel__header">
+            <span>Realm Minimap</span>
+            <button class="secondary minimap-toggle" id="minimap-toggle" type="button" aria-pressed="true">
+              Hide
+            </button>
+          </div>
+          <canvas id="minimap-canvas" width="180" height="180"></canvas>
+          <div class="minimap-legend" id="minimap-legend"></div>
+        </div>
         <div class="battlefield">
           <div class="combatant" id="player-card">
             <h2 id="player-name">Hero</h2>

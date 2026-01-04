@@ -32,6 +32,16 @@ describe("server app", () => {
     const bootstrap = await request(app).get("/api/bootstrap").set(authHeader);
     expect(bootstrap.status).toBe(200);
 
+    const minimapDefault = await request(app).get("/api/world/minimap").set(authHeader);
+    expect(minimapDefault.status).toBe(200);
+    expect(minimapDefault.body.radius).toBeGreaterThan(0);
+
+    const minimapZero = await request(app)
+      .get("/api/world/minimap?radius=0")
+      .set(authHeader);
+    expect(minimapZero.status).toBe(200);
+    expect(minimapZero.body.radius).toBe(0);
+
     const health = await request(app).get("/health");
     expect(health.status).toBe(200);
 

@@ -20,6 +20,7 @@ import {
 import { createCoreSystemRegistry } from "../systems/systemCatalog.js";
 import { createProgressionSystem } from "../systems/progressionSystem.js";
 import { createRegistryEditor } from "../systems/registryEditor.js";
+import { createWorldState } from "../world/worldState.js";
 
 export const PROGRESSION_THRESHOLDS = Object.freeze([0, 120, 280, 480, 720, 1000, 1400, 1900]);
 
@@ -192,6 +193,9 @@ export function createGameSession({
   const systemRegistry = systemRegistryFactory();
   let runtime = buildRuntimeSystems(systemRegistry, registryEditor);
   let state = buildInitialState(initialState);
+  if (!state.world) {
+    state = { ...state, world: createWorldState({ playerId: username, playerName: username }) };
+  }
   if (!state.progression) {
     state = { ...state, progression: progressionSystem.getProgressSnapshot(0) };
   }
@@ -208,12 +212,16 @@ export function createGameSession({
     };
   }
 
+  function getWorldState() {
+    return state.world;
+  }
+
   function getRegistrySnapshot() {
     return registryEditor.getSnapshot();
   }
 
   function getPersistenceSnapshot() {
-    return {
+  return {
       state: serializeState(state),
       timers: { ...timers },
       registry: getRegistrySnapshot()
@@ -547,6 +555,7 @@ export function createGameSession({
     getRegistrySnapshot,
     getPersistenceSnapshot,
     getConfig,
+    getWorldState,
     resetBattle,
     attemptAction,
     processEnemyTick,
