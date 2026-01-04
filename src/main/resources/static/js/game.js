@@ -1837,7 +1837,7 @@ function openRandomChest() {
 
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('crafting-tab').addEventListener('shown.bs.tab', function (e) {
+    document.getElementById('crafting-tab').addEventListener('dq.tab.shown', function () {
         updateCraftingInventory();
     });
 });

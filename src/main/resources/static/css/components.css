@@ -69,6 +69,63 @@
     border-color: var(--dq-border) var(--dq-border) transparent;
 }
 
+.dq-tab-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0 0 1rem;
+    padding: 0;
+}
+
+.dq-tab-item {
+    list-style: none;
+}
+
+.dq-tab-button {
+    background: var(--dq-surface-elevated);
+    border: 1px solid var(--dq-border);
+    border-radius: 14px;
+    color: var(--dq-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.1rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: var(--dq-card-glow);
+}
+
+.dq-tab-button:hover,
+.dq-tab-button:focus-visible {
+    color: var(--dq-text);
+    border-color: rgba(99, 102, 241, 0.45);
+    outline: none;
+}
+
+.dq-tab-button--active {
+    color: var(--dq-text);
+    background: var(--dq-surface);
+    border-color: rgba(99, 102, 241, 0.6);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.dq-tab-panels {
+    display: block;
+}
+
+.dq-tab-panel {
+    margin-bottom: 1.5rem;
+}
+
+.dq-tab-panel[hidden] {
+    display: none;
+}
+
+.dq-tab-card {
+    height: 100%;
+}
+
 .dq-badge {
     display: inline-flex;
     align-items: center;

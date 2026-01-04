@@ -62,4 +62,4 @@ function upgradeTalent(talent) {
 }
 
 // Call this function when the Talent Trees tab is shown
-document.getElementById('talent-trees-tab').addEventListener('shown.bs.tab', initializeTalentTrees);
+document.getElementById('talent-trees-tab').addEventListener('dq.tab.shown', initializeTalentTrees);

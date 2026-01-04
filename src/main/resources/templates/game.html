@@ -629,84 +629,86 @@
 <!--            </div>-->
 <!--        </div>-->
         <div class="col-md-9">
-            <ul class="nav nav-tabs" id="myTab" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="combat-tab" data-bs-toggle="tab" data-bs-target="#combat" type="button"
-                            role="tab" aria-controls="combat" aria-selected="true">Game
+            <div class="dq-tab-list" data-dq-tablist="primary" role="tablist" aria-label="Game sections">
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="combat-tab" data-dq-tab-target="#combat" type="button"
+                            role="tab" aria-controls="combat" aria-selected="false">Game
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="quests-tab" data-bs-toggle="tab" data-bs-target="#quests"
-                            type="button" role="tab" aria-controls="quests" aria-selected="false">Quests
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="quests-tab" data-dq-tab-target="#quests"
+                            type="button" role="tab" aria-controls="quests" aria-selected="true">Quests
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="talent-trees-tab" data-bs-toggle="tab" data-bs-target="#talent-trees" type="button" role="tab" aria-controls="talent-trees" aria-selected="false">Talent Trees</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="inventory-management-tab" data-bs-toggle="tab" data-bs-target="#inventory-management" type="button" role="tab" aria-controls="talent-trees" aria-selected="false">Inventory</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="activities-tab" data-bs-toggle="tab" data-bs-target="#activities"
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="talent-trees-tab" data-dq-tab-target="#talent-trees" type="button" role="tab" aria-controls="talent-trees" aria-selected="false">Talent Trees</button>
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="inventory-management-tab" data-dq-tab-target="#inventory-management" type="button" role="tab" aria-controls="inventory-management" aria-selected="false">Inventory</button>
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="activities-tab" data-dq-tab-target="#activities"
                             type="button" role="tab" aria-controls="activities" aria-selected="false">Activities
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="shops-tab" data-bs-toggle="tab" data-bs-target="#shops" type="button"
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="shops-tab" data-dq-tab-target="#shops" type="button"
                             role="tab" aria-controls="shops" aria-selected="false">Shops
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="my-shop-tab" data-bs-toggle="tab" data-bs-target="#my-shop"
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="my-shop-tab" data-dq-tab-target="#my-shop"
                             type="button" role="tab" aria-controls="my-shop" aria-selected="false">My Shop
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="crafting-tab" data-bs-toggle="tab" data-bs-target="#crafting"
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="crafting-tab" data-dq-tab-target="#crafting"
                             type="button"
                             role="tab" aria-controls="crafting" aria-selected="false">Crafting
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="inspect-tab" data-bs-toggle="tab" data-bs-target="#inspect"
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="inspect-tab" data-dq-tab-target="#inspect"
                             type="button" role="tab" aria-controls="inspect" aria-selected="false">Inspect
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button"
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="chat-tab" data-dq-tab-target="#chat" type="button"
                             role="tab" aria-controls="chat" aria-selected="false">Chat
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#worldMapH"
+                </div>
+                <div class="dq-tab-item" role="presentation">
+                    <button class="dq-tab-button" id="world-tab" data-dq-tab-target="#worldMapH"
                             type="button"
-                            role="tab" aria-controls="chat" aria-selected="false">World Map
+                            role="tab" aria-controls="worldMapH" aria-selected="false">World Map
                     </button>
-                </li>
-            </ul>
-            <div class="tab-content" id="myTabContent">
-                <div class="tab-pane fade show active" id="quests" role="tabpanel" aria-labelledby="quests-tab">
-                    <div class="card dq-card">
+                </div>
+            </div>
+            <div class="dq-tab-panels" id="myTabContent">
+                <div class="dq-tab-panel" id="quests" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="quests-tab">
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">Available Quests</h5>
                             <ul class="nav nav-tabs attribute-tabs" id="questAttributeTabs" role="tablist">
                             </ul>
                             <div class="tab-content" id="questAttributeTabContent">
                             </div>
+                            <div class="mt-4">
+                                <h5 class="card-title">Active Task</h5>
+                                <div id="activeTask"></div>
+                            </div>
+                            <div class="mt-4">
+                                <form action="https://www.paypal.com/donate" method="post" target="_top">
+                                    <input type="hidden" name="hosted_button_id" value="4HUFMKCUUSV9L"/>
+                                    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button"/>
+                                    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1"/>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <script th:src="@{/js/playerInventory.js}"></script>
-                <script>window.PlayerInventory = {
-                    initializeInventory: function() {
-                        console.log('Initializing inventory...');
-                        fetchPlayerInventory();
-                    },
-                    // Add other functions as needed
-                };</script>
-
-                <div class="tab-pane fade" id="inventory-management" role="tabpanel" aria-labelledby="inventory-management-tab">
-                    <div class="card dq-card">
+                <div class="dq-tab-panel" id="inventory-management" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="inventory-management-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">Inventory Management</h5>
                             <div class="row">
@@ -725,8 +727,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="talent-trees" role="tabpanel" aria-labelledby="talent-trees-tab">
-                    <div class="card dq-card">
+                <div class="dq-tab-panel" id="talent-trees" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="talent-trees-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">Talent Trees</h5>
                             <div id="talentTreesContainer"></div>
@@ -736,8 +738,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="activities" role="tabpanel" aria-labelledby="activities-tab">
-                    <div class="card dq-card">
+                <div class="dq-tab-panel" id="activities" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="activities-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">Available Activities</h5>
                             <ul class="nav nav-tabs attribute-tabs" id="activityAttributeTabs" role="tablist">
@@ -747,24 +749,24 @@
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="shops" role="tabpanel" aria-labelledby="shops-tab">
-                    <div class="card dq-card">
+                <div class="dq-tab-panel" id="shops" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="shops-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">Available Shops</h5>
                             <div id="shopList"></div>
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="my-shop" role="tabpanel" aria-labelledby="my-shop-tab">
-                    <div class="card dq-card">
+                <div class="dq-tab-panel" id="my-shop" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="my-shop-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">My Shop</h5>
                             <div id="playerShopList"></div>
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="combat" role="tabpanel" aria-labelledby="combat-tab">
-                    <div class="card dq-card combat-container">
+                <div class="dq-tab-panel" id="combat" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="combat-tab" hidden>
+                    <div class="card dq-card dq-tab-card combat-container">
                         <div class="card-body">
                             <h5 class="card-title text-center">DaisyQuest World Map</h5>
 
@@ -823,8 +825,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="inspect" role="tabpanel" aria-labelledby="inspect-tab">
-                    <div class="card dq-card">
+                <div class="dq-tab-panel" id="inspect" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="inspect-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">Inspect</h5>
                             <p class="text-muted">Review player or NPC details without editing them.</p>
@@ -855,8 +857,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="chat" role="tabpanel" aria-labelledby="chat-tab">
-                    <div class="card">
+                <div class="dq-tab-panel" id="chat" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="chat-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">Chat</h5>
                             <p class="text-muted" id="chat-status">Connecting...</p>
@@ -872,8 +874,8 @@
 
                 </div>
 
-                <div class="tab-pane fade" id="worldMapH" role="tabpanel" aria-labelledby="world-tab">
-                    <div class="card dq-card">
+                <div class="dq-tab-panel" id="worldMapH" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="world-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
                         <div class="card-body">
                             <h5 class="card-title">World Map</h5>
                             <div id="worldMaps"></div>
@@ -905,25 +907,28 @@
                     </div>
 
                 </div>
-                <div class="tab-pane fade" id="crafting" role="tabpanel" aria-labelledby="crafting-tab">
-                    <h5>Crafting</h5>
-                    <div class="crafting-container">
-                        <div class="inventory-panel">
-                            <h6>Inventory</h6>
-                            <div id="craftingInventoryList"></div>
-                        </div>
+                <div class="dq-tab-panel" id="crafting" data-dq-tab-panel="primary" role="tabpanel" aria-labelledby="crafting-tab" hidden>
+                    <div class="card dq-card dq-tab-card">
+                        <div class="card-body">
+                            <h5 class="card-title">Crafting</h5>
+                            <div class="crafting-container">
+                                <div class="inventory-panel">
+                                    <h6>Inventory</h6>
+                                    <div id="craftingInventoryList"></div>
+                                </div>
 
-                        <div class="ingredients-panel">
-                            <h6>Ingredients</h6>
-                            <div id="craftingIngredientsList"></div>
+                                <div class="ingredients-panel">
+                                    <h6>Ingredients</h6>
+                                    <div id="craftingIngredientsList"></div>
+                                </div>
+                            </div>
+                            <div class="crafting-actions">
+                                <button class="btn btn-primary craft-button" onclick="attemptCrafting()">Craft</button>
+                                <button class="btn btn-secondary recipe-book-button" onclick="openRecipeBook()">Recipe Book
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="crafting-actions">
-                        <button class="btn btn-primary craft-button" onclick="attemptCrafting()">Craft</button>
-                        <button class="btn btn-secondary recipe-book-button" onclick="openRecipeBook()">Recipe Book
-                        </button>
-                    </div>
-
                     <div class="modal fade" id="recipeBookModal" tabindex="-1" aria-labelledby="recipeBookModalLabel"
                          aria-hidden="true">
                         <div class="modal-dialog modal-lg">
@@ -940,24 +945,6 @@
                         </div>
                     </div>
                 </div>
-
-
-                <!-- Active Task future: Task(s) -->
-                <div class="card dq-card mt-3">
-                    <div class="card-body">
-                        <h5 class="card-title">Active Task</h5>
-                        <div id="activeTask"></div>
-                    </div>
-                </div>
-                <div class="card dq-card mt-3">
-                    <div class="card-body">
-                <form action="https://www.paypal.com/donate" method="post" target="_top">
-                    <input type="hidden" name="hosted_button_id" value="4HUFMKCUUSV9L" />
-                    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-                    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
-                </form>
-                    </div>
-                    </div>
 
             </div>
         </div>
@@ -1276,7 +1263,9 @@
     });
 </script>
 
+<script th:src="@{/js/tabFramework.js}"></script>
 <script th:src="@{/js/game.js}"></script>
+<script th:src="@{/js/playerInventory.js}"></script>
 <script th:src="@{/js/dialog.js}"></script>
 <script th:src="@{/js/inspect.js}"></script>
 

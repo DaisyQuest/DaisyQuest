@@ -482,7 +482,7 @@ function drop(ev) {
     }
 }
 
-document.getElementById('inventory-management-tab').addEventListener('shown.bs.tab', initializeInventory);
+document.getElementById('inventory-management-tab').addEventListener('dq.tab.shown', initializeInventory);
 
 function useSelectedItem() {
     if (selectedItem) {
@@ -539,4 +539,3 @@ window.addEventListener('message', function(event) {
         // Add other cases as needed
     }
 }, false);
-
