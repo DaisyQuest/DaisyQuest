@@ -36,7 +36,7 @@ describe("tab controller", () => {
     expect(panels[1].getAttribute("aria-hidden")).toBe("false");
   });
 
-  it("wires click handlers to switch tabs", () => {
+  it("does not attach click handlers when wiring", () => {
     const dom = new JSDOM(
       `
         <button class="layout-tab-button" data-tab-target="battle"></button>
@@ -60,10 +60,10 @@ describe("tab controller", () => {
     controller.wire();
     buttons[1].dispatchEvent(new dom.window.Event("click", { bubbles: true }));
 
-    expect(buttons[0].classList.contains("is-active")).toBe(false);
-    expect(buttons[1].classList.contains("is-active")).toBe(true);
-    expect(panels[0].classList.contains("is-active")).toBe(false);
-    expect(panels[1].classList.contains("is-active")).toBe(true);
+    expect(buttons[0].classList.contains("is-active")).toBe(true);
+    expect(buttons[1].classList.contains("is-active")).toBe(false);
+    expect(panels[0].classList.contains("is-active")).toBe(true);
+    expect(panels[1].classList.contains("is-active")).toBe(false);
   });
 
   it("defaults to the first active button when wiring", () => {

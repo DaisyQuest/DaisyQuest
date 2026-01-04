@@ -8,6 +8,13 @@ import { applySpriteToImage, getBattleSpriteSet } from "./ui/battleSceneAssets.j
 import { createFlowOrchestrator, FlowEvent, FlowState } from "./ui/flowOrchestrator.js";
 import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
+import { createFlowState, FLOW_SCREENS, getFlowScreenFromTab } from "./ui/flowState.js";
+import {
+  createCombatScreenAdapter,
+  createLootScreenAdapter,
+  createMapScreenAdapter
+} from "./ui/screenAdapters.js";
+import { createTabNavigationAdapter } from "./ui/tabNavigationAdapter.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
 import { createWorldMapView, getSurfacePercentFromEvent } from "./ui/worldMapView.js";
 import {
@@ -200,6 +207,31 @@ flowOrchestrator = createFlowOrchestrator({
     console.warn("Flow transition rejected.", error);
   }
 });
+const flowState = createFlowState({
+  initialScreen: getFlowScreenFromTab(layoutTabs.getActiveValue()) ?? FLOW_SCREENS.COMBAT
+});
+const layoutTabNavigation = createTabNavigationAdapter({
+  buttons: layoutTabButtons,
+  buttonKey: "tabTarget",
+  onSelect: (tabKey) => {
+    const flowScreen = getFlowScreenFromTab(tabKey);
+    if (flowScreen) {
+      flowState.setScreen(flowScreen, { source: "layout-tab" });
+      return;
+    }
+    layoutTabs.setActive(tabKey);
+  }
+});
+const registryTabNavigation = createTabNavigationAdapter({
+  buttons: tabButtons,
+  buttonKey: "tab",
+  onSelect: (tabKey) => {
+    registryTabs.setActive(tabKey);
+  }
+});
+const combatScreenAdapter = createCombatScreenAdapter({ flowState, tabController: layoutTabs });
+const mapScreenAdapter = createMapScreenAdapter({ flowState, tabController: layoutTabs });
+const lootScreenAdapter = createLootScreenAdapter({ flowState, tabController: layoutTabs });
 const gameFlow = createGameFlowEmitter();
 const gameFlowActions = createGameFlowActions({ emitter: gameFlow });
 createGameFlowNavigator({ emitter: gameFlow, layoutTabs });
@@ -304,6 +336,9 @@ function pushLog(lines) {
 
 function pushLoot(lines) {
   lootFeed.pushLines(lines);
+  if (Array.isArray(lines) && lines.length) {
+    flowState.setScreen(FLOW_SCREENS.LOOT, { source: "loot-drop" });
+  }
 }
 
 function updateMeters() {
@@ -1523,6 +1558,7 @@ async function handleLogout() {
       worldInteractionClient.destroy();
       worldInteractionClient = null;
     }
+    flowState.setScreen(FLOW_SCREENS.COMBAT, { source: "logout" });
   }
 }
 
@@ -1540,6 +1576,7 @@ function initializeGameUI() {
   populateRecipeResultOptions();
   wireTabs();
   wireLayoutTabs();
+  flowState.setScreen(FLOW_SCREENS.COMBAT, { source: "init" });
   gameFlowActions.combatStarted({ npcId: state.enemy?.id, reason: "bootstrap" });
   requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
   const hasActiveCombat = Boolean(
