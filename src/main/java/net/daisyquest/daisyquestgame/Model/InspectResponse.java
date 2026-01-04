@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ItemTransferRequest {
-    private String itemId;
-    private String fromPlayerId;
-    private String toPlayerId;
-    private int quantity;
+public class InspectResponse {
+    private boolean success;
+    private String message;
+    private Player player;
+    private NPCTemplate npcTemplate;
 }

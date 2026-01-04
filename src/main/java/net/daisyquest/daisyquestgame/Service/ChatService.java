@@ -78,4 +78,16 @@ public class ChatService {
     public List<ChatRoom> getUserRooms(String userId) {
         return chatRoomRepository.findByParticipantsContaining(userId);
     }
+
+    public ChatRoom getOrCreatePublicRoom(String name) {
+        ChatRoom existing = chatRoomRepository.findByName(name);
+        if (existing != null) {
+            return existing;
+        }
+        ChatRoom room = new ChatRoom();
+        room.setName(name);
+        room.setParticipants(List.of());
+        room.setPublic(true);
+        return chatRoomRepository.save(room);
+    }
 }

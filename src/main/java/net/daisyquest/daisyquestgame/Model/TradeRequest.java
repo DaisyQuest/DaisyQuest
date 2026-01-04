@@ -4,12 +4,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ItemTransferRequest {
-    private String itemId;
+public class TradeRequest {
+    private String id;
     private String fromPlayerId;
     private String toPlayerId;
+    private String itemId;
     private int quantity;
+    private String status;
+    private Instant createdAt;
 }

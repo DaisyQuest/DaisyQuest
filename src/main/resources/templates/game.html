@@ -168,6 +168,17 @@
             margin-right: 10px;
         }
 
+        .inspect-results {
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 6px;
+            background: #f8f9fa;
+        }
+
+        .dialog-body-text {
+            white-space: pre-wrap;
+        }
+
         #playerInfo, #questList, #activeQuest {
             margin-top: 20px;
             border: 1px solid #ddd;
@@ -657,6 +668,11 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="inspect-tab" data-bs-toggle="tab" data-bs-target="#inspect"
+                            type="button" role="tab" aria-controls="inspect" aria-selected="false">Inspect
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button"
                             role="tab" aria-controls="chat" aria-selected="false">Chat
                     </button>
@@ -807,21 +823,54 @@
                         </div>
                     </div>
                 </div>
-<!--                <div class="tab-pane fade" id="chat" role="tabpanel" aria-labelledby="chat-tab">-->
-<!--                    <div class="card">-->
-<!--                        <div class="card-body">-->
-<!--                            <h5 class="card-title">Chat</h5>-->
-<!--                            <div id="chatMessages"></div>-->
-<!--                            <div class="chat-input">-->
-<!--                                <input type="text" id="chatInput" class="form-control"-->
-<!--                                       placeholder="Type your message...">-->
-<!--                                <button class="btn btn-primary" onclick="sendChatMessage()">Send</button>-->
-<!--                            </div>-->
-<!--                        </div>-->
+                <div class="tab-pane fade" id="inspect" role="tabpanel" aria-labelledby="inspect-tab">
+                    <div class="card dq-card">
+                        <div class="card-body">
+                            <h5 class="card-title">Inspect</h5>
+                            <p class="text-muted">Review player or NPC details without editing them.</p>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <h6>Player Inspection</h6>
+                                    <label for="inspect-player-id" class="form-label">Target Player ID</label>
+                                    <input id="inspect-player-id" class="form-control" placeholder="Player ID">
+                                    <button class="btn btn-primary mt-2" id="inspect-player-button" type="button">
+                                        Inspect Player
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>NPC Inspection</h6>
+                                    <label for="inspect-npc-id" class="form-label">NPC Template ID</label>
+                                    <input id="inspect-npc-id" class="form-control" placeholder="NPC Template ID">
+                                    <button class="btn btn-primary mt-2" id="inspect-npc-button" type="button">
+                                        Inspect NPC
+                                    </button>
+                                    <button class="btn btn-outline-secondary mt-2" id="inspect-npc-dialog" type="button">
+                                        Request NPC Dialog
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-4 inspect-results" id="inspect-results">
+                                <p class="text-muted mb-0">Inspection results will appear here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="chat" role="tabpanel" aria-labelledby="chat-tab">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Chat</h5>
+                            <p class="text-muted" id="chat-status">Connecting...</p>
+                            <div id="chatMessages"></div>
+                            <div class="chat-input">
+                                <input type="text" id="chatInput" class="form-control"
+                                       placeholder="Type your message...">
+                                <button class="btn btn-primary" id="chatSendButton" type="button">Send</button>
+                            </div>
+                        </div>
 
-<!--                    </div>-->
+                    </div>
 
-<!--                </div>-->
+                </div>
 
                 <div class="tab-pane fade" id="worldMapH" role="tabpanel" aria-labelledby="world-tab">
                     <div class="card dq-card">
@@ -1062,6 +1111,23 @@
                 </div>
             </div>
         </div>
+        <div class="modal fade" id="dialogModal" tabindex="-1" aria-labelledby="dialogModalTitle"
+             aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="dialogModalTitle">Message</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="dialog-body-text" id="dialogModalBody"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1211,6 +1277,8 @@
 </script>
 
 <script th:src="@{/js/game.js}"></script>
+<script th:src="@{/js/dialog.js}"></script>
+<script th:src="@{/js/inspect.js}"></script>
 
 <script th:src="@{/js/talentTrees.js}"></script>
 <script th:src="@{/js/interactiveMap.js}"></script>

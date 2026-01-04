@@ -196,6 +196,52 @@ describe("server app", () => {
     expect(response.status).toBe(200);
   });
 
+  test("routes world interaction endpoints with validation", async () => {
+    const app = createApp({ nowFn: () => 1000, rng, dataStore: createInMemoryDataStore() });
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ username: "Hero", password: "secret1" });
+    const authHeader = { Authorization: `Bearer ${register.body.token}` };
+
+    const action = await request(app)
+      .post("/api/world-interactions/action")
+      .set(authHeader)
+      .send({
+        clickType: "primary",
+        candidates: [
+          { id: "enemy", type: "npc", layer: 5 },
+          { id: "terrain", type: "terrain", layer: 0 }
+        ]
+      });
+    expect(action.status).toBe(200);
+    expect(action.body).toEqual({
+      action: "interact",
+      resolvedTarget: { id: "enemy", type: "npc", layer: 5 }
+    });
+
+    const badAction = await request(app)
+      .post("/api/world-interactions/action")
+      .set(authHeader)
+      .send({ clickType: "secondary", candidates: [] });
+    expect(badAction.status).toBe(400);
+
+    const menu = await request(app)
+      .post("/api/world-interactions/context-menu")
+      .set(authHeader)
+      .send({ candidates: [{ id: "player", type: "player", layer: 3 }] });
+    expect(menu.status).toBe(200);
+    expect(menu.body.options).toEqual(["inspect", "trade", "combat"]);
+
+    const invalidContext = await request(app)
+      .post("/api/world-interactions/context-action")
+      .set(authHeader)
+      .send({
+        option: "trade",
+        candidates: [{ id: "object", type: "object", layer: 1 }]
+      });
+    expect(invalidContext.status).toBe(400);
+  });
+
   test("rejects trade confirmation when inventory changes after offers", async () => {
     const dataStore = createInMemoryDataStore();
     const app = createApp({ nowFn: () => 1000, rng, dataStore });
