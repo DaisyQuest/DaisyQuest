@@ -34,7 +34,8 @@ export function mapEntriesForRender({ data, canvasWidth, canvasHeight }) {
   if (!data) {
     return [];
   }
-  return data.entries.map((entry) => {
+  const entries = Array.isArray(data.entries) ? data.entries : [];
+  return entries.map((entry) => {
     const style = getMinimapStyle(entry.type);
     const point = projectPoint({
       centerX: data.center.x,
@@ -100,7 +101,7 @@ export function createMinimapPanel({
   setIntervalFn = setInterval,
   clearIntervalFn = clearInterval
 }) {
-  const state = { isVisible: true, intervalId: null };
+  const state = { isVisible: true, intervalId: null, hasToggleListener: false };
   if (!container || !canvas || !toggleButton || !legendContainer) {
     return {
       start() {},
@@ -128,20 +129,29 @@ export function createMinimapPanel({
   }
 
   async function refresh() {
-    if (!state.isVisible || !fetchMinimap) {
+    if (!state.isVisible || typeof fetchMinimap !== "function") {
       return;
     }
-    const data = await fetchMinimap();
-    renderMinimap({ canvas, data });
+    try {
+      const data = await fetchMinimap();
+      renderMinimap({ canvas, data });
+    } catch (error) {
+      console.warn("Failed to refresh minimap.", error);
+    }
+  }
+
+  function handleToggle() {
+    toggleMinimapVisibility(state, { container, toggleButton });
   }
 
   function start() {
     renderLegend();
     toggleButton.setAttribute("aria-pressed", "true");
     toggleButton.textContent = "Hide";
-    toggleButton.addEventListener("click", () =>
-      toggleMinimapVisibility(state, { container, toggleButton })
-    );
+    if (!state.hasToggleListener) {
+      toggleButton.addEventListener("click", handleToggle);
+      state.hasToggleListener = true;
+    }
     if (state.intervalId) {
       return;
     }

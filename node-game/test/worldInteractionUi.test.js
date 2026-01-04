@@ -62,6 +62,26 @@ describe("world interaction client", () => {
     expect(candidates[candidates.length - 1]).toMatchObject({ type: "terrain" });
   });
 
+  test("skips terrain candidates when disabled", () => {
+    const targets = collectInteractionTargets([surface]);
+    const candidates = resolveInteractionCandidates({
+      point: { x: 10, y: 10 },
+      targets,
+      includeTerrain: false
+    });
+
+    expect(candidates.find((candidate) => candidate.type === "terrain")).toBeUndefined();
+  });
+
+  test("collectInteractionTargets ignores elements missing interaction metadata", () => {
+    surface.insertAdjacentHTML(
+      "beforeend",
+      "<div id=\"ignored\" data-interaction-id=\"skip\">Ignored</div>"
+    );
+    const targets = collectInteractionTargets([surface]);
+    expect(targets.find((target) => target.id === "skip")).toBeUndefined();
+  });
+
   test("dispatches primary click action requests", async () => {
     const apiRequest = jest.fn().mockResolvedValue({ action: "move" });
     const client = createWorldInteractionClient({

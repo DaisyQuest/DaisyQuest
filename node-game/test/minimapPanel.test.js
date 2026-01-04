@@ -102,6 +102,15 @@ describe("minimap panel UI helpers", () => {
     expect(entries[0].y).toBe(100);
   });
 
+  test("mapEntriesForRender returns empty when entries are missing", () => {
+    const entries = mapEntriesForRender({
+      data: { center: { x: 0, y: 0 }, radius: 3 },
+      canvasWidth: 100,
+      canvasHeight: 100
+    });
+    expect(entries).toEqual([]);
+  });
+
   test("renderMinimap draws symbols to canvas", () => {
     const canvas = createMockCanvas();
     renderMinimap({
@@ -114,6 +123,23 @@ describe("minimap panel UI helpers", () => {
     });
     expect(canvas.getContext).toHaveBeenCalledWith("2d");
     expect(canvas.getContext().fillText).toHaveBeenCalledWith("▲", 90, 90);
+  });
+
+  test("renderMinimap returns early when no drawing context is available", () => {
+    const canvas = {
+      width: 100,
+      height: 100,
+      getContext: jest.fn(() => null)
+    };
+    renderMinimap({
+      canvas,
+      data: {
+        center: { x: 0, y: 0 },
+        radius: 1,
+        entries: []
+      }
+    });
+    expect(canvas.getContext).toHaveBeenCalledWith("2d");
   });
 
   test("toggleMinimapVisibility updates state and button", () => {
@@ -174,6 +200,7 @@ describe("createMinimapPanel", () => {
     });
 
     await panel.start();
+    expect(toggleButton.addEventListener).toHaveBeenCalledTimes(1);
     expect(setIntervalFn).toHaveBeenCalledTimes(1);
     await panel.start();
     expect(setIntervalFn).toHaveBeenCalledTimes(1);
@@ -185,5 +212,25 @@ describe("createMinimapPanel", () => {
     expect(clearIntervalFn).toHaveBeenCalledTimes(1);
 
     global.document = originalDocument;
+  });
+
+  test("refresh ignores failures and hidden state", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const panel = createMinimapPanel({
+      container: createMockElement(),
+      canvas: createMockCanvas(),
+      toggleButton: createMockElement(),
+      legendContainer: createMockElement(),
+      fetchMinimap: jest.fn().mockRejectedValue(new Error("offline"))
+    });
+
+    await panel.refresh();
+    expect(warnSpy).toHaveBeenCalledWith("Failed to refresh minimap.", expect.any(Error));
+
+    panel.state.isVisible = false;
+    await panel.refresh();
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    warnSpy.mockRestore();
   });
 });
