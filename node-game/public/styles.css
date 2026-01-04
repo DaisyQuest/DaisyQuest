@@ -388,6 +388,46 @@ body {
 
 .minimap-legend-symbol {
   font-size: 0.9rem;
+  width: 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-panel {
+  display: grid;
+  gap: 20px;
+}
+
+.map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.map-panel .world-panel {
+  margin-top: 0;
+}
+
+.map-panel .world-panel__surface {
+  min-height: min(60vh, 640px);
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.65), rgba(30, 41, 59, 0.35));
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+}
+
+.map-panel .world-panel__target {
+  background: rgba(15, 23, 42, 0.75);
+}
+
+@media (max-width: 900px) {
+  .map-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .battle-scene__relic {
   position: absolute;
   right: 8%;
