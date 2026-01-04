@@ -539,8 +539,11 @@ public class WorldMapService {
     }
 
     private boolean isWithinMapBounds(int x, int y) {
-        return x >= 0 && x < getWorldMap().getWidth() &&
-                y >= 0 && y < getWorldMap().getHeight();
+        WorldMap worldMap = getWorldMap();
+        int worldPixelWidth = worldMap.getWidth() * LAND_SIZE;
+        int worldPixelHeight = worldMap.getHeight() * LAND_SIZE;
+        return x >= 0 && x < worldPixelWidth &&
+                y >= 0 && y < worldPixelHeight;
     }
 
     private boolean isTraversable(int x, int y) {
@@ -721,5 +724,4 @@ public class WorldMapService {
     }
 
 }
-
 
