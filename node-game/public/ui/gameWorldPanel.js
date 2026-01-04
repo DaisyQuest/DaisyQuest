@@ -1,4 +1,4 @@
-const DEFAULT_PANEL_HEIGHT = "min(70vh, 720px)";
+const DEFAULT_PANEL_HEIGHT = "100%";
 
 const DEFAULT_GAME_WORLD_LAYERS = Object.freeze([
   {

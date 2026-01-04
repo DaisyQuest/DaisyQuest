@@ -31,6 +31,12 @@ describe("game world panel", () => {
     expect(panel.dataset.layoutHeight).toBe("65vh");
   });
 
+  it("throws when applying layout without a panel element", () => {
+    expect(() => applyGameWorldPanelLayout()).toThrow(
+      "Game world panel element is required."
+    );
+  });
+
   it("builds the layer stack in deterministic order", () => {
     const dom = new JSDOM("<div id=\"stack\"></div>");
     const stack = dom.window.document.getElementById("stack");
@@ -46,6 +52,30 @@ describe("game world panel", () => {
     expect(zIndexes).toEqual(GAME_WORLD_LAYERS.map((_, index) => String(index + 1)));
     expect(layerElements).toHaveLength(GAME_WORLD_LAYERS.length);
     expect(stack.dataset.renderStrategy).toBe("ordered-layer-stack");
+  });
+
+  it("falls back to the global document when no ownerDocument is available", () => {
+    const dom = new JSDOM("<div></div>");
+    const previousDocument = global.document;
+    global.document = dom.window.document;
+
+    const container = {
+      ownerDocument: null,
+      dataset: {},
+      replaceChildren: (...children) => {
+        container.children = children;
+      }
+    };
+
+    const { layerElements } = createGameWorldLayerStack({
+      container,
+      layers: [{ id: "test", label: "Test", category: "misc" }]
+    });
+
+    expect(container.children).toHaveLength(1);
+    expect(layerElements).toHaveLength(1);
+
+    global.document = previousDocument;
   });
 
   it("throws when the layer stack container is missing", () => {
@@ -79,7 +109,7 @@ describe("game world panel", () => {
     );
   });
 
-  it("renders a panel snapshot that fills most of the viewport", () => {
+  it("renders a panel snapshot that fills the available battle stage", () => {
     const dom = new JSDOM("<div id=\"panel\"><div id=\"stack\"></div></div>");
     const panel = dom.window.document.getElementById("panel");
     const stack = dom.window.document.getElementById("stack");
