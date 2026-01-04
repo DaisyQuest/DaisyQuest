@@ -10,10 +10,8 @@ import {
 function buildLayoutDom() {
   const dom = new JSDOM(
     `
-      <button class="layout-tab-button" data-tab-target="battle"></button>
       <button class="layout-tab-button" data-tab-target="map"></button>
       <button class="layout-tab-button" data-tab-target="inventory"></button>
-      <section data-tab-panel="battle"></section>
       <section data-tab-panel="map"></section>
       <section data-tab-panel="inventory"></section>
     `
@@ -33,7 +31,7 @@ describe("screen adapters", () => {
       buttonKey: "tabTarget",
       panelKey: "tabPanel"
     });
-    const flowState = createFlowState({ initialScreen: FLOW_SCREENS.COMBAT });
+    const flowState = createFlowState({ initialScreen: FLOW_SCREENS.MAP });
 
     const combatAdapter = createCombatScreenAdapter({ flowState, tabController });
     const mapAdapter = createMapScreenAdapter({ flowState, tabController });
@@ -41,13 +39,13 @@ describe("screen adapters", () => {
 
     flowState.setScreen(FLOW_SCREENS.MAP);
 
-    expect(buttons[1].classList.contains("is-active")).toBe(true);
-    expect(panels[1].classList.contains("is-active")).toBe(true);
+    expect(buttons[0].classList.contains("is-active")).toBe(true);
+    expect(panels[0].classList.contains("is-active")).toBe(true);
 
     flowState.setScreen(FLOW_SCREENS.LOOT);
 
-    expect(buttons[2].classList.contains("is-active")).toBe(true);
-    expect(panels[2].classList.contains("is-active")).toBe(true);
+    expect(buttons[1].classList.contains("is-active")).toBe(true);
+    expect(panels[1].classList.contains("is-active")).toBe(true);
 
     flowState.setScreen(FLOW_SCREENS.COMBAT);
 

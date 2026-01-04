@@ -22,7 +22,7 @@ describe("layout tab markup", () => {
 
   test("hides inactive layout panels in markup", () => {
     panels.forEach((panel) => {
-      if (panel.dataset.tabPanel === "battle") {
+      if (panel.dataset.tabPanel === "map") {
         expect(panel.hasAttribute("hidden")).toBe(false);
       } else {
         expect(panel.hasAttribute("hidden")).toBe(true);
@@ -30,10 +30,11 @@ describe("layout tab markup", () => {
     });
   });
 
-  test("keeps battle secondary content inside the battle panel card", () => {
-    const battlePanel = document.getElementById("tab-panel-battle");
-    expect(battlePanel).not.toBeNull();
-    expect(battlePanel.querySelector("#log")).not.toBeNull();
-    expect(battlePanel.querySelector("#milestone-list")).not.toBeNull();
+  test("keeps map-side content inside the map panel card", () => {
+    const mapPanel = document.getElementById("tab-panel-map");
+    expect(mapPanel).not.toBeNull();
+    expect(mapPanel.querySelector("#log")).not.toBeNull();
+    expect(mapPanel.querySelector("#milestone-list")).not.toBeNull();
+    expect(mapPanel.querySelector("#battle-scene")).not.toBeNull();
   });
 });

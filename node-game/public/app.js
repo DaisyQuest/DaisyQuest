@@ -57,7 +57,6 @@ const minimapCanvas = document.getElementById("minimap-canvas");
 const minimapLegend = document.getElementById("minimap-legend");
 const minimapToggle = document.getElementById("minimap-toggle");
 const worldMapPanel = document.getElementById("world-panel");
-const worldMapLayout = document.querySelector(".map-layout");
 const worldMapSurface = worldMapPanel?.querySelector(".world-panel__surface") ?? null;
 const worldMapEntities = worldMapPanel?.querySelector("[data-world-map-entities]") ?? null;
 const worldMapCoordinates =
@@ -141,7 +140,7 @@ let combatTimers = {
 let pendingAction = false;
 let battleSceneInitialized = false;
 let worldInteractionClient = null;
-let gameFlowState = GameFlowState.COMBAT;
+let gameFlowState = GameFlowState.MAP;
 const logFeed = createFeedPanel({ listElement: logList });
 const lootFeed = createFeedPanel({ listElement: lootList });
 const combatMeters = createCombatMeterPanel({
@@ -163,7 +162,6 @@ const registryTabs = createTabController({
 });
 let flowOrchestrator = null;
 const tabToFlowState = Object.freeze({
-  battle: FlowState.COMBAT,
   map: FlowState.MAP,
   inventory: FlowState.INVENTORY,
   crafting: FlowState.CRAFTING,
@@ -171,8 +169,8 @@ const tabToFlowState = Object.freeze({
   registry: FlowState.REGISTRY
 });
 const flowStateToTab = Object.freeze({
-  [FlowState.COMBAT]: "battle",
-  [FlowState.LOOT]: "battle",
+  [FlowState.COMBAT]: "map",
+  [FlowState.LOOT]: "inventory",
   [FlowState.MAP]: "map",
   [FlowState.INVENTORY]: "inventory",
   [FlowState.CRAFTING]: "crafting",
@@ -196,7 +194,7 @@ const layoutTabs = createTabController({
   }
 });
 flowOrchestrator = createFlowOrchestrator({
-  initialState: FlowState.COMBAT,
+  initialState: FlowState.MAP,
   onTransition: ({ to }) => {
     const nextTab = flowStateToTab[to];
     if (nextTab) {
@@ -208,7 +206,7 @@ flowOrchestrator = createFlowOrchestrator({
   }
 });
 const flowState = createFlowState({
-  initialScreen: getFlowScreenFromTab(layoutTabs.getActiveValue()) ?? FLOW_SCREENS.COMBAT
+  initialScreen: getFlowScreenFromTab(layoutTabs.getActiveValue()) ?? FLOW_SCREENS.MAP
 });
 const layoutTabNavigation = createTabNavigationAdapter({
   buttons: layoutTabButtons,
@@ -238,7 +236,6 @@ createGameFlowNavigator({ emitter: gameFlow, layoutTabs });
 applyGameWorldPanelLayout(gameWorldPanel);
 createGameWorldLayerStack({ container: gameWorldLayerStack });
 applyWorldMapPanelLayout({
-  layout: worldMapLayout,
   panel: worldMapPanel,
   surface: worldMapSurface
 });
@@ -350,7 +347,7 @@ function applyGameFlowState(nextState) {
   if (document?.body) {
     document.body.dataset.gameFlowState = nextState;
   }
-  const target = nextState === GameFlowState.MAP ? "map" : "battle";
+  const target = nextState === GameFlowState.LOOT ? "inventory" : "map";
   layoutTabs.setActive(target);
 }
 
@@ -1372,8 +1369,6 @@ function wireLayoutTabs() {
   const initial = layoutTabs.getActiveValue();
   if (initial === "map") {
     requestGameFlowTransition(GameFlowEvent.SHOW_MAP);
-  } else if (initial === "battle") {
-    requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
   } else if (initial) {
     layoutTabs.setActive(initial);
   }
@@ -1385,10 +1380,6 @@ function wireLayoutTabs() {
       }
       if (target === "map") {
         requestGameFlowTransition(GameFlowEvent.SHOW_MAP);
-        return;
-      }
-      if (target === "battle") {
-        requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
         return;
       }
       layoutTabs.setActive(target);

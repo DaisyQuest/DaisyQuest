@@ -148,10 +148,8 @@ describe("game flow navigation", () => {
   function setupDom() {
     const dom = new JSDOM(
       `
-        <button class="layout-tab-button is-active" data-tab-target="battle"></button>
-        <button class="layout-tab-button" data-tab-target="map"></button>
+        <button class="layout-tab-button is-active" data-tab-target="map"></button>
         <button class="layout-tab-button" data-tab-target="inventory"></button>
-        <section data-tab-panel="battle"></section>
         <section data-tab-panel="map"></section>
         <section data-tab-panel="inventory"></section>
       `
@@ -190,7 +188,7 @@ describe("game flow navigation", () => {
     expectActive(doc, "map");
 
     emitter.emit(GameFlowEvent.CombatStarted, { npcId: "npc-2" });
-    expectActive(doc, "battle");
+    expectActive(doc, "map");
 
     emitter.emit(GameFlowEvent.LootGranted, { loot: ["Looted Ember"] });
     expectActive(doc, "inventory");

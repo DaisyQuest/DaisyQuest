@@ -5,8 +5,8 @@ export const FLOW_SCREENS = Object.freeze({
 });
 
 export const FLOW_SCREEN_ENTRY_POINTS = Object.freeze({
-  [FLOW_SCREENS.COMBAT]: { tabKey: "battle", panelId: "tab-panel-battle" },
   [FLOW_SCREENS.MAP]: { tabKey: "map", panelId: "tab-panel-map" },
+  [FLOW_SCREENS.COMBAT]: { tabKey: "map", panelId: "tab-panel-map" },
   [FLOW_SCREENS.LOOT]: { tabKey: "inventory", panelId: "tab-panel-inventory" }
 });
 
@@ -28,8 +28,8 @@ export function getFlowScreenFromTab(tabKey) {
   return match ? match[0] : null;
 }
 
-export function createFlowState({ initialScreen = FLOW_SCREENS.COMBAT } = {}) {
-  const normalized = isFlowScreen(initialScreen) ? initialScreen : FLOW_SCREENS.COMBAT;
+export function createFlowState({ initialScreen = FLOW_SCREENS.MAP } = {}) {
+  const normalized = isFlowScreen(initialScreen) ? initialScreen : FLOW_SCREENS.MAP;
   let state = { screen: normalized, meta: null };
   const listeners = new Set();
 

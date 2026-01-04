@@ -121,6 +121,23 @@ body {
   color: #1e0f24;
 }
 
+.chat-tab-button {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f6f4ff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chat-tab-button.is-active {
+  background: linear-gradient(135deg, #93c5fd, #fbbf24);
+  color: #1e0f24;
+}
+
 
 .panel {
   background: linear-gradient(165deg, var(--dq-surface), rgba(10, 10, 20, 0.9));
@@ -496,14 +513,31 @@ body {
   display: grid;
   gap: 20px;
   grid-column: 1 / -1;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
-.map-layout {
+.map-game-layout {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
   gap: 20px;
   align-items: stretch;
+}
+
+.map-game-main {
+  display: grid;
+  gap: 20px;
+}
+
+.map-utility-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.map-game-side {
+  display: grid;
+  gap: 20px;
 }
 
 .map-panel .world-panel {
@@ -514,7 +548,7 @@ body {
 }
 
 .map-panel .world-panel__surface {
-  min-height: min(70vh, 720px);
+  min-height: min(52vh, 600px);
   flex: 1;
   width: 100%;
   height: 100%;
@@ -548,7 +582,11 @@ body {
 }
 
 @media (max-width: 900px) {
-  .map-layout {
+  .map-game-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-utility-row {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -612,6 +650,94 @@ body {
     transparent 65%
   );
   box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+}
+
+.combat-dock {
+  display: grid;
+  gap: 16px;
+}
+
+.battle-stage--compact {
+  min-height: min(58vh, 600px);
+  height: min(58vh, 600px);
+}
+
+.battle-hud--compact {
+  gap: 12px;
+  padding: 14px;
+}
+
+.battle-hud--compact .battle-hud__top {
+  padding: 12px 14px;
+}
+
+.battle-hud--compact .battle-hud__footer {
+  gap: 12px;
+}
+
+.interaction-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.interaction-details {
+  display: grid;
+  gap: 10px;
+  color: var(--dq-muted);
+}
+
+.interaction-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--dq-muted);
+}
+
+.interaction-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chat-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.chat-panel .panel-header {
+  align-items: center;
+}
+
+.chat-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-feed {
+  background: rgba(10, 14, 32, 0.5);
+  border-radius: 14px;
+  padding: 12px;
+  min-height: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.chat-input {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--dq-text);
 }
 
 .effect-bounds {
