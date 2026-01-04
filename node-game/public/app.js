@@ -494,7 +494,7 @@ async function handleInteractionDecision(payload, meta) {
       if (movement?.moved) {
         pushLog([`You move toward ${summary}.`]);
       } else {
-        pushLog([`You are already at (${movement?.to?.x ?? \"?\"}, ${movement?.to?.y ?? \"?\"}).`]);
+        pushLog([`You are already at (${movement?.to?.x ?? "?"}, ${movement?.to?.y ?? "?"}).`]);
       }
       minimapPanel.refresh();
     } catch (error) {
