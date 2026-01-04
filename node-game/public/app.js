@@ -7,6 +7,7 @@ import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameW
 import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
+import { createWorldMapView, getSurfacePercentFromEvent } from "./ui/worldMapView.js";
 
 const logList = document.getElementById("log");
 const playerHealth = document.getElementById("player-health");
@@ -36,6 +37,10 @@ const minimapToggle = document.getElementById("minimap-toggle");
 const worldMapPanel = document.getElementById("world-panel");
 const worldMapLayout = document.querySelector(".map-layout");
 const worldMapSurface = worldMapPanel?.querySelector(".world-panel__surface") ?? null;
+const worldMapEntities = worldMapPanel?.querySelector("[data-world-map-entities]") ?? null;
+const worldMapCoordinates =
+  worldMapPanel?.querySelector("[data-world-map-coordinates]") ?? null;
+const worldMapRegion = worldMapPanel?.querySelector("[data-world-map-region]") ?? null;
 const captionGlobal = document.getElementById("caption-global");
 const captionPlayer = document.getElementById("caption-player");
 const captionEnemy = document.getElementById("caption-enemy");
@@ -93,8 +98,6 @@ const tradeRequestForm = document.getElementById("trade-request-form");
 const tradeTarget = document.getElementById("trade-target");
 const tradeRequestMessage = document.getElementById("trade-request-message");
 const tradeList = document.getElementById("trade-list");
-const worldPanel = document.getElementById("world-panel");
-const worldPanelSurface = worldPanel?.querySelector(".world-panel__surface") ?? null;
 
 const API_TOKEN_KEY = "dq-auth-token";
 
@@ -155,6 +158,14 @@ const minimapPanel = createMinimapPanel({
   toggleButton: minimapToggle,
   legendContainer: minimapLegend,
   fetchMinimap: () => apiRequest("/api/world/minimap")
+});
+
+const worldMapView = createWorldMapView({
+  surface: worldMapSurface,
+  entitiesContainer: worldMapEntities,
+  coordinatesLabel: worldMapCoordinates,
+  regionLabel: worldMapRegion,
+  apiRequest
 });
 
 function apiRequest(path, options = {}) {
@@ -452,25 +463,43 @@ function initializeBattleScene() {
 }
 
 function initializeWorldInteractions() {
-  if (worldInteractionClient || !battleScene) {
+  if (worldInteractionClient || !worldMapSurface) {
     return;
   }
-  const surfaces = [battleScene, worldPanelSurface].filter(Boolean);
   worldInteractionClient = createWorldInteractionClient({
-    surfaces,
+    surfaces: [worldMapSurface],
     apiRequest,
     onDecision: handleInteractionDecision,
     onContextAction: handleContextActionResult
   });
 }
 
-function handleInteractionDecision(payload) {
+async function handleInteractionDecision(payload, meta) {
   if (!payload) {
     return;
   }
   const summary = describeInteractionTarget(payload.resolvedTarget);
   if (payload.action === "move") {
-    pushLog([`You move toward ${summary}.`]);
+    const percent = getSurfacePercentFromEvent({
+      event: meta?.event,
+      surface: worldMapSurface
+    });
+    if (!percent) {
+      pushLog([`You move toward ${summary}.`]);
+      return;
+    }
+    try {
+      const result = await worldMapView.moveToPercent(percent);
+      const movement = result?.movement;
+      if (movement?.moved) {
+        pushLog([`You move toward ${summary}.`]);
+      } else {
+        pushLog([`You are already at (${movement?.to?.x ?? \"?\"}, ${movement?.to?.y ?? \"?\"}).`]);
+      }
+      minimapPanel.refresh();
+    } catch (error) {
+      pushLog([error.message]);
+    }
     return;
   }
   if (payload.action === "interact") {
@@ -1361,6 +1390,7 @@ async function handleLogout() {
     currentTrades = [];
     tradeList.innerHTML = "";
     minimapPanel.stop();
+    worldMapView.stop();
     updateAuthStatus(null);
     if (worldInteractionClient) {
       worldInteractionClient.destroy();
@@ -1403,6 +1433,7 @@ function initializeGameUI() {
   updateActionButtons();
   startCombatLoop();
   minimapPanel.start();
+  worldMapView.start();
 }
 
 actionButtons.forEach((button) => {

@@ -74,7 +74,12 @@ export function createWorldInteractionClient({
         candidates
       }
     }).then((payload) => {
-      onDecision?.(payload);
+      onDecision?.(payload, {
+        event,
+        candidates,
+        point: { x: event.clientX, y: event.clientY },
+        surface: event.currentTarget
+      });
     });
   }
 

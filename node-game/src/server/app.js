@@ -200,6 +200,36 @@ export function createApp({
     res.json(snapshot);
   });
 
+  app.get("/api/world/state", requireSession, async (req, res) => {
+    const tick = req.session.advanceWorldTick();
+    if (tick.error) {
+      res.status(400).json({ error: tick.error });
+      return;
+    }
+    await persistSession(req.session);
+    res.json({
+      playerId: req.session.username,
+      world: tick.world,
+      otherMovements: tick.otherMovements
+    });
+  });
+
+  app.post("/api/world/move", requireSession, async (req, res) => {
+    const { target } = req.body ?? {};
+    const result = req.session.moveWorldPlayer(target);
+    if (result.error) {
+      res.status(400).json({ error: result.error });
+      return;
+    }
+    await persistSession(req.session);
+    res.json({
+      playerId: req.session.username,
+      world: result.world,
+      movement: result.movement,
+      otherMovements: result.otherMovements
+    });
+  });
+
   app.post("/api/registry/items", requireSession, async (req, res) => {
     const result = req.session.updateItem(req.body);
     if (result.error) {

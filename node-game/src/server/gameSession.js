@@ -21,6 +21,7 @@ import { createCoreSystemRegistry } from "../systems/systemCatalog.js";
 import { createProgressionSystem } from "../systems/progressionSystem.js";
 import { createRegistryEditor } from "../systems/registryEditor.js";
 import { createWorldState } from "../world/worldState.js";
+import { applyWorldMovement, moveOtherPlayers } from "../world/movementEngine.js";
 
 export const PROGRESSION_THRESHOLDS = Object.freeze([0, 120, 280, 480, 720, 1000, 1400, 1900]);
 
@@ -214,6 +215,43 @@ export function createGameSession({
 
   function getWorldState() {
     return state.world;
+  }
+
+  function moveWorldPlayer(target) {
+    if (!state.world) {
+      return { error: "World state is not initialized." };
+    }
+    const result = applyWorldMovement({
+      worldState: state.world,
+      playerId: username,
+      target,
+      rng
+    });
+    if (result.error) {
+      return { error: result.error };
+    }
+    state = { ...state, world: result.worldState };
+    return {
+      world: state.world,
+      movement: result.movement,
+      otherMovements: result.otherMovements
+    };
+  }
+
+  function advanceWorldTick() {
+    if (!state.world) {
+      return { error: "World state is not initialized." };
+    }
+    const result = moveOtherPlayers({
+      worldState: state.world,
+      playerId: username,
+      rng
+    });
+    if (result.error) {
+      return { error: result.error };
+    }
+    state = { ...state, world: result.worldState };
+    return { world: state.world, otherMovements: result.movements };
   }
 
   function getRegistrySnapshot() {
@@ -556,6 +594,8 @@ export function createGameSession({
     getPersistenceSnapshot,
     getConfig,
     getWorldState,
+    moveWorldPlayer,
+    advanceWorldTick,
     resetBattle,
     attemptAction,
     processEnemyTick,

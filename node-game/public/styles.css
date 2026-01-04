@@ -743,6 +743,11 @@ body {
   margin-top: 12px;
 }
 
+.world-panel__entities {
+  position: absolute;
+  inset: 0;
+}
+
 .world-panel__target {
   position: absolute;
   left: var(--x, 50%);
@@ -778,6 +783,11 @@ body {
 .world-panel__target--player {
   color: #7dd3fc;
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+}
+
+.world-panel__target--self {
+  color: #facc15;
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.45);
 }
 
 .world-panel__target--npc {

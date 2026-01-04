@@ -42,6 +42,17 @@ describe("server app", () => {
     expect(minimapZero.status).toBe(200);
     expect(minimapZero.body.radius).toBe(0);
 
+    const worldState = await request(app).get("/api/world/state").set(authHeader);
+    expect(worldState.status).toBe(200);
+    expect(worldState.body.world.worldMap).toBeDefined();
+
+    const moveResult = await request(app)
+      .post("/api/world/move")
+      .set(authHeader)
+      .send({ target: { xPercent: 0, yPercent: 0 } });
+    expect(moveResult.status).toBe(200);
+    expect(moveResult.body.movement).toMatchObject({ id: "hero" });
+
     const health = await request(app).get("/health");
     expect(health.status).toBe(200);
 
