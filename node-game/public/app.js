@@ -7,6 +7,13 @@ import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameW
 import { applySpriteToImage, getBattleSpriteSet } from "./ui/battleSceneAssets.js";
 import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
+import { createFlowState, FLOW_SCREENS, getFlowScreenFromTab } from "./ui/flowState.js";
+import {
+  createCombatScreenAdapter,
+  createLootScreenAdapter,
+  createMapScreenAdapter
+} from "./ui/screenAdapters.js";
+import { createTabNavigationAdapter } from "./ui/tabNavigationAdapter.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
 import { createWorldMapView, getSurfacePercentFromEvent } from "./ui/worldMapView.js";
 
@@ -147,6 +154,31 @@ const layoutTabs = createTabController({
   buttonKey: "tabTarget",
   panelKey: "tabPanel"
 });
+const flowState = createFlowState({
+  initialScreen: getFlowScreenFromTab(layoutTabs.getActiveValue()) ?? FLOW_SCREENS.COMBAT
+});
+const layoutTabNavigation = createTabNavigationAdapter({
+  buttons: layoutTabButtons,
+  buttonKey: "tabTarget",
+  onSelect: (tabKey) => {
+    const flowScreen = getFlowScreenFromTab(tabKey);
+    if (flowScreen) {
+      flowState.setScreen(flowScreen, { source: "layout-tab" });
+      return;
+    }
+    layoutTabs.setActive(tabKey);
+  }
+});
+const registryTabNavigation = createTabNavigationAdapter({
+  buttons: tabButtons,
+  buttonKey: "tab",
+  onSelect: (tabKey) => {
+    registryTabs.setActive(tabKey);
+  }
+});
+const combatScreenAdapter = createCombatScreenAdapter({ flowState, tabController: layoutTabs });
+const mapScreenAdapter = createMapScreenAdapter({ flowState, tabController: layoutTabs });
+const lootScreenAdapter = createLootScreenAdapter({ flowState, tabController: layoutTabs });
 applyGameWorldPanelLayout(gameWorldPanel);
 createGameWorldLayerStack({ container: gameWorldLayerStack });
 applyWorldMapPanelLayout({
@@ -248,6 +280,9 @@ function pushLog(lines) {
 
 function pushLoot(lines) {
   lootFeed.pushLines(lines);
+  if (Array.isArray(lines) && lines.length) {
+    flowState.setScreen(FLOW_SCREENS.LOOT, { source: "loot-drop" });
+  }
 }
 
 function updateMeters() {
@@ -1416,6 +1451,7 @@ async function handleLogout() {
       worldInteractionClient.destroy();
       worldInteractionClient = null;
     }
+    flowState.setScreen(FLOW_SCREENS.COMBAT, { source: "logout" });
   }
 }
 
@@ -1433,7 +1469,7 @@ function initializeGameUI() {
   populateRecipeResultOptions();
   wireTabs();
   wireLayoutTabs();
-  layoutTabs.setActive("battle");
+  flowState.setScreen(FLOW_SCREENS.COMBAT, { source: "init" });
   populateRecipes();
   renderRecipeDetails();
   populateItemForm(null);

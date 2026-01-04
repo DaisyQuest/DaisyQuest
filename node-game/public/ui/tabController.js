@@ -45,12 +45,6 @@ export function createTabController({
     if (initialValue) {
       setActive(initialValue);
     }
-
-    buttonList.forEach((button) => {
-      button.addEventListener("click", () => {
-        setActive(button.dataset[buttonKey]);
-      });
-    });
   }
 
   return Object.freeze({
