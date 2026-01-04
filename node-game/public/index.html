@@ -46,23 +46,12 @@
       <nav class="layout-tabs" aria-label="Primary navigation" role="tablist">
         <button
           class="layout-tab-button is-active"
-          id="tab-button-battle"
-          type="button"
-          data-tab-target="battle"
-          role="tab"
-          aria-controls="tab-panel-battle"
-          aria-selected="true"
-        >
-          Battle
-        </button>
-        <button
-          class="layout-tab-button"
           id="tab-button-map"
           type="button"
           data-tab-target="map"
           role="tab"
           aria-controls="tab-panel-map"
-          aria-selected="false"
+          aria-selected="true"
         >
           Map
         </button>
@@ -112,168 +101,118 @@
         </button>
       </nav>
       <section
-        class="panel tab-panel is-active"
-        id="tab-panel-battle"
-        data-tab-panel="battle"
+        class="panel map-panel is-active"
+        id="tab-panel-map"
+        data-tab-panel="map"
         role="tabpanel"
-        aria-labelledby="tab-button-battle"
+        aria-labelledby="tab-button-map"
       >
-        <div class="battle-tab-layout">
-          <div class="battle-tab-main">
-            <div class="battle-stage">
-              <div class="battle-scene game-world-panel" id="battle-scene" data-game-world-panel>
-                <div class="game-world-layer-stack" id="game-world-layer-stack" aria-hidden="true"></div>
-                <div class="battle-scene__parallax" aria-hidden="true">
-                  <div class="parallax-layer layer-distant"></div>
-                  <div class="parallax-layer layer-mid"></div>
-                  <div class="parallax-layer layer-near"></div>
+        <header class="panel-header">
+          <div>
+            <h2>World Command View</h2>
+            <p class="subtitle">
+              Navigate the realm, coordinate combat, and manage encounters from one screen.
+            </p>
+          </div>
+          <div class="map-status">
+            <span class="badge">Map-First</span>
+          </div>
+        </header>
+        <div class="map-game-layout">
+          <div class="map-game-main">
+            <div class="world-panel" id="world-panel">
+              <header class="world-panel__header">
+                <div>
+                  <h3>World Map</h3>
+                  <p class="subtitle">
+                    Right-click to inspect, trade, or interact with nearby entities.
+                  </p>
                 </div>
-                <div class="battle-scene__ambient" id="battle-particles" aria-hidden="true"></div>
-                <div class="battle-scene__baseline" aria-hidden="true"></div>
-                <div class="caption-zone" id="caption-global" data-zone="global" aria-live="polite"></div>
-                <div class="caption-zone" id="caption-player" data-zone="player" aria-live="polite"></div>
-                <div class="caption-zone" id="caption-enemy" data-zone="enemy" aria-live="polite"></div>
-                <div
-                  class="battle-combatant battle-combatant--player"
-                  id="battle-player"
-                  data-interaction-type="player"
-                  data-interaction-id="player"
-                  data-interaction-label="Hero"
-                  data-interaction-layer="20"
-                >
-                  <div class="status-banners" id="player-status-banners"></div>
-                  <div class="battle-sprite-frame">
-                    <img
-                      class="battle-sprite"
-                      id="player-battle-sprite"
-                      src="assets/battle/avi_sprite_1_position1.png"
-                      alt="Hero battle sprite"
-                      loading="eager"
-                    />
+                <div class="world-panel__status" data-world-map-hud>
+                  <span class="world-panel__status-label">Travel Mode</span>
+                  <span class="world-panel__status-detail" data-world-map-hint>
+                    Click a tile to move • Right-click for actions
+                  </span>
+                </div>
+              </header>
+              <div class="world-panel__surface" data-world-map-surface>
+                <div class="world-panel__hud" aria-hidden="true">
+                  <div class="world-panel__compass">N</div>
+                  <div class="world-panel__coordinates" data-world-map-coordinates>
+                    Coordinates: --, --
                   </div>
-                  <div class="effect-bounds" data-role="player" aria-hidden="true"></div>
+                  <div class="world-panel__region" data-world-map-region>Region: --</div>
                 </div>
-                <div
-                  class="battle-combatant battle-combatant--enemy"
-                  id="battle-enemy"
-                  data-interaction-type="npc"
-                  data-interaction-id="enemy"
-                  data-interaction-label="Challenger"
-                  data-interaction-layer="30"
-                >
-                  <div class="status-banners" id="enemy-status-banners"></div>
-                  <div class="battle-sprite-frame">
-                    <img
-                      class="battle-sprite"
-                      id="enemy-battle-sprite"
-                      src="assets/battle/otherworldly_beast.png"
-                      alt="Enemy battle sprite"
-                      loading="eager"
-                    />
-                  </div>
-                  <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
-                </div>
-                <div
-                  class="battle-scene__relic"
-                  data-interaction-type="object"
-                  data-interaction-id="battle-relic"
-                  data-interaction-label="Ember Relic"
-                  data-interaction-layer="10"
-                >
-                  Ember Relic
-                </div>
-              </div>
-              <div class="battle-hud">
-                <div class="battle-hud__top battle-hud__panel">
-                  <header class="hero-header">
-                    <div>
-                      <h1>DaisyQuest: Ember Duel</h1>
-                      <p class="subtitle">
-                        A refined combat encounter for the next-generation DaisyQuest.
-                      </p>
-                    </div>
-                    <div class="theme-selector">
-                      <label for="theme-select">Theme</label>
-                      <select id="theme-select" aria-label="Select a theme"></select>
-                    </div>
-                  </header>
-                  <div class="npc-selector">
-                    <label for="npc-select">Choose a challenger</label>
-                    <select id="npc-select" aria-label="Select a challenger"></select>
-                    <p class="npc-description" id="npc-description"></p>
-                  </div>
-                </div>
-                <div class="battle-hud__footer">
-                  <div class="battlefield battle-hud__panel">
-                    <div class="combatant" id="player-card">
-                      <h2 id="player-name">Hero</h2>
-                      <div class="sprite-frame">
-                        <img
-                          class="sprite-portrait"
-                          id="player-sprite"
-                          src="assets/battle/avi_sprite_1_position1.png"
-                          alt="Hero portrait"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div class="bar">
-                        <span>Health</span>
-                        <div class="meter">
-                          <div class="fill" id="player-health"></div>
-                        </div>
-                        <span class="value" id="player-health-value"></span>
-                      </div>
-                      <div class="bar">
-                        <span>Mana</span>
-                        <div class="meter mana">
-                          <div class="fill" id="player-mana"></div>
-                        </div>
-                        <span class="value" id="player-mana-value"></span>
-                      </div>
-                    </div>
-                    <div class="combatant" id="enemy-card">
-                      <h2 id="enemy-name">Otherworldly Beast</h2>
-                      <div class="sprite-frame">
-                        <img
-                          class="sprite-portrait"
-                          id="enemy-sprite"
-                          src="assets/battle/otherworldly_beast.png"
-                          alt="Enemy portrait"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div class="bar">
-                        <span>Health</span>
-                        <div class="meter">
-                          <div class="fill" id="enemy-health"></div>
-                        </div>
-                        <span class="value" id="enemy-health-value"></span>
-                      </div>
-                      <div class="bar" id="enemy-focus-row">
-                        <span>Focus</span>
-                        <div class="meter focus">
-                          <div class="fill" id="enemy-focus"></div>
-                        </div>
-                        <span class="value" id="enemy-focus-value"></span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="controls battle-hud__panel">
-                    <button class="action" data-action="attack">Swift Strike</button>
-                    <button class="action" data-action="special">Ember Surge</button>
-                    <button class="action" data-action="heal">Serenity Bloom</button>
-                    <button class="secondary" id="reset">Reset Battle</button>
-                  </div>
-                </div>
+                <div class="world-panel__entities" data-world-map-entities></div>
               </div>
             </div>
+            <div class="map-utility-row">
+              <div class="minimap-panel" id="minimap-panel">
+                <div class="minimap-panel__header">
+                  <span>Realm Minimap</span>
+                  <button
+                    class="secondary minimap-toggle"
+                    id="minimap-toggle"
+                    type="button"
+                    aria-pressed="true"
+                  >
+                    Hide
+                  </button>
+                </div>
+                <canvas id="minimap-canvas" width="180" height="180"></canvas>
+                <div class="minimap-legend" id="minimap-legend"></div>
+              </div>
+              <section class="subpanel interaction-panel" id="interaction-panel">
+                <header class="panel-header">
+                  <div>
+                    <h3>Interaction Focus</h3>
+                    <p class="subtitle">Select a target on the map to reveal actions.</p>
+                  </div>
+                  <span class="badge">Contextual</span>
+                </header>
+                <div class="interaction-details" id="interaction-details">
+                  <p class="caption">No target selected. Highlight a player, NPC, or object.</p>
+                  <ul class="interaction-list">
+                    <li><strong>Mode:</strong> Travel</li>
+                    <li><strong>Engage:</strong> Select a hostile target, then choose Engage.</li>
+                    <li><strong>Interact:</strong> Gather, trade, or speak when in range.</li>
+                  </ul>
+                </div>
+                <div class="interaction-actions">
+                  <button class="secondary" type="button" disabled>Engage</button>
+                  <button class="secondary" type="button" disabled>Interact</button>
+                </div>
+              </section>
+            </div>
           </div>
-          <aside class="battle-tab-side">
-            <section class="subpanel">
-              <h3>Battle Chronicle</h3>
-              <ul id="log"></ul>
+          <aside class="map-game-side">
+            <section class="subpanel chat-panel">
+              <header class="panel-header">
+                <div>
+                  <h3>Chat & Field Reports</h3>
+                  <p class="subtitle">Party chatter and system updates stay visible.</p>
+                </div>
+                <div class="chat-tabs" role="tablist" aria-label="Chat channels">
+                  <button class="chat-tab-button is-active" type="button" role="tab">Local</button>
+                  <button class="chat-tab-button" type="button" role="tab">Party</button>
+                  <button class="chat-tab-button" type="button" role="tab">Guild</button>
+                  <button class="chat-tab-button" type="button" role="tab">System</button>
+                </div>
+              </header>
+              <div class="chat-feed">
+                <ul id="log"></ul>
+              </div>
+              <div class="chat-input">
+                <input
+                  id="chat-input"
+                  type="text"
+                  placeholder="Type a message..."
+                  aria-label="Chat message"
+                />
+                <button class="secondary" type="button" disabled>Send</button>
+              </div>
             </section>
-            <section class="subpanel">
+            <section class="subpanel progression-panel">
               <header class="panel-header">
                 <div>
                   <h3>Reward Track</h3>
@@ -310,62 +249,155 @@
             </section>
           </aside>
         </div>
-      </section>
-      <section
-        class="panel map-panel"
-        id="tab-panel-map"
-        data-tab-panel="map"
-        role="tabpanel"
-        aria-labelledby="tab-button-map"
-        hidden
-      >
-        <header class="panel-header">
-          <div>
-            <h2>World Map</h2>
-            <p class="subtitle">Track nearby activity and move across the realm.</p>
-          </div>
-        </header>
-        <div class="map-layout">
-          <div class="world-panel" id="world-panel">
-            <header class="world-panel__header">
-              <div>
-                <h3>World Panel</h3>
-                <p class="subtitle">Right-click to inspect, trade, or interact with nearby entities.</p>
+        <section class="combat-dock" aria-label="Combat control deck">
+          <div class="battle-stage battle-stage--compact">
+            <div class="battle-scene game-world-panel" id="battle-scene" data-game-world-panel>
+              <div class="game-world-layer-stack" id="game-world-layer-stack" aria-hidden="true"></div>
+              <div class="battle-scene__parallax" aria-hidden="true">
+                <div class="parallax-layer layer-distant"></div>
+                <div class="parallax-layer layer-mid"></div>
+                <div class="parallax-layer layer-near"></div>
               </div>
-              <div class="world-panel__status" data-world-map-hud>
-                <span class="world-panel__status-label">Travel Mode</span>
-                <span class="world-panel__status-detail" data-world-map-hint>
-                  Click a tile to move • Right-click for actions
-                </span>
-              </div>
-            </header>
-            <div class="world-panel__surface" data-world-map-surface>
-              <div class="world-panel__hud" aria-hidden="true">
-                <div class="world-panel__compass">N</div>
-                <div class="world-panel__coordinates" data-world-map-coordinates>
-                  Coordinates: --, --
-                </div>
-                <div class="world-panel__region" data-world-map-region>Region: --</div>
-              </div>
-              <div class="world-panel__entities" data-world-map-entities></div>
-            </div>
-          </div>
-          <div class="minimap-panel" id="minimap-panel">
-            <div class="minimap-panel__header">
-              <span>Realm Minimap</span>
-              <button
-                class="secondary minimap-toggle"
-                id="minimap-toggle"
-                type="button"
-                aria-pressed="true"
+              <div class="battle-scene__ambient" id="battle-particles" aria-hidden="true"></div>
+              <div class="battle-scene__baseline" aria-hidden="true"></div>
+              <div class="caption-zone" id="caption-global" data-zone="global" aria-live="polite"></div>
+              <div class="caption-zone" id="caption-player" data-zone="player" aria-live="polite"></div>
+              <div class="caption-zone" id="caption-enemy" data-zone="enemy" aria-live="polite"></div>
+              <div
+                class="battle-combatant battle-combatant--player"
+                id="battle-player"
+                data-interaction-type="player"
+                data-interaction-id="player"
+                data-interaction-label="Hero"
+                data-interaction-layer="20"
               >
-                Hide
-              </button>
+                <div class="status-banners" id="player-status-banners"></div>
+                <div class="battle-sprite-frame">
+                  <img
+                    class="battle-sprite"
+                    id="player-battle-sprite"
+                    src="assets/battle/avi_sprite_1_position1.png"
+                    alt="Hero battle sprite"
+                    loading="eager"
+                  />
+                </div>
+                <div class="effect-bounds" data-role="player" aria-hidden="true"></div>
+              </div>
+              <div
+                class="battle-combatant battle-combatant--enemy"
+                id="battle-enemy"
+                data-interaction-type="npc"
+                data-interaction-id="enemy"
+                data-interaction-label="Challenger"
+                data-interaction-layer="30"
+              >
+                <div class="status-banners" id="enemy-status-banners"></div>
+                <div class="battle-sprite-frame">
+                  <img
+                    class="battle-sprite"
+                    id="enemy-battle-sprite"
+                    src="assets/battle/otherworldly_beast.png"
+                    alt="Enemy battle sprite"
+                    loading="eager"
+                  />
+                </div>
+                <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
+              </div>
+              <div
+                class="battle-scene__relic"
+                data-interaction-type="object"
+                data-interaction-id="battle-relic"
+                data-interaction-label="Ember Relic"
+                data-interaction-layer="10"
+              >
+                Ember Relic
+              </div>
             </div>
-            <canvas id="minimap-canvas" width="180" height="180"></canvas>
-            <div class="minimap-legend" id="minimap-legend"></div>
+            <div class="battle-hud battle-hud--compact">
+              <div class="battle-hud__top battle-hud__panel">
+                <header class="hero-header">
+                  <div>
+                    <h1>Combat Control</h1>
+                    <p class="subtitle">
+                      Initiate encounters from the map and execute abilities without switching tabs.
+                    </p>
+                  </div>
+                  <div class="theme-selector">
+                    <label for="theme-select">Theme</label>
+                    <select id="theme-select" aria-label="Select a theme"></select>
+                  </div>
+                </header>
+                <div class="npc-selector">
+                  <label for="npc-select">Choose a challenger</label>
+                  <select id="npc-select" aria-label="Select a challenger"></select>
+                  <p class="npc-description" id="npc-description"></p>
+                </div>
+              </div>
+              <div class="battle-hud__footer">
+                <div class="battlefield battle-hud__panel">
+                  <div class="combatant" id="player-card">
+                    <h2 id="player-name">Hero</h2>
+                    <div class="sprite-frame">
+                      <img
+                        class="sprite-portrait"
+                        id="player-sprite"
+                        src="assets/battle/avi_sprite_1_position1.png"
+                        alt="Hero portrait"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div class="bar">
+                      <span>Health</span>
+                      <div class="meter">
+                        <div class="fill" id="player-health"></div>
+                      </div>
+                      <span class="value" id="player-health-value"></span>
+                    </div>
+                    <div class="bar">
+                      <span>Mana</span>
+                      <div class="meter mana">
+                        <div class="fill" id="player-mana"></div>
+                      </div>
+                      <span class="value" id="player-mana-value"></span>
+                    </div>
+                  </div>
+                  <div class="combatant" id="enemy-card">
+                    <h2 id="enemy-name">Otherworldly Beast</h2>
+                    <div class="sprite-frame">
+                      <img
+                        class="sprite-portrait"
+                        id="enemy-sprite"
+                        src="assets/battle/otherworldly_beast.png"
+                        alt="Enemy portrait"
+                        loading="lazy"
+                      />
+                    </div>
+                    <div class="bar">
+                      <span>Health</span>
+                      <div class="meter">
+                        <div class="fill" id="enemy-health"></div>
+                      </div>
+                      <span class="value" id="enemy-health-value"></span>
+                    </div>
+                    <div class="bar" id="enemy-focus-row">
+                      <span>Focus</span>
+                      <div class="meter focus">
+                        <div class="fill" id="enemy-focus"></div>
+                      </div>
+                      <span class="value" id="enemy-focus-value"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="controls battle-hud__panel">
+                  <button class="action" data-action="attack">Swift Strike</button>
+                  <button class="action" data-action="special">Ember Surge</button>
+                  <button class="action" data-action="heal">Serenity Bloom</button>
+                  <button class="secondary" id="reset">Reset Battle</button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </section>
       <section
         class="panel inventory"

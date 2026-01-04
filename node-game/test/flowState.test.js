@@ -15,30 +15,30 @@ describe("flow state", () => {
 
   it("returns entry points for known screens", () => {
     expect(getFlowEntryPoint(FLOW_SCREENS.COMBAT)).toEqual({
-      tabKey: "battle",
-      panelId: "tab-panel-battle"
+      tabKey: "map",
+      panelId: "tab-panel-map"
     });
     expect(getFlowEntryPoint("missing")).toBeNull();
   });
 
   it("resolves flow screens from tab keys", () => {
-    expect(getFlowScreenFromTab("battle")).toBe(FLOW_SCREENS.COMBAT);
+    expect(getFlowScreenFromTab("battle")).toBeNull();
     expect(getFlowScreenFromTab("map")).toBe(FLOW_SCREENS.MAP);
     expect(getFlowScreenFromTab("inventory")).toBe(FLOW_SCREENS.LOOT);
     expect(getFlowScreenFromTab()).toBeNull();
     expect(getFlowScreenFromTab("unknown")).toBeNull();
   });
 
-  it("defaults to combat when provided with an invalid initial screen", () => {
+  it("defaults to map when provided with an invalid initial screen", () => {
     const flowState = createFlowState({ initialScreen: "invalid" });
 
-    expect(flowState.getState().screen).toBe(FLOW_SCREENS.COMBAT);
+    expect(flowState.getState().screen).toBe(FLOW_SCREENS.MAP);
   });
 
-  it("defaults to combat when no initial screen is provided", () => {
+  it("defaults to map when no initial screen is provided", () => {
     const flowState = createFlowState();
 
-    expect(flowState.getState().screen).toBe(FLOW_SCREENS.COMBAT);
+    expect(flowState.getState().screen).toBe(FLOW_SCREENS.MAP);
   });
 
   it("notifies subscribers when the screen changes", () => {

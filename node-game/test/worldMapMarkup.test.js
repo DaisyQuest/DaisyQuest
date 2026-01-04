@@ -24,4 +24,14 @@ describe("world map markup", () => {
     expect(surface).not.toBeNull();
     expect(entities).not.toBeNull();
   });
+
+  test("includes cohesive interaction, chat, and combat regions", () => {
+    const interactionPanel = mapPanel.querySelector("#interaction-panel");
+    const chatPanel = mapPanel.querySelector(".chat-panel");
+    const combatDock = mapPanel.querySelector(".combat-dock");
+
+    expect(interactionPanel).not.toBeNull();
+    expect(chatPanel).not.toBeNull();
+    expect(combatDock).not.toBeNull();
+  });
 });

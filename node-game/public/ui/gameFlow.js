@@ -96,7 +96,7 @@ export function createGameFlowNavigator({ emitter, layoutTabs }) {
   };
 
   const unsubscribeHandlers = [
-    emitter.on(GameFlowEvent.CombatStarted, () => setActive("battle")),
+    emitter.on(GameFlowEvent.CombatStarted, () => setActive("map")),
     emitter.on(GameFlowEvent.LootGranted, () => setActive("inventory")),
     emitter.on(GameFlowEvent.MapMoved, () => setActive("map"))
   ];
