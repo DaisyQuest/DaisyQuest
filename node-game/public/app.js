@@ -9,6 +9,11 @@ import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
 import { createWorldMapView, getSurfacePercentFromEvent } from "./ui/worldMapView.js";
+import {
+  createGameFlowActions,
+  createGameFlowEmitter,
+  createGameFlowNavigator
+} from "./ui/gameFlow.js";
 
 const logList = document.getElementById("log");
 const playerHealth = document.getElementById("player-health");
@@ -147,6 +152,9 @@ const layoutTabs = createTabController({
   buttonKey: "tabTarget",
   panelKey: "tabPanel"
 });
+const gameFlow = createGameFlowEmitter();
+const gameFlowActions = createGameFlowActions({ emitter: gameFlow });
+createGameFlowNavigator({ emitter: gameFlow, layoutTabs });
 applyGameWorldPanelLayout(gameWorldPanel);
 createGameWorldLayerStack({ container: gameWorldLayerStack });
 applyWorldMapPanelLayout({
@@ -516,6 +524,7 @@ async function handleInteractionDecision(payload, meta) {
       } else {
         pushLog([`You are already at (${movement?.to?.x ?? "?"}, ${movement?.to?.y ?? "?"}).`]);
       }
+      gameFlowActions.mapMoved(movement);
       minimapPanel.refresh();
     } catch (error) {
       pushLog([error.message]);
@@ -981,6 +990,7 @@ async function resetBattle() {
     applySessionSnapshot(payload);
     enemyName.textContent = npc.name;
     npcDescription.textContent = npc.description;
+    gameFlowActions.combatStarted({ npcId: npc.id });
     pushLog(payload.log);
     updateMeters();
     updateBattleSceneSprites();
@@ -1270,6 +1280,8 @@ async function executePlayerAction(action) {
     applySessionSnapshot(payload);
     pushLog(payload.log);
     pushLoot(payload.loot);
+    gameFlowActions.playerActionResolved(payload);
+    gameFlowActions.lootGranted(payload.loot);
     handleBattleEvent(payload.battleEvent);
     updateMeters();
     renderInventory();
@@ -1308,6 +1320,7 @@ async function pollEnemyAction() {
   try {
     const payload = await apiRequest("/api/battle/tick", { method: "POST" });
     applySessionSnapshot(payload);
+    gameFlowActions.enemyActionResolved(payload.battleEvent);
     handleBattleEvent(payload.battleEvent);
     if (payload.log?.length) {
       pushLog(payload.log);
@@ -1433,7 +1446,7 @@ function initializeGameUI() {
   populateRecipeResultOptions();
   wireTabs();
   wireLayoutTabs();
-  layoutTabs.setActive("battle");
+  gameFlowActions.combatStarted({ npcId: state.enemy?.id, reason: "bootstrap" });
   populateRecipes();
   renderRecipeDetails();
   populateItemForm(null);
