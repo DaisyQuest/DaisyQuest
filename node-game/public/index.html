@@ -43,174 +43,282 @@
           <p class="form-message" id="auth-message"></p>
         </form>
       </section>
-      <nav class="layout-tabs" aria-label="Primary navigation">
-        <button class="layout-tab-button is-active" type="button" data-tab-target="battle">
+      <nav class="layout-tabs" aria-label="Primary navigation" role="tablist">
+        <button
+          class="layout-tab-button is-active"
+          id="tab-button-battle"
+          type="button"
+          data-tab-target="battle"
+          role="tab"
+          aria-controls="tab-panel-battle"
+          aria-selected="true"
+        >
           Battle
         </button>
-        <button class="layout-tab-button" type="button" data-tab-target="map">Map</button>
-        <button class="layout-tab-button" type="button" data-tab-target="inventory">
+        <button
+          class="layout-tab-button"
+          id="tab-button-map"
+          type="button"
+          data-tab-target="map"
+          role="tab"
+          aria-controls="tab-panel-map"
+          aria-selected="false"
+        >
+          Map
+        </button>
+        <button
+          class="layout-tab-button"
+          id="tab-button-inventory"
+          type="button"
+          data-tab-target="inventory"
+          role="tab"
+          aria-controls="tab-panel-inventory"
+          aria-selected="false"
+        >
           Inventory
         </button>
-        <button class="layout-tab-button" type="button" data-tab-target="crafting">
+        <button
+          class="layout-tab-button"
+          id="tab-button-crafting"
+          type="button"
+          data-tab-target="crafting"
+          role="tab"
+          aria-controls="tab-panel-crafting"
+          aria-selected="false"
+        >
           Crafting
         </button>
-        <button class="layout-tab-button" type="button" data-tab-target="trading">
+        <button
+          class="layout-tab-button"
+          id="tab-button-trading"
+          type="button"
+          data-tab-target="trading"
+          role="tab"
+          aria-controls="tab-panel-trading"
+          aria-selected="false"
+        >
           Trading
         </button>
-        <button class="layout-tab-button" type="button" data-tab-target="registry">
+        <button
+          class="layout-tab-button"
+          id="tab-button-registry"
+          type="button"
+          data-tab-target="registry"
+          role="tab"
+          aria-controls="tab-panel-registry"
+          aria-selected="false"
+        >
           Registry
         </button>
       </nav>
-      <section class="panel hero" data-tab-panel="battle">
-        <div class="battle-stage">
-          <div class="battle-scene game-world-panel" id="battle-scene" data-game-world-panel>
-            <div class="game-world-layer-stack" id="game-world-layer-stack" aria-hidden="true"></div>
-            <div class="battle-scene__parallax" aria-hidden="true">
-              <div class="parallax-layer layer-distant"></div>
-              <div class="parallax-layer layer-mid"></div>
-              <div class="parallax-layer layer-near"></div>
-            </div>
-            <div class="battle-scene__ambient" id="battle-particles" aria-hidden="true"></div>
-            <div class="battle-scene__baseline" aria-hidden="true"></div>
-            <div class="caption-zone" id="caption-global" data-zone="global" aria-live="polite"></div>
-            <div class="caption-zone" id="caption-player" data-zone="player" aria-live="polite"></div>
-            <div class="caption-zone" id="caption-enemy" data-zone="enemy" aria-live="polite"></div>
-            <div
-              class="battle-combatant battle-combatant--player"
-              id="battle-player"
-              data-interaction-type="player"
-              data-interaction-id="player"
-              data-interaction-label="Hero"
-              data-interaction-layer="20"
-            >
-              <div class="status-banners" id="player-status-banners"></div>
-              <div class="battle-sprite-frame">
-                <img
-                  class="battle-sprite"
-                  id="player-battle-sprite"
-                  src="assets/battle/avi_sprite_1_position1.png"
-                  alt="Hero battle sprite"
-                  loading="eager"
-                />
-              </div>
-              <div class="effect-bounds" data-role="player" aria-hidden="true"></div>
-            </div>
-            <div
-              class="battle-combatant battle-combatant--enemy"
-              id="battle-enemy"
-              data-interaction-type="npc"
-              data-interaction-id="enemy"
-              data-interaction-label="Challenger"
-              data-interaction-layer="30"
-            >
-              <div class="status-banners" id="enemy-status-banners"></div>
-              <div class="battle-sprite-frame">
-                <img
-                  class="battle-sprite"
-                  id="enemy-battle-sprite"
-                  src="assets/battle/otherworldly_beast.png"
-                  alt="Enemy battle sprite"
-                  loading="eager"
-                />
-              </div>
-              <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
-            </div>
-            <div
-              class="battle-scene__relic"
-              data-interaction-type="object"
-              data-interaction-id="battle-relic"
-              data-interaction-label="Ember Relic"
-              data-interaction-layer="10"
-            >
-              Ember Relic
-            </div>
-          </div>
-          <div class="battle-hud">
-            <div class="battle-hud__top battle-hud__panel">
-              <header class="hero-header">
-                <div>
-                  <h1>DaisyQuest: Ember Duel</h1>
-                  <p class="subtitle">
-                    A refined combat encounter for the next-generation DaisyQuest.
-                  </p>
+      <section
+        class="panel tab-panel is-active"
+        id="tab-panel-battle"
+        data-tab-panel="battle"
+        role="tabpanel"
+        aria-labelledby="tab-button-battle"
+      >
+        <div class="battle-tab-layout">
+          <div class="battle-tab-main">
+            <div class="battle-stage">
+              <div class="battle-scene game-world-panel" id="battle-scene" data-game-world-panel>
+                <div class="game-world-layer-stack" id="game-world-layer-stack" aria-hidden="true"></div>
+                <div class="battle-scene__parallax" aria-hidden="true">
+                  <div class="parallax-layer layer-distant"></div>
+                  <div class="parallax-layer layer-mid"></div>
+                  <div class="parallax-layer layer-near"></div>
                 </div>
-                <div class="theme-selector">
-                  <label for="theme-select">Theme</label>
-                  <select id="theme-select" aria-label="Select a theme"></select>
-                </div>
-              </header>
-              <div class="npc-selector">
-                <label for="npc-select">Choose a challenger</label>
-                <select id="npc-select" aria-label="Select a challenger"></select>
-                <p class="npc-description" id="npc-description"></p>
-              </div>
-            </div>
-            <div class="battle-hud__footer">
-              <div class="battlefield battle-hud__panel">
-                <div class="combatant" id="player-card">
-                  <h2 id="player-name">Hero</h2>
-                  <div class="sprite-frame">
+                <div class="battle-scene__ambient" id="battle-particles" aria-hidden="true"></div>
+                <div class="battle-scene__baseline" aria-hidden="true"></div>
+                <div class="caption-zone" id="caption-global" data-zone="global" aria-live="polite"></div>
+                <div class="caption-zone" id="caption-player" data-zone="player" aria-live="polite"></div>
+                <div class="caption-zone" id="caption-enemy" data-zone="enemy" aria-live="polite"></div>
+                <div
+                  class="battle-combatant battle-combatant--player"
+                  id="battle-player"
+                  data-interaction-type="player"
+                  data-interaction-id="player"
+                  data-interaction-label="Hero"
+                  data-interaction-layer="20"
+                >
+                  <div class="status-banners" id="player-status-banners"></div>
+                  <div class="battle-sprite-frame">
                     <img
-                      class="sprite-portrait"
-                      id="player-sprite"
+                      class="battle-sprite"
+                      id="player-battle-sprite"
                       src="assets/battle/avi_sprite_1_position1.png"
-                      alt="Hero portrait"
-                      loading="lazy"
+                      alt="Hero battle sprite"
+                      loading="eager"
                     />
                   </div>
-                  <div class="bar">
-                    <span>Health</span>
-                    <div class="meter">
-                      <div class="fill" id="player-health"></div>
-                    </div>
-                    <span class="value" id="player-health-value"></span>
-                  </div>
-                  <div class="bar">
-                    <span>Mana</span>
-                    <div class="meter mana">
-                      <div class="fill" id="player-mana"></div>
-                    </div>
-                    <span class="value" id="player-mana-value"></span>
-                  </div>
+                  <div class="effect-bounds" data-role="player" aria-hidden="true"></div>
                 </div>
-                <div class="combatant" id="enemy-card">
-                  <h2 id="enemy-name">Otherworldly Beast</h2>
-                  <div class="sprite-frame">
+                <div
+                  class="battle-combatant battle-combatant--enemy"
+                  id="battle-enemy"
+                  data-interaction-type="npc"
+                  data-interaction-id="enemy"
+                  data-interaction-label="Challenger"
+                  data-interaction-layer="30"
+                >
+                  <div class="status-banners" id="enemy-status-banners"></div>
+                  <div class="battle-sprite-frame">
                     <img
-                      class="sprite-portrait"
-                      id="enemy-sprite"
+                      class="battle-sprite"
+                      id="enemy-battle-sprite"
                       src="assets/battle/otherworldly_beast.png"
-                      alt="Enemy portrait"
-                      loading="lazy"
+                      alt="Enemy battle sprite"
+                      loading="eager"
                     />
                   </div>
-                  <div class="bar">
-                    <span>Health</span>
-                    <div class="meter">
-                      <div class="fill" id="enemy-health"></div>
-                    </div>
-                    <span class="value" id="enemy-health-value"></span>
-                  </div>
-                  <div class="bar" id="enemy-focus-row">
-                    <span>Focus</span>
-                    <div class="meter focus">
-                      <div class="fill" id="enemy-focus"></div>
-                    </div>
-                    <span class="value" id="enemy-focus-value"></span>
-                  </div>
+                  <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
+                </div>
+                <div
+                  class="battle-scene__relic"
+                  data-interaction-type="object"
+                  data-interaction-id="battle-relic"
+                  data-interaction-label="Ember Relic"
+                  data-interaction-layer="10"
+                >
+                  Ember Relic
                 </div>
               </div>
-              <div class="controls battle-hud__panel">
-                <button class="action" data-action="attack">Swift Strike</button>
-                <button class="action" data-action="special">Ember Surge</button>
-                <button class="action" data-action="heal">Serenity Bloom</button>
-                <button class="secondary" id="reset">Reset Battle</button>
+              <div class="battle-hud">
+                <div class="battle-hud__top battle-hud__panel">
+                  <header class="hero-header">
+                    <div>
+                      <h1>DaisyQuest: Ember Duel</h1>
+                      <p class="subtitle">
+                        A refined combat encounter for the next-generation DaisyQuest.
+                      </p>
+                    </div>
+                    <div class="theme-selector">
+                      <label for="theme-select">Theme</label>
+                      <select id="theme-select" aria-label="Select a theme"></select>
+                    </div>
+                  </header>
+                  <div class="npc-selector">
+                    <label for="npc-select">Choose a challenger</label>
+                    <select id="npc-select" aria-label="Select a challenger"></select>
+                    <p class="npc-description" id="npc-description"></p>
+                  </div>
+                </div>
+                <div class="battle-hud__footer">
+                  <div class="battlefield battle-hud__panel">
+                    <div class="combatant" id="player-card">
+                      <h2 id="player-name">Hero</h2>
+                      <div class="sprite-frame">
+                        <img
+                          class="sprite-portrait"
+                          id="player-sprite"
+                          src="assets/battle/avi_sprite_1_position1.png"
+                          alt="Hero portrait"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div class="bar">
+                        <span>Health</span>
+                        <div class="meter">
+                          <div class="fill" id="player-health"></div>
+                        </div>
+                        <span class="value" id="player-health-value"></span>
+                      </div>
+                      <div class="bar">
+                        <span>Mana</span>
+                        <div class="meter mana">
+                          <div class="fill" id="player-mana"></div>
+                        </div>
+                        <span class="value" id="player-mana-value"></span>
+                      </div>
+                    </div>
+                    <div class="combatant" id="enemy-card">
+                      <h2 id="enemy-name">Otherworldly Beast</h2>
+                      <div class="sprite-frame">
+                        <img
+                          class="sprite-portrait"
+                          id="enemy-sprite"
+                          src="assets/battle/otherworldly_beast.png"
+                          alt="Enemy portrait"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div class="bar">
+                        <span>Health</span>
+                        <div class="meter">
+                          <div class="fill" id="enemy-health"></div>
+                        </div>
+                        <span class="value" id="enemy-health-value"></span>
+                      </div>
+                      <div class="bar" id="enemy-focus-row">
+                        <span>Focus</span>
+                        <div class="meter focus">
+                          <div class="fill" id="enemy-focus"></div>
+                        </div>
+                        <span class="value" id="enemy-focus-value"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="controls battle-hud__panel">
+                    <button class="action" data-action="attack">Swift Strike</button>
+                    <button class="action" data-action="special">Ember Surge</button>
+                    <button class="action" data-action="heal">Serenity Bloom</button>
+                    <button class="secondary" id="reset">Reset Battle</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+          <aside class="battle-tab-side">
+            <section class="subpanel">
+              <h3>Battle Chronicle</h3>
+              <ul id="log"></ul>
+            </section>
+            <section class="subpanel">
+              <header class="panel-header">
+                <div>
+                  <h3>Reward Track</h3>
+                  <p class="subtitle">Fuel your rise with every victory and crafted upgrade.</p>
+                </div>
+                <span class="badge badge-accent" id="progress-level-badge">Level 1</span>
+              </header>
+              <div class="reward-track">
+                <div class="track-card">
+                  <div class="track-header">
+                    <div>
+                      <h4>Battle Mastery</h4>
+                      <p class="caption">Earn XP for victories, crafting, and upgrades.</p>
+                    </div>
+                    <span class="badge" id="progress-xp-label">0 XP</span>
+                  </div>
+                  <div class="progress-track">
+                    <div class="progress-fill" id="progress-fill"></div>
+                  </div>
+                  <div class="track-meta">
+                    <span id="progress-current">0 / 120 XP</span>
+                    <span id="progress-next">Next reward at Level 2</span>
+                  </div>
+                </div>
+                <div class="reward-card" id="reward-card">
+                  <h4>Next Reward</h4>
+                  <p id="reward-description">Win a duel to reveal your next blessing.</p>
+                  <button class="action" id="claim-reward" type="button" disabled>
+                    Claim Reward
+                  </button>
+                </div>
+              </div>
+              <ul class="milestone-list" id="milestone-list"></ul>
+            </section>
+          </aside>
         </div>
       </section>
-      <section class="panel map-panel" data-tab-panel="map">
+      <section
+        class="panel map-panel"
+        id="tab-panel-map"
+        data-tab-panel="map"
+        role="tabpanel"
+        aria-labelledby="tab-button-map"
+        hidden
+      >
         <header class="panel-header">
           <div>
             <h2>World Map</h2>
@@ -259,44 +367,14 @@
           </div>
         </div>
       </section>
-      <section class="panel log tab-panel" data-tab-panel="battle">
-        <h3>Battle Chronicle</h3>
-        <ul id="log"></ul>
-      </section>
-      <section class="panel progression" data-tab-panel="battle">
-        <header class="panel-header">
-          <div>
-            <h3>Reward Track</h3>
-            <p class="subtitle">Fuel your rise with every victory and crafted upgrade.</p>
-          </div>
-          <span class="badge badge-accent" id="progress-level-badge">Level 1</span>
-        </header>
-        <div class="reward-track">
-          <div class="track-card">
-            <div class="track-header">
-              <div>
-                <h4>Battle Mastery</h4>
-                <p class="caption">Earn XP for victories, crafting, and upgrades.</p>
-              </div>
-              <span class="badge" id="progress-xp-label">0 XP</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" id="progress-fill"></div>
-            </div>
-            <div class="track-meta">
-              <span id="progress-current">0 / 120 XP</span>
-              <span id="progress-next">Next reward at Level 2</span>
-            </div>
-          </div>
-          <div class="reward-card" id="reward-card">
-            <h4>Next Reward</h4>
-            <p id="reward-description">Win a duel to reveal your next blessing.</p>
-            <button class="action" id="claim-reward" type="button" disabled>Claim Reward</button>
-          </div>
-        </div>
-        <ul class="milestone-list" id="milestone-list"></ul>
-      </section>
-      <section class="panel inventory" data-tab-panel="inventory">
+      <section
+        class="panel inventory"
+        id="tab-panel-inventory"
+        data-tab-panel="inventory"
+        role="tabpanel"
+        aria-labelledby="tab-button-inventory"
+        hidden
+      >
         <h3>Inventory & Equipment</h3>
         <div class="inventory-grid">
           <div>
@@ -313,7 +391,14 @@
           <ul id="loot-list"></ul>
         </div>
       </section>
-      <section class="panel trading" data-tab-panel="trading">
+      <section
+        class="panel trading"
+        id="tab-panel-trading"
+        data-tab-panel="trading"
+        role="tabpanel"
+        aria-labelledby="tab-button-trading"
+        hidden
+      >
         <header class="panel-header">
           <div>
             <h3>Trade Hall</h3>
@@ -329,7 +414,14 @@
         </form>
         <div class="trade-grid" id="trade-list"></div>
       </section>
-      <section class="panel crafting tab-panel" data-tab-panel="crafting">
+      <section
+        class="panel crafting tab-panel"
+        id="tab-panel-crafting"
+        data-tab-panel="crafting"
+        role="tabpanel"
+        aria-labelledby="tab-button-crafting"
+        hidden
+      >
         <h3>Crafting Atelier</h3>
         <label for="recipe-select">Recipe</label>
         <select id="recipe-select" aria-label="Select a recipe"></select>
@@ -337,7 +429,14 @@
         <button class="action" id="craft-button" type="button">Craft</button>
         <p id="crafting-result" class="crafting-result"></p>
       </section>
-      <section class="panel registry" data-tab-panel="registry">
+      <section
+        class="panel registry"
+        id="tab-panel-registry"
+        data-tab-panel="registry"
+        role="tabpanel"
+        aria-labelledby="tab-button-registry"
+        hidden
+      >
         <header class="panel-header">
           <div>
             <h3>Registry Workshop</h3>
