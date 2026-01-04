@@ -28,6 +28,12 @@ describe("tab controller", () => {
     expect(buttons[1].classList.contains("is-active")).toBe(true);
     expect(panels[0].classList.contains("is-active")).toBe(false);
     expect(panels[1].classList.contains("is-active")).toBe(true);
+    expect(panels[0].hidden).toBe(true);
+    expect(panels[1].hidden).toBe(false);
+    expect(buttons[0].getAttribute("aria-selected")).toBe("false");
+    expect(buttons[1].getAttribute("aria-selected")).toBe("true");
+    expect(panels[0].getAttribute("aria-hidden")).toBe("true");
+    expect(panels[1].getAttribute("aria-hidden")).toBe("false");
   });
 
   it("wires click handlers to switch tabs", () => {
@@ -58,5 +64,112 @@ describe("tab controller", () => {
     expect(buttons[1].classList.contains("is-active")).toBe(true);
     expect(panels[0].classList.contains("is-active")).toBe(false);
     expect(panels[1].classList.contains("is-active")).toBe(true);
+  });
+
+  it("defaults to the first active button when wiring", () => {
+    const dom = new JSDOM(
+      `
+        <button class="layout-tab-button is-active" data-tab-target="battle"></button>
+        <button class="layout-tab-button" data-tab-target="map"></button>
+        <section data-tab-panel="battle"></section>
+        <section data-tab-panel="map"></section>
+      `
+    );
+    const doc = dom.window.document;
+    const buttons = doc.querySelectorAll(".layout-tab-button");
+    const panels = doc.querySelectorAll("[data-tab-panel]");
+
+    const controller = createTabController({
+      buttons,
+      panels,
+      buttonKey: "tabTarget",
+      panelKey: "tabPanel"
+    });
+
+    controller.wire();
+
+    expect(controller.getActiveValue()).toBe("battle");
+    expect(buttons[0].getAttribute("aria-selected")).toBe("true");
+    expect(panels[0].hidden).toBe(false);
+    expect(panels[1].hidden).toBe(true);
+  });
+
+  it("falls back to the first button when no active button is set", () => {
+    const dom = new JSDOM(
+      `
+        <button class="layout-tab-button" data-tab-target="battle"></button>
+        <button class="layout-tab-button" data-tab-target="map"></button>
+        <section data-tab-panel="battle"></section>
+        <section data-tab-panel="map"></section>
+      `
+    );
+    const doc = dom.window.document;
+    const buttons = doc.querySelectorAll(".layout-tab-button");
+    const panels = doc.querySelectorAll("[data-tab-panel]");
+
+    const controller = createTabController({
+      buttons,
+      panels,
+      buttonKey: "tabTarget",
+      panelKey: "tabPanel"
+    });
+
+    controller.wire();
+
+    expect(controller.getActiveValue()).toBe("battle");
+    expect(buttons[0].getAttribute("aria-selected")).toBe("true");
+    expect(panels[0].hidden).toBe(false);
+  });
+
+  it("ignores unknown active values", () => {
+    const dom = new JSDOM(
+      `
+        <button class="layout-tab-button is-active" data-tab-target="battle"></button>
+        <button class="layout-tab-button" data-tab-target="map"></button>
+        <section data-tab-panel="battle"></section>
+        <section data-tab-panel="map"></section>
+      `
+    );
+    const doc = dom.window.document;
+    const buttons = doc.querySelectorAll(".layout-tab-button");
+    const panels = doc.querySelectorAll("[data-tab-panel]");
+
+    const controller = createTabController({
+      buttons,
+      panels,
+      buttonKey: "tabTarget",
+      panelKey: "tabPanel"
+    });
+
+    controller.wire();
+    controller.setActive("unknown");
+
+    expect(buttons[0].classList.contains("is-active")).toBe(true);
+    expect(panels[0].classList.contains("is-active")).toBe(true);
+    expect(panels[0].hidden).toBe(false);
+  });
+
+  it("handles empty button and panel lists", () => {
+    const controller = createTabController({
+      buttons: [],
+      panels: [],
+      buttonKey: "tabTarget",
+      panelKey: "tabPanel"
+    });
+
+    expect(controller.getActiveValue()).toBeNull();
+    controller.wire();
+    controller.setActive("battle");
+  });
+
+  it("handles undefined button and panel lists", () => {
+    const controller = createTabController({
+      buttonKey: "tabTarget",
+      panelKey: "tabPanel"
+    });
+
+    expect(controller.getActiveValue()).toBeNull();
+    controller.wire();
+    controller.setActive("battle");
   });
 });

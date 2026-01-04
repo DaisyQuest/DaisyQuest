@@ -100,6 +100,10 @@ body {
   display: block;
 }
 
+[data-tab-panel][hidden] {
+  display: none;
+}
+
 .tab-button {
   border: none;
   padding: 8px 14px;
@@ -360,6 +364,42 @@ body {
   height: min(92vh, 960px);
   border-radius: 22px;
   overflow: hidden;
+}
+
+.battle-tab-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  gap: 20px;
+  align-items: start;
+}
+
+.battle-tab-main .battle-stage {
+  min-height: min(72vh, 820px);
+  height: min(72vh, 820px);
+}
+
+.battle-tab-side {
+  display: grid;
+  gap: 20px;
+}
+
+.subpanel {
+  background: rgba(12, 17, 35, 0.9);
+  border: 1px solid var(--dq-border);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 18px 40px rgba(3, 7, 18, 0.4);
+}
+
+@media (max-width: 980px) {
+  .battle-tab-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-tab-main .battle-stage {
+    min-height: min(76vh, 860px);
+    height: min(76vh, 860px);
+  }
 }
 
 .battle-stage > * {

@@ -5,17 +5,48 @@ export function createTabController({
   panelKey,
   activeClass = "is-active"
 }) {
+  const buttonList = Array.from(buttons ?? []);
+  const panelList = Array.from(panels ?? []);
+
+  function getActiveValue() {
+    const activeButton = buttonList.find((button) => button.classList.contains(activeClass));
+    if (activeButton) {
+      return activeButton.dataset[buttonKey];
+    }
+    return buttonList[0]?.dataset?.[buttonKey] ?? null;
+  }
+
+  function setButtonState(button, value) {
+    const isActive = button.dataset[buttonKey] === value;
+    button.classList.toggle(activeClass, isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+    return isActive;
+  }
+
+  function setPanelState(panel, value) {
+    const isActive = panel.dataset[panelKey] === value;
+    panel.classList.toggle(activeClass, isActive);
+    panel.hidden = !isActive;
+    panel.setAttribute("aria-hidden", isActive ? "false" : "true");
+    return isActive;
+  }
+
   function setActive(value) {
-    buttons.forEach((button) => {
-      button.classList.toggle(activeClass, button.dataset[buttonKey] === value);
-    });
-    panels.forEach((panel) => {
-      panel.classList.toggle(activeClass, panel.dataset[panelKey] === value);
-    });
+    const hasMatch = buttonList.some((button) => button.dataset[buttonKey] === value);
+    if (!hasMatch) {
+      return;
+    }
+    buttonList.forEach((button) => setButtonState(button, value));
+    panelList.forEach((panel) => setPanelState(panel, value));
   }
 
   function wire() {
-    buttons.forEach((button) => {
+    const initialValue = getActiveValue();
+    if (initialValue) {
+      setActive(initialValue);
+    }
+
+    buttonList.forEach((button) => {
       button.addEventListener("click", () => {
         setActive(button.dataset[buttonKey]);
       });
@@ -24,6 +55,7 @@ export function createTabController({
 
   return Object.freeze({
     setActive,
+    getActiveValue,
     wire
   });
 }
