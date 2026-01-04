@@ -5,6 +5,7 @@ import { createFeedPanel } from "./ui/feedPanel.js";
 import { createMinimapPanel } from "./ui/minimapPanel.js";
 import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameWorldPanel.js";
 import { applySpriteToImage, getBattleSpriteSet } from "./ui/battleSceneAssets.js";
+import { createFlowOrchestrator, FlowEvent, FlowState } from "./ui/flowOrchestrator.js";
 import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
@@ -141,11 +142,51 @@ const registryTabs = createTabController({
   buttonKey: "tab",
   panelKey: "pane"
 });
+let flowOrchestrator = null;
+const tabToFlowState = Object.freeze({
+  battle: FlowState.COMBAT,
+  map: FlowState.MAP,
+  inventory: FlowState.INVENTORY,
+  crafting: FlowState.CRAFTING,
+  trading: FlowState.TRADING,
+  registry: FlowState.REGISTRY
+});
+const flowStateToTab = Object.freeze({
+  [FlowState.COMBAT]: "battle",
+  [FlowState.LOOT]: "battle",
+  [FlowState.MAP]: "map",
+  [FlowState.INVENTORY]: "inventory",
+  [FlowState.CRAFTING]: "crafting",
+  [FlowState.TRADING]: "trading",
+  [FlowState.REGISTRY]: "registry"
+});
 const layoutTabs = createTabController({
   buttons: layoutTabButtons,
   panels: layoutPanels,
   buttonKey: "tabTarget",
-  panelKey: "tabPanel"
+  panelKey: "tabPanel",
+  onSelect: (value, meta) => {
+    if (!flowOrchestrator) {
+      return;
+    }
+    flowOrchestrator.requestTransition({
+      type: FlowEvent.NAVIGATE,
+      targetState: tabToFlowState[value],
+      force: meta?.source === "init"
+    });
+  }
+});
+flowOrchestrator = createFlowOrchestrator({
+  initialState: FlowState.COMBAT,
+  onTransition: ({ to }) => {
+    const nextTab = flowStateToTab[to];
+    if (nextTab) {
+      layoutTabs.setActive(nextTab);
+    }
+  },
+  onInvalidTransition: ({ error }) => {
+    console.warn("Flow transition rejected.", error);
+  }
 });
 applyGameWorldPanelLayout(gameWorldPanel);
 createGameWorldLayerStack({ container: gameWorldLayerStack });
@@ -1433,7 +1474,15 @@ function initializeGameUI() {
   populateRecipeResultOptions();
   wireTabs();
   wireLayoutTabs();
-  layoutTabs.setActive("battle");
+  const hasActiveCombat = Boolean(
+    state?.enemy?.id && state?.player?.health > 0 && state?.enemy?.health > 0
+  );
+  flowOrchestrator.requestTransition({
+    type: FlowEvent.SESSION_INITIALIZED,
+    hasActiveCombat,
+    hasLoot: false,
+    force: true
+  });
   populateRecipes();
   renderRecipeDetails();
   populateItemForm(null);
