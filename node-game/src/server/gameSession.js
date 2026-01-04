@@ -17,10 +17,7 @@ import {
   RARITY_COLORS,
   RECIPES
 } from "../items.js";
-import { createCraftingSystem } from "../systems/craftingSystem.js";
-import { createInventoryManager } from "../systems/inventorySystem.js";
-import { createItemRegistry } from "../systems/itemRegistry.js";
-import { createLootSystem } from "../systems/lootSystem.js";
+import { createCoreSystemRegistry } from "../systems/systemCatalog.js";
 import { createProgressionSystem } from "../systems/progressionSystem.js";
 import { createRegistryEditor } from "../systems/registryEditor.js";
 
@@ -49,23 +46,18 @@ export const REWARD_MILESTONES = Object.freeze([
   })
 ]);
 
-function buildRuntimeSystems(snapshot) {
-  const itemRegistry = createItemRegistry({
-    items: snapshot.items,
-    recipes: snapshot.recipes,
-    lootTables: NPC_LOOT_TABLES,
-    rarityColors: RARITY_COLORS,
-    equipmentSlots: EQUIPMENT_SLOTS
+function buildRuntimeSystems(systemRegistry, registryEditor) {
+  const snapshot = registryEditor.getSnapshot();
+  const runtime = systemRegistry.createRuntime({
+    context: {
+      items: snapshot.items,
+      recipes: snapshot.recipes,
+      lootTables: NPC_LOOT_TABLES,
+      rarityColors: RARITY_COLORS,
+      equipmentSlots: EQUIPMENT_SLOTS
+    }
   });
-  const inventoryManager = createInventoryManager({ itemRegistry });
-  const craftingSystem = createCraftingSystem({ itemRegistry, inventoryManager });
-  const lootSystem = createLootSystem({ itemRegistry });
-  return {
-    itemRegistry,
-    inventoryManager,
-    craftingSystem,
-    lootSystem
-  };
+  return runtime.systems;
 }
 
 function createCombatTimers() {
@@ -143,14 +135,16 @@ export function createGameSession({
   rng = Math.random,
   initialState,
   initialTimers,
-  registrySnapshot
+  registrySnapshot,
+  systemRegistryFactory = createCoreSystemRegistry
 } = {}) {
   const registryEditor = createRegistryEditor({
     items: registrySnapshot?.items ?? ITEMS,
     recipes: registrySnapshot?.recipes ?? RECIPES
   });
   const progressionSystem = createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS });
-  let runtime = buildRuntimeSystems(registryEditor.getSnapshot());
+  const systemRegistry = systemRegistryFactory();
+  let runtime = buildRuntimeSystems(systemRegistry, registryEditor);
   let state = buildInitialState(initialState);
   if (!state.progression) {
     state = { ...state, progression: progressionSystem.getProgressSnapshot(0) };
@@ -158,7 +152,7 @@ export function createGameSession({
   let timers = initialTimers ? { ...createCombatTimers(), ...initialTimers } : createCombatTimers();
 
   function refreshRuntime() {
-    runtime = buildRuntimeSystems(registryEditor.getSnapshot());
+    runtime = buildRuntimeSystems(systemRegistry, registryEditor);
   }
 
   function getSnapshot() {
@@ -433,31 +427,54 @@ export function createGameSession({
     });
   }
 
-  function removeItems(items = {}) {
-    if (!canAffordItems(items)) {
+  function previewInventoryTransaction({ removeItems = {}, addItems = {} } = {}) {
+    const invalidRemove = Object.entries(removeItems).some(
+      ([itemId, quantity]) => !itemId || !Number.isFinite(quantity) || quantity <= 0
+    );
+    if (invalidRemove) {
+      return { error: "Insufficient inventory for trade." };
+    }
+    const invalidAdd = Object.entries(addItems).some(
+      ([itemId, quantity]) => !itemId || !Number.isFinite(quantity) || quantity <= 0
+    );
+    if (invalidAdd) {
+      return { error: "Invalid trade item quantities." };
+    }
+    if (!canAffordItems(removeItems)) {
       return { error: "Insufficient inventory for trade." };
     }
     let nextInventory = { ...state.inventory };
-    Object.entries(items).forEach(([itemId, quantity]) => {
+    Object.entries(removeItems).forEach(([itemId, quantity]) => {
       nextInventory = runtime.inventoryManager.removeItem(nextInventory, itemId, quantity).inventory;
     });
-    state = { ...state, inventory: nextInventory };
+    Object.entries(addItems).forEach(([itemId, quantity]) => {
+      nextInventory = runtime.inventoryManager.addItem(nextInventory, itemId, quantity);
+    });
+    return { inventory: nextInventory };
+  }
+
+  function commitInventorySnapshot(inventory) {
+    if (!inventory || typeof inventory !== "object") {
+      return { error: "Invalid inventory snapshot." };
+    }
+    state = { ...state, inventory: { ...inventory } };
     return { inventory: getInventorySnapshot() };
   }
 
-  function addItems(items = {}) {
-    const invalid = Object.entries(items).some(
-      ([itemId, quantity]) => !itemId || !Number.isFinite(quantity) || quantity <= 0
-    );
-    if (invalid) {
-      return { error: "Invalid trade item quantities." };
+  function applyInventoryTransaction(transaction) {
+    const preview = previewInventoryTransaction(transaction);
+    if (preview.error) {
+      return { error: preview.error };
     }
-    let nextInventory = { ...state.inventory };
-    Object.entries(items).forEach(([itemId, quantity]) => {
-      nextInventory = runtime.inventoryManager.addItem(nextInventory, itemId, quantity);
-    });
-    state = { ...state, inventory: nextInventory };
-    return { inventory: getInventorySnapshot() };
+    return commitInventorySnapshot(preview.inventory);
+  }
+
+  function removeItems(items = {}) {
+    return applyInventoryTransaction({ removeItems: items });
+  }
+
+  function addItems(items = {}) {
+    return applyInventoryTransaction({ addItems: items });
   }
 
   function unsafeSetState(nextState) {
@@ -487,6 +504,9 @@ export function createGameSession({
     grantItem,
     getInventorySnapshot,
     canAffordItems,
+    previewInventoryTransaction,
+    commitInventorySnapshot,
+    applyInventoryTransaction,
     removeItems,
     addItems,
     unsafeSetState,

@@ -305,14 +305,20 @@ export function createApp({
     const toSession = sessions.get(toToken);
     const fromOffer = trade.offers[from] ?? {};
     const toOffer = trade.offers[to] ?? {};
-    if (!fromSession.canAffordItems(fromOffer) || !toSession.canAffordItems(toOffer)) {
-      res.status(400).json({ error: "Trade offers are no longer valid." });
+    const fromPreview = fromSession.previewInventoryTransaction({
+      removeItems: fromOffer,
+      addItems: toOffer
+    });
+    const toPreview = toSession.previewInventoryTransaction({
+      removeItems: toOffer,
+      addItems: fromOffer
+    });
+    if (fromPreview.error || toPreview.error) {
+      res.status(400).json({ error: fromPreview.error ?? toPreview.error });
       return;
     }
-    fromSession.removeItems(fromOffer);
-    toSession.removeItems(toOffer);
-    fromSession.addItems(toOffer);
-    toSession.addItems(fromOffer);
+    fromSession.commitInventorySnapshot(fromPreview.inventory);
+    toSession.commitInventorySnapshot(toPreview.inventory);
     tradeManager.completeTrade(tradeId);
     await persistSession(fromSession);
     await persistSession(toSession);

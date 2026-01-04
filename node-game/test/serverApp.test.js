@@ -1,6 +1,7 @@
 import request from "supertest";
 import { createApp } from "../src/server/app.js";
 import { createInMemoryDataStore } from "../src/server/dataStore.js";
+import { createGameSession } from "../src/server/gameSession.js";
 
 describe("server app", () => {
   const rng = () => 0;
@@ -183,6 +184,63 @@ describe("server app", () => {
     const app = createApp();
     const response = await request(app).get("/health");
     expect(response.status).toBe(200);
+  });
+
+  test("rejects trade confirmation when inventory changes after offers", async () => {
+    const dataStore = createInMemoryDataStore();
+    const app = createApp({ nowFn: () => 1000, rng, dataStore });
+    await request(app)
+      .post("/api/auth/register")
+      .send({ username: "Hero", password: "secret1" });
+    await request(app)
+      .post("/api/auth/register")
+      .send({ username: "Ally", password: "secret1" });
+
+    const seededSession = createGameSession({ username: "seed", rng });
+    seededSession.grantItem("wyrmling_helm", 1);
+    const snapshot = seededSession.getPersistenceSnapshot();
+    await dataStore.savePlayerState("hero", snapshot);
+    await dataStore.savePlayerState("ally", snapshot);
+
+    const heroLogin = await request(app)
+      .post("/api/auth/login")
+      .send({ username: "Hero", password: "secret1" });
+    const allyLogin = await request(app)
+      .post("/api/auth/login")
+      .send({ username: "Ally", password: "secret1" });
+    const heroAuth = { Authorization: `Bearer ${heroLogin.body.token}` };
+    const allyAuth = { Authorization: `Bearer ${allyLogin.body.token}` };
+
+    const tradeRequest = await request(app)
+      .post("/api/trades/request")
+      .set(heroAuth)
+      .send({ targetUsername: "Ally" });
+    const tradeId = tradeRequest.body.trade.id;
+    await request(app)
+      .post("/api/trades/respond")
+      .set(allyAuth)
+      .send({ tradeId, accept: true });
+    await request(app)
+      .post("/api/trades/offer")
+      .set(heroAuth)
+      .send({ tradeId, itemId: "wyrmling_helm", quantity: 1 });
+    await request(app)
+      .post("/api/trades/offer")
+      .set(allyAuth)
+      .send({ tradeId, itemId: "wyrmling_helm", quantity: 1 });
+
+    await request(app)
+      .post("/api/inventory/equip")
+      .set(allyAuth)
+      .send({ itemId: "wyrmling_helm" });
+
+    await request(app).post("/api/trades/confirm").set(heroAuth).send({ tradeId });
+    const confirm = await request(app)
+      .post("/api/trades/confirm")
+      .set(allyAuth)
+      .send({ tradeId });
+    expect(confirm.status).toBe(400);
+    expect(confirm.body.error).toBe("Insufficient inventory for trade.");
   });
 
   test("skips persistence when data store does not support it", async () => {

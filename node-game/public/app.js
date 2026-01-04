@@ -1,5 +1,8 @@
 import { createItemRegistry } from "./systems/itemRegistry.js";
 import { initializeThemeEngine } from "./themeEngine.js";
+import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
+import { createFeedPanel } from "./ui/feedPanel.js";
+import { createTabController } from "./ui/tabController.js";
 
 const logList = document.getElementById("log");
 const playerHealth = document.getElementById("player-health");
@@ -87,6 +90,31 @@ let combatTimers = {
   enemyPollId: null
 };
 let pendingAction = false;
+const logFeed = createFeedPanel({ listElement: logList });
+const lootFeed = createFeedPanel({ listElement: lootList });
+const combatMeters = createCombatMeterPanel({
+  playerHealth,
+  playerHealthValue,
+  playerMana,
+  playerManaValue,
+  enemyHealth,
+  enemyHealthValue,
+  enemyFocus,
+  enemyFocusValue,
+  enemyFocusRow
+});
+const registryTabs = createTabController({
+  buttons: tabButtons,
+  panels: registryPanes,
+  buttonKey: "tab",
+  panelKey: "pane"
+});
+const layoutTabs = createTabController({
+  buttons: layoutTabButtons,
+  panels: layoutPanels,
+  buttonKey: "tabTarget",
+  panelKey: "tabPanel"
+});
 
 function apiRequest(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers ?? {}) };
@@ -160,48 +188,15 @@ function applySessionSnapshot(payload) {
 }
 
 function pushLog(lines) {
-  if (!lines || lines.length === 0) {
-    return;
-  }
-  lines.forEach((line) => {
-    const li = document.createElement("li");
-    li.textContent = line;
-    logList.prepend(li);
-  });
+  logFeed.pushLines(lines);
 }
 
 function pushLoot(lines) {
-  if (!lines || lines.length === 0) {
-    return;
-  }
-  lines.forEach((line) => {
-    const li = document.createElement("li");
-    li.textContent = line;
-    lootList.prepend(li);
-  });
+  lootFeed.pushLines(lines);
 }
 
 function updateMeters() {
-  if (!state) {
-    return;
-  }
-  const enemyFocusCurrent = state.enemy.focus ?? 0;
-  const enemyFocusMax = state.enemy.maxFocus ?? 0;
-  playerHealth.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
-  playerHealthValue.textContent = `${state.player.health} / ${state.player.maxHealth}`;
-  playerMana.style.width = `${(state.player.mana / state.player.maxMana) * 100}%`;
-  playerManaValue.textContent = `${state.player.mana} / ${state.player.maxMana}`;
-  enemyHealth.style.width = `${(state.enemy.health / state.enemy.maxHealth) * 100}%`;
-  enemyHealthValue.textContent = `${state.enemy.health} / ${state.enemy.maxHealth}`;
-  if (enemyFocusMax > 0) {
-    enemyFocusRow.classList.remove("is-hidden");
-    enemyFocus.style.width = `${(enemyFocusCurrent / enemyFocusMax) * 100}%`;
-    enemyFocusValue.textContent = `${enemyFocusCurrent} / ${enemyFocusMax}`;
-  } else {
-    enemyFocusRow.classList.add("is-hidden");
-    enemyFocus.style.width = "0%";
-    enemyFocusValue.textContent = "0 / 0";
-  }
+  combatMeters.render(state);
 }
 
 function updateActionButtons(now = Date.now()) {
@@ -227,15 +222,6 @@ function updateActionButtons(now = Date.now()) {
     }
 
     button.textContent = `${baseLabel}${suffix}`;
-  });
-}
-
-function setActiveLayoutTab(tab) {
-  layoutTabButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.tabTarget === tab);
-  });
-  layoutPanels.forEach((panel) => {
-    panel.classList.toggle("is-active", panel.dataset.tabPanel === tab);
   });
 }
 
@@ -920,23 +906,11 @@ addIngredientButton.addEventListener("click", () => addIngredientRow());
 claimRewardButton.addEventListener("click", claimReward);
 
 function wireTabs() {
-  tabButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      tabButtons.forEach((btn) => btn.classList.remove("is-active"));
-      button.classList.add("is-active");
-      registryPanes.forEach((pane) => {
-        pane.classList.toggle("is-active", pane.dataset.pane === button.dataset.tab);
-      });
-    });
-  });
+  registryTabs.wire();
 }
 
 function wireLayoutTabs() {
-  layoutTabButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      setActiveLayoutTab(button.dataset.tabTarget);
-    });
-  });
+  layoutTabs.wire();
 }
 
 async function executePlayerAction(action) {
@@ -1104,7 +1078,7 @@ function initializeGameUI() {
   populateRecipeResultOptions();
   wireTabs();
   wireLayoutTabs();
-  setActiveLayoutTab("battle");
+  layoutTabs.setActive("battle");
   populateRecipes();
   renderRecipeDetails();
   populateItemForm(null);
