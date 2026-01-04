@@ -62,122 +62,152 @@
         </button>
       </nav>
       <section class="panel hero" data-tab-panel="battle">
-        <header class="hero-header">
-          <div>
-            <h1>DaisyQuest: Ember Duel</h1>
-            <p class="subtitle">A refined combat encounter for the next-generation DaisyQuest.</p>
-          </div>
-          <div class="theme-selector">
-            <label for="theme-select">Theme</label>
-            <select id="theme-select" aria-label="Select a theme"></select>
-          </div>
-        </header>
-        <div class="npc-selector">
-          <label for="npc-select">Choose a challenger</label>
-          <select id="npc-select" aria-label="Select a challenger"></select>
-          <p class="npc-description" id="npc-description"></p>
-        </div>
-        <div class="battle-scene game-world-panel" id="battle-scene" data-game-world-panel>
-          <div class="game-world-layer-stack" id="game-world-layer-stack" aria-hidden="true"></div>
-          <div class="battle-scene__parallax" aria-hidden="true">
-            <div class="parallax-layer layer-distant"></div>
-            <div class="parallax-layer layer-mid"></div>
-            <div class="parallax-layer layer-near"></div>
-          </div>
-          <div class="battle-scene__ambient" id="battle-particles" aria-hidden="true"></div>
-          <div class="battle-scene__baseline" aria-hidden="true"></div>
-          <div class="caption-zone" id="caption-global" data-zone="global" aria-live="polite"></div>
-          <div class="caption-zone" id="caption-player" data-zone="player" aria-live="polite"></div>
-          <div class="caption-zone" id="caption-enemy" data-zone="enemy" aria-live="polite"></div>
-          <div
-            class="battle-combatant battle-combatant--player"
-            id="battle-player"
-            data-interaction-type="player"
-            data-interaction-id="player"
-            data-interaction-label="Hero"
-            data-interaction-layer="20"
-          >
-            <div class="status-banners" id="player-status-banners"></div>
-            <div class="sprite-placeholder battle-sprite" id="player-battle-sprite">
-              <span>Hero Sprite</span>
+        <div class="battle-stage">
+          <div class="battle-scene game-world-panel" id="battle-scene" data-game-world-panel>
+            <div class="game-world-layer-stack" id="game-world-layer-stack" aria-hidden="true"></div>
+            <div class="battle-scene__parallax" aria-hidden="true">
+              <div class="parallax-layer layer-distant"></div>
+              <div class="parallax-layer layer-mid"></div>
+              <div class="parallax-layer layer-near"></div>
             </div>
-            <div class="effect-bounds" data-role="player" aria-hidden="true"></div>
-          </div>
-          <div
-            class="battle-combatant battle-combatant--enemy"
-            id="battle-enemy"
-            data-interaction-type="npc"
-            data-interaction-id="enemy"
-            data-interaction-label="Challenger"
-            data-interaction-layer="30"
-          >
-            <div class="status-banners" id="enemy-status-banners"></div>
-            <div class="sprite-placeholder battle-sprite" id="enemy-battle-sprite">
-              <span>Enemy Sprite</span>
+            <div class="battle-scene__ambient" id="battle-particles" aria-hidden="true"></div>
+            <div class="battle-scene__baseline" aria-hidden="true"></div>
+            <div class="caption-zone" id="caption-global" data-zone="global" aria-live="polite"></div>
+            <div class="caption-zone" id="caption-player" data-zone="player" aria-live="polite"></div>
+            <div class="caption-zone" id="caption-enemy" data-zone="enemy" aria-live="polite"></div>
+            <div
+              class="battle-combatant battle-combatant--player"
+              id="battle-player"
+              data-interaction-type="player"
+              data-interaction-id="player"
+              data-interaction-label="Hero"
+              data-interaction-layer="20"
+            >
+              <div class="status-banners" id="player-status-banners"></div>
+              <div class="battle-sprite-frame">
+                <img
+                  class="battle-sprite"
+                  id="player-battle-sprite"
+                  src="assets/battle/avi_sprite_1_position1.png"
+                  alt="Hero battle sprite"
+                  loading="eager"
+                />
+              </div>
+              <div class="effect-bounds" data-role="player" aria-hidden="true"></div>
             </div>
-            <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
+            <div
+              class="battle-combatant battle-combatant--enemy"
+              id="battle-enemy"
+              data-interaction-type="npc"
+              data-interaction-id="enemy"
+              data-interaction-label="Challenger"
+              data-interaction-layer="30"
+            >
+              <div class="status-banners" id="enemy-status-banners"></div>
+              <div class="battle-sprite-frame">
+                <img
+                  class="battle-sprite"
+                  id="enemy-battle-sprite"
+                  src="assets/battle/otherworldly_beast.png"
+                  alt="Enemy battle sprite"
+                  loading="eager"
+                />
+              </div>
+              <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
+            </div>
+            <div
+              class="battle-scene__relic"
+              data-interaction-type="object"
+              data-interaction-id="battle-relic"
+              data-interaction-label="Ember Relic"
+              data-interaction-layer="10"
+            >
+              Ember Relic
+            </div>
           </div>
-          <div
-            class="battle-scene__relic"
-            data-interaction-type="object"
-            data-interaction-id="battle-relic"
-            data-interaction-label="Ember Relic"
-            data-interaction-layer="10"
-          >
-            Ember Relic
-          </div>
-        </div>
-        <div class="battlefield">
-          <div class="combatant" id="player-card">
-            <h2 id="player-name">Hero</h2>
-            <div class="sprite-frame">
-              <div class="sprite-placeholder" id="player-sprite">
-                <span>Hero Sprite</span>
+          <div class="battle-hud">
+            <div class="battle-hud__top battle-hud__panel">
+              <header class="hero-header">
+                <div>
+                  <h1>DaisyQuest: Ember Duel</h1>
+                  <p class="subtitle">
+                    A refined combat encounter for the next-generation DaisyQuest.
+                  </p>
+                </div>
+                <div class="theme-selector">
+                  <label for="theme-select">Theme</label>
+                  <select id="theme-select" aria-label="Select a theme"></select>
+                </div>
+              </header>
+              <div class="npc-selector">
+                <label for="npc-select">Choose a challenger</label>
+                <select id="npc-select" aria-label="Select a challenger"></select>
+                <p class="npc-description" id="npc-description"></p>
               </div>
             </div>
-            <div class="bar">
-              <span>Health</span>
-              <div class="meter">
-                <div class="fill" id="player-health"></div>
+            <div class="battle-hud__footer">
+              <div class="battlefield battle-hud__panel">
+                <div class="combatant" id="player-card">
+                  <h2 id="player-name">Hero</h2>
+                  <div class="sprite-frame">
+                    <img
+                      class="sprite-portrait"
+                      id="player-sprite"
+                      src="assets/battle/avi_sprite_1_position1.png"
+                      alt="Hero portrait"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div class="bar">
+                    <span>Health</span>
+                    <div class="meter">
+                      <div class="fill" id="player-health"></div>
+                    </div>
+                    <span class="value" id="player-health-value"></span>
+                  </div>
+                  <div class="bar">
+                    <span>Mana</span>
+                    <div class="meter mana">
+                      <div class="fill" id="player-mana"></div>
+                    </div>
+                    <span class="value" id="player-mana-value"></span>
+                  </div>
+                </div>
+                <div class="combatant" id="enemy-card">
+                  <h2 id="enemy-name">Otherworldly Beast</h2>
+                  <div class="sprite-frame">
+                    <img
+                      class="sprite-portrait"
+                      id="enemy-sprite"
+                      src="assets/battle/otherworldly_beast.png"
+                      alt="Enemy portrait"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div class="bar">
+                    <span>Health</span>
+                    <div class="meter">
+                      <div class="fill" id="enemy-health"></div>
+                    </div>
+                    <span class="value" id="enemy-health-value"></span>
+                  </div>
+                  <div class="bar" id="enemy-focus-row">
+                    <span>Focus</span>
+                    <div class="meter focus">
+                      <div class="fill" id="enemy-focus"></div>
+                    </div>
+                    <span class="value" id="enemy-focus-value"></span>
+                  </div>
+                </div>
               </div>
-              <span class="value" id="player-health-value"></span>
-            </div>
-            <div class="bar">
-              <span>Mana</span>
-              <div class="meter mana">
-                <div class="fill" id="player-mana"></div>
+              <div class="controls battle-hud__panel">
+                <button class="action" data-action="attack">Swift Strike</button>
+                <button class="action" data-action="special">Ember Surge</button>
+                <button class="action" data-action="heal">Serenity Bloom</button>
+                <button class="secondary" id="reset">Reset Battle</button>
               </div>
-              <span class="value" id="player-mana-value"></span>
             </div>
           </div>
-          <div class="combatant" id="enemy-card">
-            <h2 id="enemy-name">Otherworldly Beast</h2>
-            <div class="sprite-frame">
-              <div class="sprite-placeholder" id="enemy-sprite">
-                <span>Enemy Sprite</span>
-              </div>
-            </div>
-            <div class="bar">
-              <span>Health</span>
-              <div class="meter">
-                <div class="fill" id="enemy-health"></div>
-              </div>
-              <span class="value" id="enemy-health-value"></span>
-            </div>
-            <div class="bar" id="enemy-focus-row">
-              <span>Focus</span>
-              <div class="meter focus">
-                <div class="fill" id="enemy-focus"></div>
-              </div>
-              <span class="value" id="enemy-focus-value"></span>
-            </div>
-          </div>
-        </div>
-        <div class="controls">
-          <button class="action" data-action="attack">Swift Strike</button>
-          <button class="action" data-action="special">Ember Surge</button>
-          <button class="action" data-action="heal">Serenity Bloom</button>
-          <button class="secondary" id="reset">Reset Battle</button>
         </div>
       </section>
       <section class="panel map-panel" data-tab-panel="map">

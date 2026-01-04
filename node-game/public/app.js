@@ -4,6 +4,7 @@ import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
 import { createMinimapPanel } from "./ui/minimapPanel.js";
 import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameWorldPanel.js";
+import { applySpriteToImage, getBattleSpriteSet } from "./ui/battleSceneAssets.js";
 import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
@@ -26,6 +27,8 @@ const battleScene = document.getElementById("battle-scene");
 const battleParticles = document.getElementById("battle-particles");
 const battlePlayerSprite = document.getElementById("player-battle-sprite");
 const battleEnemySprite = document.getElementById("enemy-battle-sprite");
+const playerCardSprite = document.getElementById("player-sprite");
+const enemyCardSprite = document.getElementById("enemy-sprite");
 const gameWorldPanel = document.querySelector("[data-game-world-panel]");
 const gameWorldLayerStack = document.getElementById("game-world-layer-stack");
 const playerStatusBanners = document.getElementById("player-status-banners");
@@ -255,18 +258,35 @@ function updateBattleSceneSprites() {
   if (!state) {
     return;
   }
-  if (battlePlayerSprite) {
-    const label = battlePlayerSprite.querySelector("span");
-    if (label) {
-      label.textContent = `${state.player.name} Sprite`;
-    }
-  }
-  if (battleEnemySprite) {
-    const label = battleEnemySprite.querySelector("span");
-    if (label) {
-      label.textContent = `${state.enemy.name} Sprite`;
-    }
-  }
+  const playerSprites = getBattleSpriteSet({
+    combatant: state.player,
+    role: "player"
+  });
+  const enemySprites = getBattleSpriteSet({
+    combatant: state.enemy,
+    role: "enemy"
+  });
+
+  applySpriteToImage(
+    battlePlayerSprite,
+    playerSprites.scene,
+    `${state.player.name} battle sprite`
+  );
+  applySpriteToImage(
+    playerCardSprite,
+    playerSprites.portrait,
+    `${state.player.name} portrait`
+  );
+  applySpriteToImage(
+    battleEnemySprite,
+    enemySprites.scene,
+    `${state.enemy.name} battle sprite`
+  );
+  applySpriteToImage(
+    enemyCardSprite,
+    enemySprites.portrait,
+    `${state.enemy.name} portrait`
+  );
 }
 
 function applyBattleLayout(layout) {

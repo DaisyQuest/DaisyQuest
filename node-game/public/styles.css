@@ -139,6 +139,11 @@ body {
   backdrop-filter: blur(8px);
 }
 
+.hero {
+  grid-column: 1 / -1;
+  padding: 20px;
+}
+
 .auth-status {
   display: grid;
   justify-items: end;
@@ -223,9 +228,8 @@ body {
 
 .game-world-panel {
   position: relative;
-  min-height: min(70vh, 720px);
-  height: min(70vh, 720px);
-  margin-bottom: 24px;
+  min-height: 100%;
+  height: 100%;
   border-radius: 22px;
   padding: 24px;
   overflow: hidden;
@@ -241,6 +245,14 @@ body {
 
 .battle-scene {
   position: relative;
+  height: 100%;
+  min-height: 100%;
+  display: grid;
+  background-image:
+    linear-gradient(160deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.4)),
+    url("assets/battle/background_1.png");
+  background-size: cover;
+  background-position: center;
 }
 
 .game-world-layer-stack {
@@ -338,6 +350,52 @@ body {
     transparent
   );
   opacity: 0.7;
+}
+
+.battle-stage {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-height: min(92vh, 960px);
+  height: min(92vh, 960px);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.battle-stage > * {
+  grid-area: 1 / 1;
+}
+
+.battle-hud {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 20px;
+  padding: 20px;
+  height: 100%;
+  pointer-events: none;
+}
+
+.battle-hud__panel {
+  background: rgba(10, 14, 32, 0.62);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 20px;
+  box-shadow: 0 18px 40px rgba(3, 7, 18, 0.4);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.battle-hud__top {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.battle-hud__footer {
+  display: grid;
+  gap: 16px;
+  align-self: end;
 }
 
 .minimap-panel {
@@ -468,6 +526,18 @@ body {
   box-shadow: 0 8px 16px rgba(15, 23, 42, 0.35);
 }
 
+.battle-sprite-frame {
+  border-radius: 18px;
+  padding: 10px;
+  background: linear-gradient(
+    140deg,
+    rgba(15, 23, 42, 0.6),
+    rgba(124, 58, 237, 0.35)
+  );
+  border: 1px solid rgba(248, 250, 252, 0.3);
+  box-shadow: 0 16px 24px rgba(15, 23, 42, 0.45);
+}
+
 .battle-combatant {
   position: absolute;
   display: grid;
@@ -490,15 +560,18 @@ body {
 }
 
 .battle-sprite {
-  width: 140px;
-  height: 140px;
+  width: min(240px, 30vw);
+  height: min(240px, 30vw);
+  object-fit: contain;
+  border-radius: 16px;
   animation: pulseGlow 3.5s ease-in-out infinite;
-  border-color: var(--dq-battle-sprite-border);
-  background: linear-gradient(
-    135deg,
+  border: 1px solid var(--dq-battle-sprite-border);
+  background: radial-gradient(
+    circle at top,
     var(--dq-battle-sprite-start),
-    var(--dq-battle-sprite-end)
+    transparent 65%
   );
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
 }
 
 .effect-bounds {
@@ -679,7 +752,7 @@ body {
   display: grid;
   gap: 20px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  margin-bottom: 24px;
+  padding: 16px;
 }
 
 .combatant {
@@ -696,19 +769,19 @@ body {
   padding: 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.sprite-placeholder {
-  height: 140px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.35), rgba(14, 165, 233, 0.35));
-  border: 1px dashed rgba(255, 255, 255, 0.35);
   display: grid;
   place-items: center;
-  color: rgba(255, 255, 255, 0.8);
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
+}
+
+.sprite-portrait {
+  width: 100%;
+  max-width: 160px;
+  height: 160px;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: radial-gradient(circle at top, rgba(124, 58, 237, 0.35), transparent 65%);
+  box-shadow: inset 0 0 12px rgba(15, 23, 42, 0.45);
 }
 
 .controls {
@@ -716,10 +789,10 @@ body {
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .controls button {
