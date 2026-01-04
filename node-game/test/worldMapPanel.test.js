@@ -18,11 +18,13 @@ describe("world map panel layout", () => {
     expect(panel.style.height).toBe(WORLD_MAP_PANEL_HEIGHT);
     expect(panel.style.minHeight).toBe(WORLD_MAP_PANEL_HEIGHT);
     expect(panel.dataset.layoutHeight).toBe(WORLD_MAP_PANEL_HEIGHT);
+    expect(panel.dataset.worldMapInteractive).toBe("true");
     expect(layout.style.height).toBe(WORLD_MAP_PANEL_HEIGHT);
     expect(layout.style.minHeight).toBe(WORLD_MAP_PANEL_HEIGHT);
     expect(layout.dataset.layoutHeight).toBe(WORLD_MAP_PANEL_HEIGHT);
     expect(surface.style.height).toBe("100%");
     expect(surface.style.flex).toBe("1 1 0%");
+    expect(surface.dataset.worldMapInteractive).toBe("true");
   });
 
   it("supports custom sizing overrides", () => {

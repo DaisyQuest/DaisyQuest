@@ -190,12 +190,26 @@
         <div class="map-layout">
           <div class="world-panel" id="world-panel">
             <header class="world-panel__header">
-              <h3>World Panel</h3>
-              <p class="subtitle">Right-click to inspect, trade, or interact with nearby entities.</p>
+              <div>
+                <h3>World Panel</h3>
+                <p class="subtitle">Right-click to inspect, trade, or interact with nearby entities.</p>
+              </div>
+              <div class="world-panel__status" data-world-map-hud>
+                <span class="world-panel__status-label">Travel Mode</span>
+                <span class="world-panel__status-detail" data-world-map-hint>
+                  Click a tile to move • Right-click for actions
+                </span>
+              </div>
             </header>
-            <div class="world-panel__surface">
+            <div class="world-panel__surface" data-world-map-surface>
+              <div class="world-panel__hud" aria-hidden="true">
+                <div class="world-panel__compass">N</div>
+                <div class="world-panel__coordinates">Coordinates: 14, 08</div>
+                <div class="world-panel__region">Region: Emberwood Crossing</div>
+              </div>
               <div
                 class="world-panel__target world-panel__target--player"
+                style="--x: 28%; --y: 35%;"
                 data-interaction-type="player"
                 data-interaction-id="wandering-merchant"
                 data-interaction-label="Wandering Merchant"
@@ -205,6 +219,7 @@
               </div>
               <div
                 class="world-panel__target world-panel__target--npc"
+                style="--x: 62%; --y: 48%;"
                 data-interaction-type="npc"
                 data-interaction-id="shadow-warden"
                 data-interaction-label="Shadow Warden"
@@ -214,6 +229,7 @@
               </div>
               <div
                 class="world-panel__target world-panel__target--object"
+                style="--x: 46%; --y: 68%;"
                 data-interaction-type="object"
                 data-interaction-id="signal-beacon"
                 data-interaction-label="Signal Beacon"

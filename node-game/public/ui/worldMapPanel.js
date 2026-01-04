@@ -13,6 +13,7 @@ export function applyWorldMapPanelLayout({
   panel.style.height = height;
   panel.style.minHeight = height;
   panel.dataset.layoutHeight = height;
+  panel.dataset.worldMapInteractive = "true";
 
   if (layout) {
     layout.style.height = height;
@@ -23,6 +24,7 @@ export function applyWorldMapPanelLayout({
   if (surface) {
     surface.style.height = "100%";
     surface.style.flex = "1";
+    surface.dataset.worldMapInteractive = "true";
   }
 
   return { layout, panel, surface };
