@@ -221,7 +221,7 @@ export function createGameSession({
   }
 
   function getPersistenceSnapshot() {
-  return {
+    return {
       state: serializeState(state),
       timers: { ...timers },
       registry: getRegistrySnapshot()

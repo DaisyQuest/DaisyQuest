@@ -79,6 +79,48 @@ describe("minimap snapshot", () => {
     expect(snapshot.entries.find((entry) => entry.id === "far-object")).toBeUndefined();
   });
 
+  test("includes only entries at the center when radius is zero", () => {
+    const worldState = {
+      worldMap: { id: "realm", width: 5, height: 5 },
+      submaps: [],
+      players: [
+        {
+          id: "hero",
+          name: "Hero",
+          isNpc: false,
+          location: { mapId: "realm", submapId: null },
+          position: { x: 2, y: 2 }
+        },
+        {
+          id: "ally",
+          name: "Ally",
+          isNpc: false,
+          location: { mapId: "realm", submapId: null },
+          position: { x: 3, y: 2 }
+        }
+      ],
+      worldObjects: [
+        {
+          id: "altar",
+          name: "Altar",
+          objectType: "altar",
+          location: { mapId: "realm", submapId: null },
+          position: { x: 2, y: 2 }
+        }
+      ]
+    };
+
+    const snapshot = buildMinimapSnapshot({ worldState, playerId: "hero", radius: 0 });
+
+    expect(snapshot.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "hero", type: MINIMAP_ENTITY_TYPES.SELF }),
+        expect.objectContaining({ id: "altar", type: MINIMAP_ENTITY_TYPES.WORLD_OBJECT })
+      ])
+    );
+    expect(snapshot.entries.find((entry) => entry.id === "ally")).toBeUndefined();
+  });
+
   test("filters to submap and includes submap bounds", () => {
     const worldState = {
       worldMap: { id: "realm", width: 30, height: 30 },
@@ -187,7 +229,15 @@ describe("minimap helpers", () => {
 
   test("getBounds clamps to zero when map size is missing", () => {
     const bounds = getBounds({ centerX: 4, centerY: 4, radius: 3, maxX: -1, maxY: -2 });
+    const missingBounds = getBounds({
+      centerX: 4,
+      centerY: 4,
+      radius: 3,
+      maxX: Number.NaN,
+      maxY: undefined
+    });
     expect(bounds).toEqual({ minX: 0, maxX: 0, minY: 0, maxY: 0 });
+    expect(missingBounds).toEqual({ minX: 0, maxX: 0, minY: 0, maxY: 0 });
   });
 
   test("bounds and radius checks handle inclusive edges", () => {

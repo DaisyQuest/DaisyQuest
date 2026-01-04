@@ -15,8 +15,8 @@ function normalizeRadius(radius) {
 }
 
 function getBounds({ centerX, centerY, radius, maxX, maxY }) {
-  const boundedMaxX = Math.max(0, maxX);
-  const boundedMaxY = Math.max(0, maxY);
+  const boundedMaxX = Number.isFinite(maxX) ? Math.max(0, maxX) : 0;
+  const boundedMaxY = Number.isFinite(maxY) ? Math.max(0, maxY) : 0;
   const maxXValue = Math.min(boundedMaxX, centerX + radius);
   const maxYValue = Math.min(boundedMaxY, centerY + radius);
   const minX = Math.max(0, Math.min(centerX - radius, maxXValue));
@@ -86,6 +86,27 @@ function buildWorldObjectEntry(object) {
   };
 }
 
+function filterVisibleEntries({ entries, location, bounds, center, radius }) {
+  return entries
+    .filter((entry) => matchesLocation(entry.location, location))
+    .filter((entry) =>
+      isWithinBounds({
+        x: entry.position.x,
+        y: entry.position.y,
+        ...bounds
+      })
+    )
+    .filter((entry) =>
+      isWithinRadius({
+        x: entry.position.x,
+        y: entry.position.y,
+        centerX: center.x,
+        centerY: center.y,
+        radius
+      })
+    );
+}
+
 export function buildMinimapSnapshot({ worldState, playerId, radius }) {
   if (!worldState) {
     throw new Error("World state is required.");
@@ -97,57 +118,34 @@ export function buildMinimapSnapshot({ worldState, playerId, radius }) {
 
   const normalizedRadius = normalizeRadius(radius);
   const { maxX, maxY } = resolveBoundsForPlayer(worldState, player);
+  const center = { x: player.position.x, y: player.position.y };
   const bounds = getBounds({
-    centerX: player.position.x,
-    centerY: player.position.y,
+    centerX: center.x,
+    centerY: center.y,
     radius: normalizedRadius,
     maxX,
     maxY
   });
 
-  const entries = [];
-  worldState.players
-    .filter((entry) => matchesLocation(entry.location, player.location))
-    .filter((entry) =>
-      isWithinBounds({
-        x: entry.position.x,
-        y: entry.position.y,
-        ...bounds
-      })
-    )
-    .filter((entry) =>
-      isWithinRadius({
-        x: entry.position.x,
-        y: entry.position.y,
-        centerX: player.position.x,
-        centerY: player.position.y,
-        radius: normalizedRadius
-      })
-    )
-    .forEach((entry) => entries.push(buildPlayerEntry(entry, entry.id === player.id)));
-
-  worldState.worldObjects
-    .filter((entry) => matchesLocation(entry.location, player.location))
-    .filter((entry) =>
-      isWithinBounds({
-        x: entry.position.x,
-        y: entry.position.y,
-        ...bounds
-      })
-    )
-    .filter((entry) =>
-      isWithinRadius({
-        x: entry.position.x,
-        y: entry.position.y,
-        centerX: player.position.x,
-        centerY: player.position.y,
-        radius: normalizedRadius
-      })
-    )
-    .forEach((entry) => entries.push(buildWorldObjectEntry(entry)));
+  const entries = [
+    ...filterVisibleEntries({
+      entries: worldState.players,
+      location: player.location,
+      bounds,
+      center,
+      radius: normalizedRadius
+    }).map((entry) => buildPlayerEntry(entry, entry.id === player.id)),
+    ...filterVisibleEntries({
+      entries: worldState.worldObjects,
+      location: player.location,
+      bounds,
+      center,
+      radius: normalizedRadius
+    }).map((entry) => buildWorldObjectEntry(entry))
+  ];
 
   return {
-    center: { x: player.position.x, y: player.position.y },
+    center,
     radius: normalizedRadius,
     location: { ...player.location },
     entries

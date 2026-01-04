@@ -7,7 +7,7 @@ const DEFAULT_PARAMS = Object.freeze({
   frequency: 1
 });
 
-function normalizeParams({ durationMs, amplitude, color, frequency }) {
+function normalizeParams({ durationMs, amplitude, color, frequency } = {}) {
   return {
     durationMs: durationMs ?? DEFAULT_PARAMS.durationMs,
     amplitude: amplitude ?? DEFAULT_PARAMS.amplitude,
