@@ -2,6 +2,7 @@ import { createItemRegistry } from "./systems/itemRegistry.js";
 import { initializeThemeEngine } from "./themeEngine.js";
 import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
+import { createMinimapPanel } from "./ui/minimapPanel.js";
 import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameWorldPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
@@ -27,6 +28,10 @@ const gameWorldPanel = document.querySelector("[data-game-world-panel]");
 const gameWorldLayerStack = document.getElementById("game-world-layer-stack");
 const playerStatusBanners = document.getElementById("player-status-banners");
 const enemyStatusBanners = document.getElementById("enemy-status-banners");
+const minimapPanelElement = document.getElementById("minimap-panel");
+const minimapCanvas = document.getElementById("minimap-canvas");
+const minimapLegend = document.getElementById("minimap-legend");
+const minimapToggle = document.getElementById("minimap-toggle");
 const captionGlobal = document.getElementById("caption-global");
 const captionPlayer = document.getElementById("caption-player");
 const captionEnemy = document.getElementById("caption-enemy");
@@ -134,6 +139,14 @@ const layoutTabs = createTabController({
 });
 applyGameWorldPanelLayout(gameWorldPanel);
 createGameWorldLayerStack({ container: gameWorldLayerStack });
+
+const minimapPanel = createMinimapPanel({
+  container: minimapPanelElement,
+  canvas: minimapCanvas,
+  toggleButton: minimapToggle,
+  legendContainer: minimapLegend,
+  fetchMinimap: () => apiRequest("/api/world/minimap")
+});
 
 function apiRequest(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers ?? {}) };
@@ -1338,6 +1351,7 @@ async function handleLogout() {
     state = null;
     currentTrades = [];
     tradeList.innerHTML = "";
+    minimapPanel.stop();
     updateAuthStatus(null);
     if (worldInteractionClient) {
       worldInteractionClient.destroy();
@@ -1379,6 +1393,7 @@ function initializeGameUI() {
   updateMeters();
   updateActionButtons();
   startCombatLoop();
+  minimapPanel.start();
 }
 
 actionButtons.forEach((button) => {

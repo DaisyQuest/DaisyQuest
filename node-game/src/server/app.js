@@ -6,6 +6,7 @@ import { createAuthStore } from "./authStore.js";
 import { createInMemoryDataStore } from "./dataStore.js";
 import { createGameSession } from "./gameSession.js";
 import { createTradeManager } from "./tradeManager.js";
+import { buildMinimapSnapshot, MINIMAP_VISIBILITY_RADIUS } from "../world/minimap.js";
 import {
   resolveContextAction,
   resolveContextMenu,
@@ -186,6 +187,17 @@ export function createApp({
 
   app.get("/api/registry", requireSession, (req, res) => {
     res.json({ registry: req.session.getRegistrySnapshot() });
+  });
+
+  app.get("/api/world/minimap", requireSession, (req, res) => {
+    const radiusParam = Number(req.query.radius);
+    const radius = Number.isFinite(radiusParam) ? radiusParam : MINIMAP_VISIBILITY_RADIUS;
+    const snapshot = buildMinimapSnapshot({
+      worldState: req.session.getWorldState(),
+      playerId: req.session.username,
+      radius
+    });
+    res.json(snapshot);
   });
 
   app.post("/api/registry/items", requireSession, async (req, res) => {
