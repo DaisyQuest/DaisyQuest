@@ -76,6 +76,32 @@
           <select id="npc-select" aria-label="Select a challenger"></select>
           <p class="npc-description" id="npc-description"></p>
         </div>
+        <div class="battle-scene" id="battle-scene">
+          <div class="battle-scene__parallax" aria-hidden="true">
+            <div class="parallax-layer layer-distant"></div>
+            <div class="parallax-layer layer-mid"></div>
+            <div class="parallax-layer layer-near"></div>
+          </div>
+          <div class="battle-scene__ambient" id="battle-particles" aria-hidden="true"></div>
+          <div class="battle-scene__baseline" aria-hidden="true"></div>
+          <div class="caption-zone" id="caption-global" data-zone="global" aria-live="polite"></div>
+          <div class="caption-zone" id="caption-player" data-zone="player" aria-live="polite"></div>
+          <div class="caption-zone" id="caption-enemy" data-zone="enemy" aria-live="polite"></div>
+          <div class="battle-combatant battle-combatant--player" id="battle-player">
+            <div class="status-banners" id="player-status-banners"></div>
+            <div class="sprite-placeholder battle-sprite" id="player-battle-sprite">
+              <span>Hero Sprite</span>
+            </div>
+            <div class="effect-bounds" data-role="player" aria-hidden="true"></div>
+          </div>
+          <div class="battle-combatant battle-combatant--enemy" id="battle-enemy">
+            <div class="status-banners" id="enemy-status-banners"></div>
+            <div class="sprite-placeholder battle-sprite" id="enemy-battle-sprite">
+              <span>Enemy Sprite</span>
+            </div>
+            <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
+          </div>
+        </div>
         <div class="battlefield">
           <div class="combatant" id="player-card">
             <h2 id="player-name">Hero</h2>

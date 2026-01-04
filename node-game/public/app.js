@@ -17,6 +17,15 @@ const enemyFocusRow = document.getElementById("enemy-focus-row");
 const npcSelect = document.getElementById("npc-select");
 const npcDescription = document.getElementById("npc-description");
 const enemyName = document.getElementById("enemy-name");
+const battleScene = document.getElementById("battle-scene");
+const battleParticles = document.getElementById("battle-particles");
+const battlePlayerSprite = document.getElementById("player-battle-sprite");
+const battleEnemySprite = document.getElementById("enemy-battle-sprite");
+const playerStatusBanners = document.getElementById("player-status-banners");
+const enemyStatusBanners = document.getElementById("enemy-status-banners");
+const captionGlobal = document.getElementById("caption-global");
+const captionPlayer = document.getElementById("caption-player");
+const captionEnemy = document.getElementById("caption-enemy");
 const inventoryList = document.getElementById("inventory-list");
 const equipmentList = document.getElementById("equipment-list");
 const lootList = document.getElementById("loot-list");
@@ -90,6 +99,7 @@ let combatTimers = {
   enemyPollId: null
 };
 let pendingAction = false;
+let battleSceneInitialized = false;
 const logFeed = createFeedPanel({ listElement: logList });
 const lootFeed = createFeedPanel({ listElement: lootList });
 const combatMeters = createCombatMeterPanel({
@@ -197,6 +207,217 @@ function pushLoot(lines) {
 
 function updateMeters() {
   combatMeters.render(state);
+}
+
+function updateBattleSceneSprites() {
+  if (!state) {
+    return;
+  }
+  if (battlePlayerSprite) {
+    const label = battlePlayerSprite.querySelector("span");
+    if (label) {
+      label.textContent = `${state.player.name} Sprite`;
+    }
+  }
+  if (battleEnemySprite) {
+    const label = battleEnemySprite.querySelector("span");
+    if (label) {
+      label.textContent = `${state.enemy.name} Sprite`;
+    }
+  }
+}
+
+function applyBattleLayout(layout) {
+  if (!battleScene || !layout) {
+    return;
+  }
+  const setPercent = (variable, value) => {
+    if (typeof value !== "number") {
+      return;
+    }
+    battleScene.style.setProperty(variable, `${value}%`);
+  };
+
+  setPercent("--battle-baseline-y", layout.arenaBaseline?.yPercent);
+  setPercent("--battle-player-x", layout.spritePlacement?.player?.xPercent);
+  setPercent("--battle-player-y", layout.spritePlacement?.player?.yPercent);
+  setPercent("--battle-enemy-x", layout.spritePlacement?.enemy?.xPercent);
+  setPercent("--battle-enemy-y", layout.spritePlacement?.enemy?.yPercent);
+  battleScene.style.setProperty(
+    "--battle-player-scale",
+    layout.spritePlacement?.player?.scale ?? 1
+  );
+  battleScene.style.setProperty(
+    "--battle-enemy-scale",
+    layout.spritePlacement?.enemy?.scale ?? 1
+  );
+
+  setPercent("--battle-player-effect-x", layout.effectBounds?.player?.xPercent);
+  setPercent("--battle-player-effect-y", layout.effectBounds?.player?.yPercent);
+  setPercent("--battle-player-effect-width", layout.effectBounds?.player?.widthPercent);
+  setPercent("--battle-player-effect-height", layout.effectBounds?.player?.heightPercent);
+  setPercent("--battle-enemy-effect-x", layout.effectBounds?.enemy?.xPercent);
+  setPercent("--battle-enemy-effect-y", layout.effectBounds?.enemy?.yPercent);
+  setPercent("--battle-enemy-effect-width", layout.effectBounds?.enemy?.widthPercent);
+  setPercent("--battle-enemy-effect-height", layout.effectBounds?.enemy?.heightPercent);
+
+  setPercent("--battle-caption-player-x", layout.captionZones?.player?.xPercent);
+  setPercent("--battle-caption-player-y", layout.captionZones?.player?.yPercent);
+  setPercent("--battle-caption-player-width", layout.captionZones?.player?.widthPercent);
+  setPercent("--battle-caption-player-height", layout.captionZones?.player?.heightPercent);
+  setPercent("--battle-caption-enemy-x", layout.captionZones?.enemy?.xPercent);
+  setPercent("--battle-caption-enemy-y", layout.captionZones?.enemy?.yPercent);
+  setPercent("--battle-caption-enemy-width", layout.captionZones?.enemy?.widthPercent);
+  setPercent("--battle-caption-enemy-height", layout.captionZones?.enemy?.heightPercent);
+  setPercent("--battle-caption-global-x", layout.captionZones?.global?.xPercent);
+  setPercent("--battle-caption-global-y", layout.captionZones?.global?.yPercent);
+  setPercent("--battle-caption-global-width", layout.captionZones?.global?.widthPercent);
+  setPercent("--battle-caption-global-height", layout.captionZones?.global?.heightPercent);
+}
+
+function applyBattlePolish(polish) {
+  if (!battleScene || !polish) {
+    return;
+  }
+  const pulsing = polish.pulsingHighlights ?? {};
+  if (typeof pulsing.opacity === "number") {
+    battleScene.style.setProperty("--dq-battle-effect-opacity", pulsing.opacity);
+  }
+  if (typeof pulsing.speedMs === "number") {
+    battleScene.style.setProperty("--dq-battle-effect-speed", `${pulsing.speedMs}ms`);
+  }
+}
+
+function buildBattleSceneParticles() {
+  if (!battleParticles || !config?.battleScene?.polish?.ambientParticles) {
+    return;
+  }
+  battleParticles.innerHTML = "";
+  const count = config.battleScene.polish.ambientParticles.count ?? 12;
+  for (let i = 0; i < count; i += 1) {
+    const particle = document.createElement("span");
+    particle.className = "battle-particle";
+    particle.style.left = `${Math.random() * 100}%`;
+    particle.style.top = `${50 + Math.random() * 40}%`;
+    particle.style.animationDelay = `${Math.random() * 4}s`;
+    particle.style.animationDuration = `${4 + Math.random() * 4}s`;
+    battleParticles.appendChild(particle);
+  }
+}
+
+function wireParallax() {
+  if (!battleScene || battleSceneInitialized) {
+    return;
+  }
+  const layers = Array.from(battleScene.querySelectorAll(".parallax-layer"));
+  const layerSpeeds = config?.battleScene?.polish?.parallaxLayers ?? [];
+  const resolveSpeed = (index) => layerSpeeds[index]?.speed ?? 0.2;
+
+  battleScene.addEventListener("mousemove", (event) => {
+    const rect = battleScene.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    layers.forEach((layer, index) => {
+      const speed = resolveSpeed(index);
+      layer.style.setProperty("--dq-layer-x", `${x * speed * 40}px`);
+      layer.style.setProperty("--dq-layer-y", `${y * speed * 40}px`);
+    });
+  });
+
+  battleScene.addEventListener("mouseleave", () => {
+    layers.forEach((layer) => {
+      layer.style.setProperty("--dq-layer-x", "0px");
+      layer.style.setProperty("--dq-layer-y", "0px");
+    });
+  });
+
+  battleSceneInitialized = true;
+}
+
+function resolveStatusBanner(statusId) {
+  const statuses = config?.battleScene?.overlays?.statusBanners ?? [];
+  return statuses.find((status) => status.id === statusId) ?? null;
+}
+
+function showStatusBanner(target, statusId) {
+  const container = target === "player" ? playerStatusBanners : enemyStatusBanners;
+  if (!container) {
+    return;
+  }
+  const status = resolveStatusBanner(statusId);
+  if (!status) {
+    return;
+  }
+  const banner = document.createElement("div");
+  banner.className = "status-banner";
+  banner.dataset.tone = status.tone ?? "accent";
+  banner.textContent = status.label ?? statusId;
+  container.appendChild(banner);
+  const duration = config?.battleScene?.overlays?.durationsMs?.status ?? 2600;
+  window.setTimeout(() => banner.remove(), duration);
+}
+
+function spawnHitNumber(target, text, variant = "damage") {
+  const zone =
+    target === "player" ? captionPlayer : target === "enemy" ? captionEnemy : captionGlobal;
+  if (!zone) {
+    return;
+  }
+  const hit = document.createElement("div");
+  hit.className = "hit-number";
+  if (variant === "crit") {
+    hit.classList.add("hit-number--crit");
+  }
+  if (variant === "heal") {
+    hit.classList.add("hit-number--heal");
+  }
+  hit.textContent = text;
+  zone.appendChild(hit);
+  const duration = config?.battleScene?.overlays?.durationsMs?.hit ?? 1400;
+  window.setTimeout(() => hit.remove(), duration);
+}
+
+function handleBattleEvent(event) {
+  if (!event) {
+    return;
+  }
+  const rules = config?.battleScene?.overlays?.statusRules ?? [];
+  rules
+    .filter((rule) => rule.source === event.source && rule.action === event.action)
+    .forEach((rule) => showStatusBanner(rule.target, rule.status));
+
+  if (event.damage > 0) {
+    const target = event.source === "player" ? "enemy" : "player";
+    spawnHitNumber(target, `-${event.damage}`);
+  } else if (event.failed) {
+    const target = event.source === "player" ? "enemy" : "player";
+    spawnHitNumber(target, "Miss", "crit");
+  }
+
+  if (event.healed > 0) {
+    const target = event.source === "player" ? "player" : "enemy";
+    spawnHitNumber(target, `+${event.healed}`, "heal");
+  }
+}
+
+function clearBattleOverlays() {
+  [captionGlobal, captionPlayer, captionEnemy, playerStatusBanners, enemyStatusBanners].forEach(
+    (container) => {
+      if (container) {
+        container.innerHTML = "";
+      }
+    }
+  );
+}
+
+function initializeBattleScene() {
+  if (!config?.battleScene) {
+    return;
+  }
+  applyBattleLayout(config.battleScene.layout);
+  applyBattlePolish(config.battleScene.polish);
+  buildBattleSceneParticles();
+  wireParallax();
 }
 
 function updateActionButtons(now = Date.now()) {
@@ -627,6 +848,7 @@ async function resetBattle() {
   }
   logList.innerHTML = "";
   lootList.innerHTML = "";
+  clearBattleOverlays();
   try {
     const payload = await apiRequest("/api/battle/reset", {
       method: "POST",
@@ -637,6 +859,7 @@ async function resetBattle() {
     npcDescription.textContent = npc.description;
     pushLog(payload.log);
     updateMeters();
+    updateBattleSceneSprites();
     updateActionButtons();
     startCombatLoop();
   } catch (error) {
@@ -923,6 +1146,7 @@ async function executePlayerAction(action) {
     applySessionSnapshot(payload);
     pushLog(payload.log);
     pushLoot(payload.loot);
+    handleBattleEvent(payload.battleEvent);
     updateMeters();
     renderInventory();
     renderProgression();
@@ -960,6 +1184,7 @@ async function pollEnemyAction() {
   try {
     const payload = await apiRequest("/api/battle/tick", { method: "POST" });
     applySessionSnapshot(payload);
+    handleBattleEvent(payload.battleEvent);
     if (payload.log?.length) {
       pushLog(payload.log);
       updateMeters();
@@ -1091,6 +1316,8 @@ function initializeGameUI() {
   refreshTrades();
   npcDescription.textContent = getSelectedNpc()?.description ?? "";
   enemyName.textContent = state.enemy.name;
+  initializeBattleScene();
+  updateBattleSceneSprites();
   updateMeters();
   updateActionButtons();
   startCombatLoop();
