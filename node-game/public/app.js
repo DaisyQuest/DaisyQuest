@@ -5,6 +5,7 @@ import { createFeedPanel } from "./ui/feedPanel.js";
 import { createMinimapPanel } from "./ui/minimapPanel.js";
 import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameWorldPanel.js";
 import { applySpriteToImage, getBattleSpriteSet } from "./ui/battleSceneAssets.js";
+import { createFlowOrchestrator, FlowEvent, FlowState } from "./ui/flowOrchestrator.js";
 import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createFlowState, FLOW_SCREENS, getFlowScreenFromTab } from "./ui/flowState.js";
@@ -16,6 +17,12 @@ import {
 import { createTabNavigationAdapter } from "./ui/tabNavigationAdapter.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
 import { createWorldMapView, getSurfacePercentFromEvent } from "./ui/worldMapView.js";
+import {
+  GameFlowEvent,
+  GameFlowState,
+  canTransition,
+  transition
+} from "./state/gameFlow.js";
 
 const logList = document.getElementById("log");
 const playerHealth = document.getElementById("player-health");
@@ -129,6 +136,7 @@ let combatTimers = {
 let pendingAction = false;
 let battleSceneInitialized = false;
 let worldInteractionClient = null;
+let gameFlowState = GameFlowState.COMBAT;
 const logFeed = createFeedPanel({ listElement: logList });
 const lootFeed = createFeedPanel({ listElement: lootList });
 const combatMeters = createCombatMeterPanel({
@@ -148,11 +156,51 @@ const registryTabs = createTabController({
   buttonKey: "tab",
   panelKey: "pane"
 });
+let flowOrchestrator = null;
+const tabToFlowState = Object.freeze({
+  battle: FlowState.COMBAT,
+  map: FlowState.MAP,
+  inventory: FlowState.INVENTORY,
+  crafting: FlowState.CRAFTING,
+  trading: FlowState.TRADING,
+  registry: FlowState.REGISTRY
+});
+const flowStateToTab = Object.freeze({
+  [FlowState.COMBAT]: "battle",
+  [FlowState.LOOT]: "battle",
+  [FlowState.MAP]: "map",
+  [FlowState.INVENTORY]: "inventory",
+  [FlowState.CRAFTING]: "crafting",
+  [FlowState.TRADING]: "trading",
+  [FlowState.REGISTRY]: "registry"
+});
 const layoutTabs = createTabController({
   buttons: layoutTabButtons,
   panels: layoutPanels,
   buttonKey: "tabTarget",
-  panelKey: "tabPanel"
+  panelKey: "tabPanel",
+  onSelect: (value, meta) => {
+    if (!flowOrchestrator) {
+      return;
+    }
+    flowOrchestrator.requestTransition({
+      type: FlowEvent.NAVIGATE,
+      targetState: tabToFlowState[value],
+      force: meta?.source === "init"
+    });
+  }
+});
+flowOrchestrator = createFlowOrchestrator({
+  initialState: FlowState.COMBAT,
+  onTransition: ({ to }) => {
+    const nextTab = flowStateToTab[to];
+    if (nextTab) {
+      layoutTabs.setActive(nextTab);
+    }
+  },
+  onInvalidTransition: ({ error }) => {
+    console.warn("Flow transition rejected.", error);
+  }
 });
 const flowState = createFlowState({
   initialScreen: getFlowScreenFromTab(layoutTabs.getActiveValue()) ?? FLOW_SCREENS.COMBAT
@@ -287,6 +335,24 @@ function pushLoot(lines) {
 
 function updateMeters() {
   combatMeters.render(state);
+}
+
+function applyGameFlowState(nextState) {
+  gameFlowState = nextState;
+  if (document?.body) {
+    document.body.dataset.gameFlowState = nextState;
+  }
+  const target = nextState === GameFlowState.MAP ? "map" : "battle";
+  layoutTabs.setActive(target);
+}
+
+function requestGameFlowTransition(event) {
+  if (!canTransition(gameFlowState, event)) {
+    return false;
+  }
+  const nextState = transition(gameFlowState, event);
+  applyGameFlowState(nextState);
+  return true;
 }
 
 function updateBattleSceneSprites() {
@@ -1021,6 +1087,7 @@ async function resetBattle() {
     updateBattleSceneSprites();
     updateActionButtons();
     startCombatLoop();
+    requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
   } catch (error) {
     pushLog([error.message]);
   }
@@ -1292,7 +1359,31 @@ function wireTabs() {
 }
 
 function wireLayoutTabs() {
-  layoutTabs.wire();
+  const initial = layoutTabs.getActiveValue();
+  if (initial === "map") {
+    requestGameFlowTransition(GameFlowEvent.SHOW_MAP);
+  } else if (initial === "battle") {
+    requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
+  } else if (initial) {
+    layoutTabs.setActive(initial);
+  }
+  layoutTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.tabTarget;
+      if (!target) {
+        return;
+      }
+      if (target === "map") {
+        requestGameFlowTransition(GameFlowEvent.SHOW_MAP);
+        return;
+      }
+      if (target === "battle") {
+        requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
+        return;
+      }
+      layoutTabs.setActive(target);
+    });
+  });
 }
 
 async function executePlayerAction(action) {
@@ -1309,6 +1400,9 @@ async function executePlayerAction(action) {
     updateMeters();
     renderInventory();
     renderProgression();
+    if (state?.enemy?.health <= 0) {
+      requestGameFlowTransition(GameFlowEvent.SHOW_LOOT);
+    }
   } catch (error) {
     pushLog([error.message]);
   } finally {
@@ -1470,6 +1564,16 @@ function initializeGameUI() {
   wireTabs();
   wireLayoutTabs();
   flowState.setScreen(FLOW_SCREENS.COMBAT, { source: "init" });
+  requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
+  const hasActiveCombat = Boolean(
+    state?.enemy?.id && state?.player?.health > 0 && state?.enemy?.health > 0
+  );
+  flowOrchestrator.requestTransition({
+    type: FlowEvent.SESSION_INITIALIZED,
+    hasActiveCombat,
+    hasLoot: false,
+    force: true
+  });
   populateRecipes();
   renderRecipeDetails();
   populateItemForm(null);

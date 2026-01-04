@@ -172,4 +172,38 @@ describe("tab controller", () => {
     controller.wire();
     controller.setActive("battle");
   });
+
+  it("delegates selection to a custom handler when provided", () => {
+    const dom = new JSDOM(
+      `
+        <button class="layout-tab-button is-active" data-tab-target="battle"></button>
+        <button class="layout-tab-button" data-tab-target="map"></button>
+        <section data-tab-panel="battle"></section>
+        <section data-tab-panel="map"></section>
+      `,
+      { runScripts: "dangerously" }
+    );
+    const doc = dom.window.document;
+    const buttons = doc.querySelectorAll(".layout-tab-button");
+    const panels = doc.querySelectorAll("[data-tab-panel]");
+    const selections = [];
+
+    const controller = createTabController({
+      buttons,
+      panels,
+      buttonKey: "tabTarget",
+      panelKey: "tabPanel",
+      onSelect: (value, meta) => selections.push({ value, meta })
+    });
+
+    controller.wire();
+    buttons[1].dispatchEvent(new dom.window.Event("click", { bubbles: true }));
+
+    expect(selections).toEqual([
+      { value: "battle", meta: { source: "init" } },
+      { value: "map", meta: { source: "click" } }
+    ]);
+    expect(buttons[0].classList.contains("is-active")).toBe(true);
+    expect(panels[0].hidden).toBe(false);
+  });
 });

@@ -3,7 +3,8 @@ export function createTabController({
   panels,
   buttonKey,
   panelKey,
-  activeClass = "is-active"
+  activeClass = "is-active",
+  onSelect
 }) {
   const buttonList = Array.from(buttons ?? []);
   const panelList = Array.from(panels ?? []);
@@ -43,8 +44,23 @@ export function createTabController({
   function wire() {
     const initialValue = getActiveValue();
     if (initialValue) {
-      setActive(initialValue);
+      if (typeof onSelect === "function") {
+        onSelect(initialValue, { source: "init" });
+      } else {
+        setActive(initialValue);
+      }
     }
+
+    buttonList.forEach((button) => {
+      button.addEventListener("click", () => {
+        const value = button.dataset[buttonKey];
+        if (typeof onSelect === "function") {
+          onSelect(value, { source: "click" });
+        } else {
+          setActive(value);
+        }
+      });
+    });
   }
 
   return Object.freeze({
