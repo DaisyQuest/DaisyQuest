@@ -66,10 +66,27 @@ describe("effect primitives", () => {
     expect(burst.spokes).toBe(10);
   });
 
+  test("LineArcEffect uses default extras when omitted", () => {
+    const arc = LineArcEffect();
+    expect(arc.arcCount).toBe(2);
+    expect(arc.thickness).toBe(2);
+  });
+
+  test("RadialBurstEffect uses default extras when omitted", () => {
+    const burst = RadialBurstEffect();
+    expect(burst.radius).toBe(1);
+    expect(burst.spokes).toBe(8);
+  });
+
   test("ScreenShakeEffect keeps axis configuration", () => {
     const effect = ScreenShakeEffect({ axis: "x" });
     expect(effect.axis).toBe("x");
     expect(effect.color).toBe("#ffffff");
+  });
+
+  test("ScreenShakeEffect defaults to a dual-axis shake", () => {
+    const effect = ScreenShakeEffect();
+    expect(effect.axis).toBe("both");
   });
 });
 
@@ -100,6 +117,20 @@ describe("composition rules", () => {
     expect(effect.blendMode).toBe(BLEND_MODES.SCREEN);
   });
 
+  test("applyComposition respects effect-provided metadata when rules exist", () => {
+    const effect = applyComposition({
+      type: "flash",
+      durationMs: 100,
+      amplitude: 1,
+      color: "#fff",
+      frequency: 1,
+      layer: LAYERS.BACKGROUND,
+      blendMode: BLEND_MODES.ADD
+    });
+    expect(effect.layer).toBe(LAYERS.BACKGROUND);
+    expect(effect.blendMode).toBe(BLEND_MODES.ADD);
+  });
+
   test("applyComposition respects overrides", () => {
     const effect = applyComposition(
       { type: "tint", durationMs: 100, amplitude: 1, color: "#fff", frequency: 1 },
@@ -116,6 +147,25 @@ describe("composition rules", () => {
       { type: "c" }
     ]);
     expect(sorted.map((item) => item.type)).toEqual(["c", "a", "b"]);
+  });
+
+  test("sortEffects defaults to an empty list", () => {
+    expect(sortEffects()).toEqual([]);
+  });
+
+  test("sortEffects falls back to empty types for ordering", () => {
+    const sorted = sortEffects([{ layer: 1 }, { type: "alpha", layer: 1 }]);
+    expect(sorted.map((item) => item.type ?? "")).toEqual(["", "alpha"]);
+  });
+
+  test("sortEffects defaults to midground layers when undefined", () => {
+    const sorted = sortEffects([{ type: "beta" }, {}]);
+    expect(sorted.map((item) => item.type ?? "")).toEqual(["", "beta"]);
+  });
+
+  test("sortEffects compares empty types when both are missing", () => {
+    const sorted = sortEffects([{}, {}]);
+    expect(sorted.map((item) => item.type ?? "")).toEqual(["", ""]);
   });
 });
 
@@ -135,6 +185,13 @@ describe("effect serialization", () => {
       layer: COMPOSITION_RULES.tint.layer,
       blendMode: COMPOSITION_RULES.tint.blendMode,
       intensity: 0.9
+    });
+  });
+
+  test("serializeEffect skips undefined keys", () => {
+    expect(serializeEffect({ type: "mystery", durationMs: 250 })).toEqual({
+      type: "mystery",
+      durationMs: 250
     });
   });
 
@@ -190,6 +247,48 @@ describe("effect builders", () => {
         axis: "both"
       }
     ]);
+    expect(serialized).toMatchInlineSnapshot(`
+[
+  {
+    "amplitude": 1.2,
+    "arcCount": 3,
+    "blendMode": "add",
+    "color": "#b3e5ff",
+    "durationMs": 600,
+    "frequency": 3,
+    "layer": 2,
+    "thickness": 2,
+    "type": "lineArc",
+  },
+  {
+    "amplitude": 1.32,
+    "blendMode": "screen",
+    "color": "#ffffff",
+    "durationMs": 360,
+    "fade": "out",
+    "frequency": 3,
+    "layer": 3,
+    "type": "flash",
+  },
+  {
+    "amplitude": 4,
+    "axis": "both",
+    "blendMode": "normal",
+    "color": "#ffffff",
+    "durationMs": 600,
+    "frequency": 6,
+    "layer": 3,
+    "type": "screenShake",
+  },
+]
+`);
+  });
+
+  test("Effects.lightning uses default values when omitted", () => {
+    const effects = Effects.lightning();
+    const serialized = serializeEffects(effects);
+    expect(serialized[0].durationMs).toBe(450);
+    expect(serialized[0].amplitude).toBe(1);
   });
 
   test("Effects.fireOverlay blends tint and burst", () => {
@@ -217,6 +316,37 @@ describe("effect builders", () => {
         spokes: 8
       }
     ]);
+    expect(serializeEffects(effects)).toMatchInlineSnapshot(`
+[
+  {
+    "amplitude": 0.7,
+    "blendMode": "multiply",
+    "color": "#ff7a33",
+    "durationMs": 900,
+    "frequency": 1.1,
+    "intensity": 0.7,
+    "layer": 0,
+    "type": "tint",
+  },
+  {
+    "amplitude": 0.84,
+    "blendMode": "add",
+    "color": "#ff9900",
+    "durationMs": 630,
+    "frequency": 1.54,
+    "layer": 2,
+    "radius": 1.2,
+    "spokes": 8,
+    "type": "radialBurst",
+  },
+]
+`);
+  });
+
+  test("Effects.fireOverlay uses its default burst color", () => {
+    const effects = Effects.fireOverlay();
+    const serialized = serializeEffects(effects);
+    expect(serialized[1].color).toBe("#ffcf5a");
   });
 
   test("Effects.poisonPulse keeps defaults", () => {
