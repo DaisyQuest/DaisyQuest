@@ -14,6 +14,7 @@
 
 - `fromPlayerId`
 - `itemId`
+- `quantity`
 - `toPlayerId`
 
 **Summary:**
