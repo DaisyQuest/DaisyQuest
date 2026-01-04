@@ -1,4 +1,8 @@
-import { createGameSession, REWARD_MILESTONES } from "../src/server/gameSession.js";
+import {
+  BATTLE_SCENE_CONFIG,
+  createGameSession,
+  REWARD_MILESTONES
+} from "../src/server/gameSession.js";
 
 describe("game session", () => {
   const rng = () => 0;
@@ -12,6 +16,7 @@ describe("game session", () => {
     expect(snapshot.state.enemy.name).toBe(config.npcs[0].name);
     expect(snapshot.timers.globalCooldownUntil).toBe(0);
     expect(config.rewardMilestones).toEqual(REWARD_MILESTONES);
+    expect(config.battleScene).toEqual(BATTLE_SCENE_CONFIG);
   });
 
   test("creates default sessions without options", () => {
@@ -72,6 +77,11 @@ describe("game session", () => {
 
     const first = session.attemptAction("attack");
     expect(first.error).toBeUndefined();
+    expect(first.battleEvent).toMatchObject({
+      source: "player",
+      action: "attack",
+      failed: false
+    });
 
     const onCooldown = session.attemptAction("attack");
     expect(onCooldown.error).toBe("Action is recharging.");
@@ -83,6 +93,10 @@ describe("game session", () => {
     session.unsafeSetTimers({ actionCooldowns: {}, globalCooldownUntil: 0 });
     const defaultCooldown = session.attemptAction("attack");
     expect(defaultCooldown.error).toBeUndefined();
+    expect(defaultCooldown.battleEvent).toMatchObject({
+      source: "player",
+      action: "attack"
+    });
 
     session.unsafeSetState({ enemy: { ...session.getSnapshot().state.enemy, health: 0 } });
     expect(session.attemptAction("attack").error).toBe("Combat has concluded.");
@@ -108,11 +122,13 @@ describe("game session", () => {
     session.unsafeSetTimers({ enemyNextActionAt: 0 });
     const idle = session.processEnemyTick();
     expect(idle.log).toEqual([]);
+    expect(idle.battleEvent).toBeNull();
 
     session.unsafeSetTimers({ enemyNextActionAt: now - 1 });
     session.unsafeSetState({ enemy: { ...session.getSnapshot().state.enemy, health: 0 } });
     const concluded = session.processEnemyTick();
     expect(concluded.log).toEqual([]);
+    expect(concluded.battleEvent).toBeNull();
 
     session.unsafeSetState({ enemy: { ...session.getSnapshot().state.enemy, health: 110 } });
     session.unsafeSetState({ player: { ...session.getSnapshot().state.player, health: 1 } });
@@ -120,6 +136,9 @@ describe("game session", () => {
     const result = session.processEnemyTick();
     expect(result.log.join(" ")).toMatch("Defeat");
     expect(result.timers.enemyNextActionAt).toBe(0);
+    expect(result.battleEvent).toMatchObject({
+      source: "enemy"
+    });
 
     session.unsafeSetState({ player: { ...session.getSnapshot().state.player, health: 120 } });
     session.unsafeSetState({ enemy: { ...session.getSnapshot().state.enemy, health: 110 } });
@@ -127,6 +146,9 @@ describe("game session", () => {
     const active = session.processEnemyTick();
     expect(active.log.length).toBeGreaterThan(0);
     expect(active.timers.enemyNextActionAt).toBeGreaterThan(now);
+    expect(active.battleEvent).toMatchObject({
+      source: "enemy"
+    });
   });
 
   test("crafts items and applies progression", () => {

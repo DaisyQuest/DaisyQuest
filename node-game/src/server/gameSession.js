@@ -46,6 +46,52 @@ export const REWARD_MILESTONES = Object.freeze([
   })
 ]);
 
+export const BATTLE_SCENE_CONFIG = Object.freeze({
+  layout: Object.freeze({
+    arenaBaseline: Object.freeze({ xPercent: 50, yPercent: 72 }),
+    spritePlacement: Object.freeze({
+      player: Object.freeze({ xPercent: 22, yPercent: 62, scale: 1 }),
+      enemy: Object.freeze({ xPercent: 78, yPercent: 62, scale: 1 })
+    }),
+    effectBounds: Object.freeze({
+      player: Object.freeze({ xPercent: 10, yPercent: 22, widthPercent: 30, heightPercent: 50 }),
+      enemy: Object.freeze({ xPercent: 60, yPercent: 22, widthPercent: 30, heightPercent: 50 })
+    }),
+    captionZones: Object.freeze({
+      player: Object.freeze({ xPercent: 8, yPercent: 6, widthPercent: 38, heightPercent: 20 }),
+      enemy: Object.freeze({ xPercent: 54, yPercent: 6, widthPercent: 38, heightPercent: 20 }),
+      global: Object.freeze({ xPercent: 25, yPercent: 2, widthPercent: 50, heightPercent: 14 })
+    })
+  }),
+  overlays: Object.freeze({
+    statusBanners: Object.freeze([
+      Object.freeze({ id: "poisoned", label: "Poisoned", tone: "danger" }),
+      Object.freeze({ id: "stunned", label: "Stunned", tone: "warning" }),
+      Object.freeze({ id: "burning", label: "Burning", tone: "accent" })
+    ]),
+    statusRules: Object.freeze([
+      Object.freeze({ source: "player", action: "attack", target: "enemy", status: "poisoned" }),
+      Object.freeze({ source: "player", action: "special", target: "enemy", status: "burning" }),
+      Object.freeze({ source: "enemy", action: "attack", target: "player", status: "poisoned" }),
+      Object.freeze({ source: "enemy", action: "special", target: "player", status: "burning" }),
+      Object.freeze({ source: "enemy", action: "focus", target: "player", status: "stunned" })
+    ]),
+    durationsMs: Object.freeze({
+      status: 2600,
+      hit: 1400
+    })
+  }),
+  polish: Object.freeze({
+    ambientParticles: Object.freeze({ count: 18 }),
+    pulsingHighlights: Object.freeze({ opacity: 0.35, speedMs: 2800 }),
+    parallaxLayers: Object.freeze([
+      Object.freeze({ id: "distant", speed: 0.15 }),
+      Object.freeze({ id: "mid", speed: 0.25 }),
+      Object.freeze({ id: "near", speed: 0.35 })
+    ])
+  })
+});
+
 function buildRuntimeSystems(systemRegistry, registryEditor) {
   const snapshot = registryEditor.getSnapshot();
   const runtime = systemRegistry.createRuntime({
@@ -177,6 +223,7 @@ export function createGameSession({
   function getConfig() {
     return {
       actions: ACTION_CONFIG,
+      battleScene: BATTLE_SCENE_CONFIG,
       globalCooldownMs: GLOBAL_COOLDOWN_MS,
       npcs: NPCS,
       rarityColors: RARITY_COLORS,
@@ -257,6 +304,11 @@ export function createGameSession({
     const result = performPlayerAction({ player: state.player, enemy: state.enemy, action, rng });
     state = { ...state, player: result.player, enemy: result.enemy };
     const log = [...result.log];
+    const battleEvent = {
+      source: "player",
+      action,
+      ...result.actionResult
+    };
     let loot = [];
 
     setActionCooldowns(action, now);
@@ -279,35 +331,39 @@ export function createGameSession({
         });
         loot = formatLootLines(lootDrops, runtime.itemRegistry);
       }
-      return { log, loot, ...getSnapshot() };
+      return { log, loot, battleEvent, ...getSnapshot() };
     }
 
     scheduleEnemyAction(state.enemy, now);
-    return { log, loot, ...getSnapshot() };
+    return { log, loot, battleEvent, ...getSnapshot() };
   }
 
   function processEnemyTick() {
     const now = nowFn();
     if (!timers.enemyNextActionAt || now < timers.enemyNextActionAt) {
-      return { log: [], ...getSnapshot() };
+      return { log: [], battleEvent: null, ...getSnapshot() };
     }
     if (isDefeated(state.player) || isDefeated(state.enemy)) {
       timers = { ...timers, enemyNextActionAt: 0 };
-      return { log: [], ...getSnapshot() };
+      return { log: [], battleEvent: null, ...getSnapshot() };
     }
 
+    const previousPlayerHealth = state.player.health;
     const result = performEnemyAction({ player: state.player, enemy: state.enemy, rng });
     state = { ...state, player: result.player, enemy: result.enemy };
     const log = [...result.log];
+    const damage = Math.max(0, previousPlayerHealth - state.player.health);
+    const healed = Math.max(0, state.player.health - previousPlayerHealth);
+    const battleEvent = { source: "enemy", action: result.action, damage, healed, failed: false };
 
     if (isDefeated(state.player)) {
       log.push(`${state.player.name} falls. Defeat.`);
       timers = { ...timers, enemyNextActionAt: 0 };
-      return { log, ...getSnapshot() };
+      return { log, battleEvent, ...getSnapshot() };
     }
 
     scheduleEnemyAction(state.enemy, now);
-    return { log, ...getSnapshot() };
+    return { log, battleEvent, ...getSnapshot() };
   }
 
   function craftItem(recipeId) {
