@@ -142,7 +142,8 @@ function getMilestoneForLevel(level, claimedRewards) {
 function formatLootLines(lootDrops, itemRegistry) {
   return lootDrops.map((drop) => {
     const item = itemRegistry.getItem(drop.itemId);
-    return `Looted ${item.name} x${drop.quantity}.`;
+    const itemName = item?.name ?? "Unknown item";
+    return `Looted ${itemName} x${drop.quantity}.`;
   });
 }
 

@@ -183,6 +183,60 @@ describe("server app", () => {
     expect(postLogout.status).toBe(401);
   });
 
+  test("supports map-combat-loot-map flow and rejects combat after conclusion", async () => {
+    let now = 0;
+    const app = createApp({
+      nowFn: () => (now += 10000),
+      rng: () => 0,
+      dataStore: createInMemoryDataStore()
+    });
+
+    const register = await request(app)
+      .post("/api/auth/register")
+      .send({ username: "Traveler", password: "secret1" });
+    const authHeader = { Authorization: `Bearer ${register.body.token}` };
+
+    const worldState = await request(app).get("/api/world/state").set(authHeader);
+    expect(worldState.status).toBe(200);
+
+    const move = await request(app)
+      .post("/api/world/move")
+      .set(authHeader)
+      .send({ target: { xPercent: 0.2, yPercent: 0.2 } });
+    expect(move.status).toBe(200);
+    expect(move.body.movement.moved).toBe(true);
+
+    const reset = await request(app)
+      .post("/api/battle/reset")
+      .set(authHeader)
+      .send({ npcId: "ember_wyrmling" });
+    expect(reset.status).toBe(200);
+
+    let actionResponse;
+    do {
+      actionResponse = await request(app)
+        .post("/api/battle/action")
+        .set(authHeader)
+        .send({ action: "attack" });
+    } while (actionResponse.body.state.enemy.health > 0);
+
+    expect(actionResponse.body.loot.length).toBeGreaterThan(0);
+    expect(actionResponse.body.state.inventory.ember_scale).toBeGreaterThan(0);
+
+    const combatCancelled = await request(app)
+      .post("/api/battle/action")
+      .set(authHeader)
+      .send({ action: "attack" });
+    expect(combatCancelled.status).toBe(400);
+    expect(combatCancelled.body.error).toBe("Combat has concluded.");
+
+    const mapReturn = await request(app)
+      .post("/api/world/move")
+      .set(authHeader)
+      .send({ target: { xPercent: 0.4, yPercent: 0.4 } });
+    expect(mapReturn.status).toBe(200);
+  });
+
   test("rejects invalid login and supports login success", async () => {
     const app = createApp({ nowFn: () => 1000, rng, dataStore: createInMemoryDataStore() });
 
