@@ -632,7 +632,7 @@
             <ul class="nav nav-tabs" id="myTab" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="combat-tab" data-bs-toggle="tab" data-bs-target="#combat" type="button"
-                            role="tab" aria-controls="combat" aria-selected="true">Game
+                            role="tab" aria-controls="combat" aria-selected="false">Combat
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -680,7 +680,7 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#worldMapH"
                             type="button"
-                            role="tab" aria-controls="chat" aria-selected="false">World Map
+                            role="tab" aria-controls="chat" aria-selected="false">Map
                     </button>
                 </li>
             </ul>
@@ -766,7 +766,12 @@
                 <div class="tab-pane fade" id="combat" role="tabpanel" aria-labelledby="combat-tab">
                     <div class="card dq-card combat-container">
                         <div class="card-body">
-                            <h5 class="card-title text-center">DaisyQuest World Map</h5>
+                            <h5 class="card-title text-center">Combat Arena</h5>
+
+                            <div id="combatEmptyState" class="text-center text-muted my-4">
+                                <p class="mb-1">Combat will appear here when a duel or encounter begins.</p>
+                                <small>Initiate combat from the world map or accept a challenge to enter the arena.</small>
+                            </div>
 
                             <div id="combatArea" style="display: none;">
                                 <div class="turn-indicator" id="turnIndicator"></div>
@@ -1276,6 +1281,7 @@
     });
 </script>
 
+<script th:src="@{/js/uiEngine.js}"></script>
 <script th:src="@{/js/game.js}"></script>
 <script th:src="@{/js/dialog.js}"></script>
 <script th:src="@{/js/inspect.js}"></script>

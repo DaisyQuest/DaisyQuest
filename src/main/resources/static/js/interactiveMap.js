@@ -1,9 +1,13 @@
 
     // World Map variables
     const canvas = document.getElementById('worldMapCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas ? canvas.getContext('2d') : null;
     const coordsDisplay = document.getElementById('coordinates');
-    canvas.addEventListener('click', handleMapClick);
+    if (canvas) {
+        canvas.addEventListener('click', handleMapClick);
+    } else {
+        console.warn('World map canvas not found; skipping map click bindings.');
+    }
     let worldMap;
     let players = [];
     let currentPlayer;
@@ -40,12 +44,14 @@
     const VIEWPORT_HEIGHT = 720;
     const SPRITE_SIZE = 64;
     let mp3Player;
+    let uiEngine;
     document.addEventListener('DOMContentLoaded', function() {
         mp3Player = new MP3Player('audio-player-container');
         mp3Player.loadTrack('/audio/world2.mp3');
         mp3Player.audio.loop = true;
         mp3Player.togglePlayPause();
     });
+    document.addEventListener('DOMContentLoaded', initializeCombatUIEngine);
 
     const terrainColors = {
     PLAINS: '#90EE90',
@@ -75,6 +81,84 @@
     let lastClickX, lastClickY;
     let socket;
     let statusEffects = {};
+
+    function initializeCombatUIEngine() {
+        if (!window.DaisyQuestUIEngine) {
+            console.warn('UI engine not available; falling back to basic combat toggling.');
+            return;
+        }
+
+        const mapContainer = document.getElementById('worldMapContainer');
+        const combatArea = document.getElementById('combatArea');
+
+        if (!mapContainer || !combatArea) {
+            console.warn('Map or combat container missing; skipping UI engine initialization.');
+            return;
+        }
+
+        uiEngine = window.DaisyQuestUIEngine.createUIEngine({
+            views: {
+                map: { containerId: 'worldMapContainer', displayStyle: 'flex' },
+                combat: { containerId: 'combatArea', displayStyle: 'block' }
+            },
+            combatAreaId: 'combatArea',
+            combatResultsId: 'combatResults',
+            combatAreaDisplay: 'block',
+            combatResultsDisplay: 'block',
+            defaultView: 'map'
+        });
+
+        uiEngine.setCombatActive(false);
+    }
+
+    function showCombatView() {
+        if (uiEngine) {
+            uiEngine.setCombatActive(true);
+            return;
+        }
+        const mapContainer = document.getElementById('worldMapContainer');
+        const combatArea = document.getElementById('combatArea');
+        if (mapContainer) {
+            mapContainer.style.display = 'none';
+        }
+        if (combatArea) {
+            combatArea.style.display = 'block';
+        }
+    }
+
+    function showCombatResultsView() {
+        if (uiEngine) {
+            uiEngine.showCombatResults();
+            return;
+        }
+        const combatArea = document.getElementById('combatArea');
+        const combatResults = document.getElementById('combatResults');
+        if (combatArea) {
+            combatArea.style.display = 'none';
+        }
+        if (combatResults) {
+            combatResults.style.display = 'block';
+        }
+    }
+
+    function resetCombatView() {
+        if (uiEngine) {
+            uiEngine.resetCombatView();
+            return;
+        }
+        const mapContainer = document.getElementById('worldMapContainer');
+        const combatArea = document.getElementById('combatArea');
+        const combatResults = document.getElementById('combatResults');
+        if (combatResults) {
+            combatResults.style.display = 'none';
+        }
+        if (combatArea) {
+            combatArea.style.display = 'none';
+        }
+        if (mapContainer) {
+            mapContainer.style.display = 'flex';
+        }
+    }
 
 
 
@@ -138,7 +222,11 @@
 
 
     function initWorldMap() {
-    initGameData();
+    if (canvas && ctx) {
+        initGameData();
+    } else {
+        console.warn('World map canvas missing; interactive map initialization skipped.');
+    }
 }
 
     // Add this function at the top of your script
@@ -668,7 +756,9 @@
 
         drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
 
-        coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
+        if (coordsDisplay) {
+            coordsDisplay.textContent = `X: ${currentPlayer.worldPositionX}, Y: ${currentPlayer.worldPositionY}`;
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(offscreenCanvas, 0, 0);
     }
@@ -1022,8 +1112,7 @@
     mp3Player.loadTrack('/audio/battle.mp3');
     mp3Player.togglePlayPause();
     currentCombatId = combatId;
-    document.getElementById('worldMapContainer').style.display = 'none';
-    document.getElementById('combatArea').style.display = 'block';
+    showCombatView();
     fetchCombatState(combatId);
 }
 
@@ -1473,8 +1562,7 @@
 
 
     function showCombatResults(combat) {
-    document.getElementById('combatArea').style.display = 'none';
-    document.getElementById('combatResults').style.display = 'block';
+    showCombatResultsView();
     const resultsDiv = document.getElementById('combatResults');
     const winner = determineWinner(combat);
     const loser = Object.keys(combat.playerHealth).find(id => id !== winner);
@@ -1549,8 +1637,7 @@
         mp3Player.audio.loop = true;
         mp3Player.loadTrack('/audio/world2.mp3');
         mp3Player.audio.play();
-    document.getElementById('combatResults').style.display = 'none';
-    document.getElementById('worldMapContainer').style.display = 'flex';
+    resetCombatView();
     currentCombatId = null;
     selectedPlayer = null;
     hideDuelButton();
@@ -1834,7 +1921,9 @@
     // Draw current player
     drawPlayer(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, currentPlayer, true);
 
-    coordsDisplay.textContent = `Submap: ${currentSubmap ? currentSubmap.title : 'Unknown'} | X: ${currentPlayer.submapCoordinateX}, Y: ${currentPlayer.submapCoordinateY}`;
+    if (coordsDisplay) {
+        coordsDisplay.textContent = `Submap: ${currentSubmap ? currentSubmap.title : 'Unknown'} | X: ${currentPlayer.submapCoordinateX}, Y: ${currentPlayer.submapCoordinateY}`;
+    }
 }
 
     function loadSubmapData(submapId) {
@@ -1913,8 +2002,7 @@
     function handleDuelAccepted(combatId, playerIds) {
     console.log('Duel accepted, starting combat:', combatId);
     currentCombatId = combatId;
-    document.getElementById('worldMapContainer').style.display = 'none';
-    document.getElementById('combatArea').style.display = 'block';
+    showCombatView();
 
     // Fetch the initial combat state
     fetch(`/api/combat/${combatId}`)

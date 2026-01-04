@@ -12,10 +12,18 @@ let unclaimedRewardCount = 0;
 let combatLogs = [];
 let currencyDetails;
 let playerCurrencies = {};
+let uiEngine;
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeGame);
-//document.getElementById('startCombatBtn').addEventListener('click', startCombat);
-document.getElementById('spellSelect').addEventListener('change', handleSpellSelection);
+document.addEventListener('DOMContentLoaded', initializeCombatUIEngine);
+document.addEventListener('DOMContentLoaded', () => {
+    const spellSelect = document.getElementById('spellSelect');
+    if (spellSelect) {
+        spellSelect.addEventListener('change', handleSpellSelection);
+    } else {
+        console.warn('Spell selection dropdown not found; skipping spell event binding.');
+    }
+});
 
 // Initialization
 function initializeGame() {
@@ -36,6 +44,106 @@ function initializeGame() {
         });
       //  updateInventory();
     }
+}
+
+function initializeCombatUIEngine() {
+    if (!window.DaisyQuestUIEngine) {
+        console.warn('UI engine not available; combat view toggling will be limited.');
+        return;
+    }
+
+    const combatTab = document.getElementById('combat-tab');
+    const mapTab = document.getElementById('world-tab');
+    const combatPane = document.getElementById('combat');
+    const mapPane = document.getElementById('worldMapH');
+
+    if (!combatTab || !mapTab || !combatPane || !mapPane) {
+        console.warn('Combat or map UI elements missing; skipping UI engine initialization.');
+        return;
+    }
+
+    uiEngine = window.DaisyQuestUIEngine.createUIEngine({
+        tabs: {
+            combat: { buttonId: 'combat-tab', paneId: 'combat' },
+            map: { buttonId: 'world-tab', paneId: 'worldMapH' }
+        },
+        views: {
+            combat: { paneId: 'combat' },
+            map: { paneId: 'worldMapH' }
+        },
+        combatAreaId: 'combatArea',
+        combatResultsId: 'combatResults',
+        combatIdleId: 'combatEmptyState',
+        defaultView: 'map'
+    });
+
+    uiEngine.setCombatActive(false);
+}
+
+function showCombatView() {
+    if (uiEngine) {
+        uiEngine.setCombatActive(true);
+        return;
+    }
+    const combatArea = document.getElementById('combatArea');
+    const combatResults = document.getElementById('combatResults');
+    const combatIdle = document.getElementById('combatEmptyState');
+    if (combatArea) {
+        combatArea.style.display = 'block';
+    }
+    if (combatResults) {
+        combatResults.style.display = 'none';
+    }
+    if (combatIdle) {
+        combatIdle.style.display = 'none';
+    }
+}
+
+function showCombatResultsView() {
+    if (uiEngine) {
+        uiEngine.showCombatResults();
+        return;
+    }
+    const combatArea = document.getElementById('combatArea');
+    const combatResults = document.getElementById('combatResults');
+    const combatIdle = document.getElementById('combatEmptyState');
+    if (combatArea) {
+        combatArea.style.display = 'none';
+    }
+    if (combatResults) {
+        combatResults.style.display = 'block';
+    }
+    if (combatIdle) {
+        combatIdle.style.display = 'none';
+    }
+}
+
+function resetCombatView() {
+    if (uiEngine) {
+        uiEngine.resetCombatView();
+        return;
+    }
+    const combatArea = document.getElementById('combatArea');
+    const combatResults = document.getElementById('combatResults');
+    const combatIdle = document.getElementById('combatEmptyState');
+    if (combatArea) {
+        combatArea.style.display = 'none';
+    }
+    if (combatResults) {
+        combatResults.style.display = 'none';
+    }
+    if (combatIdle) {
+        combatIdle.style.display = 'block';
+    }
+}
+
+function setElementDisplay(id, displayValue) {
+    const element = document.getElementById(id);
+    if (!element) {
+        console.warn(`Element not found for display update: ${id}`);
+        return;
+    }
+    element.style.display = displayValue;
 }
 
 
@@ -703,8 +811,8 @@ function startCombat() {
         .then(combat => {
             console.log('Combat started:', combat);
             currentCombatId = combat.id;
-            document.getElementById('combatLobby').style.display = 'none';
-            document.getElementById('combatArea').style.display = 'block';
+            setElementDisplay('combatLobby', 'none');
+            showCombatView();
             updateCombatUI(combat);
             fetchPlayerSpells();
             pollCombatStatus();
@@ -1080,8 +1188,7 @@ function confirmAction() {
 }
 
 function showCombatResults(combat) {
-    document.getElementById('combatArea').style.display = 'none';
-    document.getElementById('combatResults').style.display = 'block';
+    showCombatResultsView();
     const resultsDiv = document.getElementById('combatResults');
     resultsDiv.innerHTML = `
         <h2>Combat Ended</h2>
@@ -1102,15 +1209,14 @@ function showCombatResults(combat) {
 
     function returnToLobby() {
         currentCombatId = null;
-        document.getElementById('combatResults').style.display = 'none';
-        document.getElementById('combatLobby').style.display = 'block';
+        resetCombatView();
+        setElementDisplay('combatLobby', 'block');
     }
 
     function endCombat() {
         currentCombatId = null;
-        document.getElementById('combatResults').style.display = 'none';
-        document.getElementById('combatArea').style.display = 'none';
-        document.getElementById('combatLobby').style.display = 'block';
+        resetCombatView();
+        setElementDisplay('combatLobby', 'block');
         updatePlayerInfo();
     }
 
