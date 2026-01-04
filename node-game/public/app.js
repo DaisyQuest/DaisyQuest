@@ -2,6 +2,7 @@ import { createItemRegistry } from "./systems/itemRegistry.js";
 import { initializeThemeEngine } from "./themeEngine.js";
 import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
+import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameWorldPanel.js";
 import { createTabController } from "./ui/tabController.js";
 
 const logList = document.getElementById("log");
@@ -21,6 +22,8 @@ const battleScene = document.getElementById("battle-scene");
 const battleParticles = document.getElementById("battle-particles");
 const battlePlayerSprite = document.getElementById("player-battle-sprite");
 const battleEnemySprite = document.getElementById("enemy-battle-sprite");
+const gameWorldPanel = document.querySelector("[data-game-world-panel]");
+const gameWorldLayerStack = document.getElementById("game-world-layer-stack");
 const playerStatusBanners = document.getElementById("player-status-banners");
 const enemyStatusBanners = document.getElementById("enemy-status-banners");
 const captionGlobal = document.getElementById("caption-global");
@@ -125,6 +128,8 @@ const layoutTabs = createTabController({
   buttonKey: "tabTarget",
   panelKey: "tabPanel"
 });
+applyGameWorldPanelLayout(gameWorldPanel);
+createGameWorldLayerStack({ container: gameWorldLayerStack });
 
 function apiRequest(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...(options.headers ?? {}) };
