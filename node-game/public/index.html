@@ -47,6 +47,7 @@
         <button class="layout-tab-button is-active" type="button" data-tab-target="battle">
           Battle
         </button>
+        <button class="layout-tab-button" type="button" data-tab-target="map">Map</button>
         <button class="layout-tab-button" type="button" data-tab-target="inventory">
           Inventory
         </button>
@@ -126,51 +127,6 @@
             Ember Relic
           </div>
         </div>
-        <div class="world-panel" id="world-panel">
-          <header class="world-panel__header">
-            <h3>World Panel</h3>
-            <p class="subtitle">Right-click to inspect, trade, or interact with nearby entities.</p>
-          </header>
-          <div class="world-panel__surface">
-            <div
-              class="world-panel__target world-panel__target--player"
-              data-interaction-type="player"
-              data-interaction-id="wandering-merchant"
-              data-interaction-label="Wandering Merchant"
-              data-interaction-layer="25"
-            >
-              Wandering Merchant
-            </div>
-            <div
-              class="world-panel__target world-panel__target--npc"
-              data-interaction-type="npc"
-              data-interaction-id="shadow-warden"
-              data-interaction-label="Shadow Warden"
-              data-interaction-layer="20"
-            >
-              Shadow Warden
-            </div>
-            <div
-              class="world-panel__target world-panel__target--object"
-              data-interaction-type="object"
-              data-interaction-id="signal-beacon"
-              data-interaction-label="Signal Beacon"
-              data-interaction-layer="15"
-            >
-              Signal Beacon
-            </div>
-          </div>
-        </div>
-        <div class="minimap-panel" id="minimap-panel">
-          <div class="minimap-panel__header">
-            <span>Realm Minimap</span>
-            <button class="secondary minimap-toggle" id="minimap-toggle" type="button" aria-pressed="true">
-              Hide
-            </button>
-          </div>
-          <canvas id="minimap-canvas" width="180" height="180"></canvas>
-          <div class="minimap-legend" id="minimap-legend"></div>
-        </div>
         <div class="battlefield">
           <div class="combatant" id="player-card">
             <h2 id="player-name">Hero</h2>
@@ -222,6 +178,66 @@
           <button class="action" data-action="special">Ember Surge</button>
           <button class="action" data-action="heal">Serenity Bloom</button>
           <button class="secondary" id="reset">Reset Battle</button>
+        </div>
+      </section>
+      <section class="panel map-panel" data-tab-panel="map">
+        <header class="panel-header">
+          <div>
+            <h2>World Map</h2>
+            <p class="subtitle">Track nearby activity and move across the realm.</p>
+          </div>
+        </header>
+        <div class="map-layout">
+          <div class="world-panel" id="world-panel">
+            <header class="world-panel__header">
+              <h3>World Panel</h3>
+              <p class="subtitle">Right-click to inspect, trade, or interact with nearby entities.</p>
+            </header>
+            <div class="world-panel__surface">
+              <div
+                class="world-panel__target world-panel__target--player"
+                data-interaction-type="player"
+                data-interaction-id="wandering-merchant"
+                data-interaction-label="Wandering Merchant"
+                data-interaction-layer="25"
+              >
+                Wandering Merchant
+              </div>
+              <div
+                class="world-panel__target world-panel__target--npc"
+                data-interaction-type="npc"
+                data-interaction-id="shadow-warden"
+                data-interaction-label="Shadow Warden"
+                data-interaction-layer="20"
+              >
+                Shadow Warden
+              </div>
+              <div
+                class="world-panel__target world-panel__target--object"
+                data-interaction-type="object"
+                data-interaction-id="signal-beacon"
+                data-interaction-label="Signal Beacon"
+                data-interaction-layer="15"
+              >
+                Signal Beacon
+              </div>
+            </div>
+          </div>
+          <div class="minimap-panel" id="minimap-panel">
+            <div class="minimap-panel__header">
+              <span>Realm Minimap</span>
+              <button
+                class="secondary minimap-toggle"
+                id="minimap-toggle"
+                type="button"
+                aria-pressed="true"
+              >
+                Hide
+              </button>
+            </div>
+            <canvas id="minimap-canvas" width="180" height="180"></canvas>
+            <div class="minimap-legend" id="minimap-legend"></div>
+          </div>
         </div>
       </section>
       <section class="panel log tab-panel" data-tab-panel="battle">
