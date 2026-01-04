@@ -212,6 +212,22 @@ describe("game session", () => {
     expect(tick.otherMovements.length).toBeGreaterThan(0);
   });
 
+  test("guards world state transitions and invalid movements", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    session.unsafeSetState({ world: null });
+    expect(session.moveWorldPlayer({ xPercent: 0.1, yPercent: 0.1 }).error).toBe(
+      "World state is not initialized."
+    );
+    expect(session.advanceWorldTick().error).toBe("World state is not initialized.");
+
+    const invalidTarget = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    const invalidMove = invalidTarget.moveWorldPlayer();
+    expect(invalidMove.error).toBe("Movement target is required.");
+
+    invalidTarget.unsafeSetState({ world: { players: [] } });
+    expect(invalidTarget.advanceWorldTick().error).toBe("World map is required.");
+  });
+
   test("awards xp and tracks milestones", () => {
     const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
 
@@ -236,6 +252,22 @@ describe("game session", () => {
     expect(result.loot).toEqual([]);
   });
 
+  test("handles loot when registry entries are missing", () => {
+    const session = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      registrySnapshot: { items: [], recipes: [] }
+    });
+    const snapshot = session.getSnapshot();
+    session.unsafeSetState({ enemy: { ...snapshot.state.enemy, id: "ember_wyrmling", health: 1 } });
+    const result = session.attemptAction("attack");
+    expect(result.loot.length).toBeGreaterThan(0);
+    result.loot.forEach((line) => {
+      expect(line).toMatch("Unknown item");
+    });
+  });
+
   test("updates registry entries and handles errors", () => {
     const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
 
@@ -257,6 +289,15 @@ describe("game session", () => {
       equippable: false
     });
     expect(updatedItem.item.name).toBe("Test Item+");
+
+    const invalidItemUpdate = session.updateItem({
+      id: "test_item",
+      name: "",
+      description: "",
+      rarity: "COMMON",
+      equippable: false
+    });
+    expect(invalidItemUpdate.error).toBe("Item must include id, name, and description.");
 
     expect(session.updateRecipe().error).toBe("Recipe payload is required.");
     const recipeError = session.updateRecipe({

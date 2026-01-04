@@ -182,6 +182,9 @@ export function moveOtherPlayers({ worldState, playerId, rng = Math.random, rule
   if (!worldState) {
     return { error: "World state is required." };
   }
+  if (!worldState.worldMap) {
+    return { error: "World map is required." };
+  }
   const ruleSet = { ...DEFAULT_RULES, ...rules };
   const players = worldState.players ?? [];
   const movements = [];

@@ -137,6 +137,7 @@ describe("movement engine", () => {
   test("applies other player movement and skips missing world state", () => {
     const world = createWorldState({ playerId: "hero", playerName: "Hero" });
     expect(moveOtherPlayers({ worldState: null }).error).toBe("World state is required.");
+    expect(moveOtherPlayers({ worldState: { players: [] } }).error).toBe("World map is required.");
 
     const result = moveOtherPlayers({
       worldState: world,
