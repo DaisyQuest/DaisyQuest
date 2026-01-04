@@ -13,7 +13,29 @@
     />
   </head>
   <body>
-    <main class="app">
+    <div class="app-shell">
+      <header class="command-bar" role="banner">
+        <div class="command-bar__brand">
+          <span class="command-eyebrow">DaisyQuest</span>
+          <div class="command-title">Emberfall Command Deck</div>
+          <span class="command-subtitle">Real-time MMORPG operations console</span>
+        </div>
+        <div class="command-bar__status" aria-label="Realm status">
+          <div class="status-pill">
+            <span class="status-pill__label">Realm</span>
+            <span class="status-pill__value">Aetheria</span>
+          </div>
+          <div class="status-pill">
+            <span class="status-pill__label">Shard</span>
+            <span class="status-pill__value">Northwatch</span>
+          </div>
+          <div class="status-pill status-pill--accent">
+            <span class="status-pill__label">Population</span>
+            <span class="status-pill__value">Stable</span>
+          </div>
+        </div>
+      </header>
+      <main class="app">
       <section class="panel auth-panel">
         <header class="panel-header">
           <div>
@@ -540,7 +562,8 @@
           </div>
         </div>
       </section>
-    </main>
+      </main>
+    </div>
     <script type="module" src="app.js"></script>
   </body>
 </html>
