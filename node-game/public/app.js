@@ -18,6 +18,11 @@ import { createTabNavigationAdapter } from "./ui/tabNavigationAdapter.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
 import { createWorldMapView, getSurfacePercentFromEvent } from "./ui/worldMapView.js";
 import {
+  createGameFlowActions,
+  createGameFlowEmitter,
+  createGameFlowNavigator
+} from "./ui/gameFlow.js";
+import{
   GameFlowEvent,
   GameFlowState,
   canTransition,
@@ -227,6 +232,9 @@ const registryTabNavigation = createTabNavigationAdapter({
 const combatScreenAdapter = createCombatScreenAdapter({ flowState, tabController: layoutTabs });
 const mapScreenAdapter = createMapScreenAdapter({ flowState, tabController: layoutTabs });
 const lootScreenAdapter = createLootScreenAdapter({ flowState, tabController: layoutTabs });
+const gameFlow = createGameFlowEmitter();
+const gameFlowActions = createGameFlowActions({ emitter: gameFlow });
+createGameFlowNavigator({ emitter: gameFlow, layoutTabs });
 applyGameWorldPanelLayout(gameWorldPanel);
 createGameWorldLayerStack({ container: gameWorldLayerStack });
 applyWorldMapPanelLayout({
@@ -617,6 +625,7 @@ async function handleInteractionDecision(payload, meta) {
       } else {
         pushLog([`You are already at (${movement?.to?.x ?? "?"}, ${movement?.to?.y ?? "?"}).`]);
       }
+      gameFlowActions.mapMoved(movement);
       minimapPanel.refresh();
     } catch (error) {
       pushLog([error.message]);
@@ -1082,6 +1091,7 @@ async function resetBattle() {
     applySessionSnapshot(payload);
     enemyName.textContent = npc.name;
     npcDescription.textContent = npc.description;
+    gameFlowActions.combatStarted({ npcId: npc.id });
     pushLog(payload.log);
     updateMeters();
     updateBattleSceneSprites();
@@ -1396,6 +1406,8 @@ async function executePlayerAction(action) {
     applySessionSnapshot(payload);
     pushLog(payload.log);
     pushLoot(payload.loot);
+    gameFlowActions.playerActionResolved(payload);
+    gameFlowActions.lootGranted(payload.loot);
     handleBattleEvent(payload.battleEvent);
     updateMeters();
     renderInventory();
@@ -1437,6 +1449,7 @@ async function pollEnemyAction() {
   try {
     const payload = await apiRequest("/api/battle/tick", { method: "POST" });
     applySessionSnapshot(payload);
+    gameFlowActions.enemyActionResolved(payload.battleEvent);
     handleBattleEvent(payload.battleEvent);
     if (payload.log?.length) {
       pushLog(payload.log);
@@ -1564,6 +1577,7 @@ function initializeGameUI() {
   wireTabs();
   wireLayoutTabs();
   flowState.setScreen(FLOW_SCREENS.COMBAT, { source: "init" });
+  gameFlowActions.combatStarted({ npcId: state.enemy?.id, reason: "bootstrap" });
   requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
   const hasActiveCombat = Boolean(
     state?.enemy?.id && state?.player?.health > 0 && state?.enemy?.health > 0
