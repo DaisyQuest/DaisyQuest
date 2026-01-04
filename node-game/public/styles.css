@@ -12,6 +12,10 @@
   --dq-success: #22c55e;
   --dq-danger: #ef4444;
   --dq-glow: 0 0 24px rgba(250, 204, 21, 0.35);
+  --dq-frame: rgba(15, 23, 42, 0.85);
+  --dq-frame-border: rgba(148, 163, 184, 0.3);
+  --dq-panel-highlight: rgba(248, 250, 252, 0.05);
+  --dq-panel-shadow: 0 26px 60px rgba(4, 6, 14, 0.7);
   --dq-battle-parallax-1: rgba(59, 130, 246, 0.35);
   --dq-battle-parallax-2: rgba(14, 165, 233, 0.35);
   --dq-battle-parallax-3: rgba(56, 189, 248, 0.35);
@@ -47,19 +51,120 @@ body {
   margin: 0;
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 32px 16px;
+  padding: 48px 24px 64px;
   background: radial-gradient(circle at top, rgba(91, 33, 182, 0.35), transparent 55%),
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.2), transparent 45%),
     var(--dq-bg);
   color: var(--dq-text);
 }
 
-.app {
-  width: min(1200px, 100%);
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::before {
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 120px 120px;
+  opacity: 0.2;
+}
+
+body::after {
+  background: radial-gradient(circle at center, transparent 35%, rgba(2, 6, 23, 0.8) 100%);
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1500px, 100%);
   display: grid;
   gap: 24px;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  padding: 24px;
+  border-radius: 32px;
+  background: linear-gradient(145deg, rgba(8, 11, 25, 0.95), rgba(15, 23, 42, 0.7));
+  border: 1px solid var(--dq-frame-border);
+  box-shadow: var(--dq-panel-shadow);
+}
+
+.command-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  padding: 20px 24px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: inset 0 0 24px rgba(15, 23, 42, 0.45);
+}
+
+.command-bar__brand {
+  display: grid;
+  gap: 6px;
+}
+
+.command-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 0.7rem;
+  color: var(--dq-muted);
+}
+
+.command-title {
+  font-size: clamp(1.4rem, 1.8vw + 1rem, 2.2rem);
+  font-weight: 700;
+}
+
+.command-subtitle {
+  color: var(--dq-muted);
+  font-size: 0.95rem;
+}
+
+.command-bar__status {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.status-pill {
+  display: grid;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-size: 0.8rem;
+  min-width: 160px;
+}
+
+.status-pill__label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--dq-muted);
+  font-size: 0.65rem;
+}
+
+.status-pill__value {
+  font-weight: 600;
+}
+
+.status-pill--accent {
+  border-color: rgba(250, 204, 21, 0.4);
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.2);
+}
+
+.app {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .layout-tabs {
@@ -69,9 +174,10 @@ body {
   gap: 12px;
   justify-content: center;
   padding: 12px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: inset 0 0 20px rgba(15, 23, 42, 0.4);
 }
 
 .layout-tab-button {
@@ -83,7 +189,7 @@ body {
   cursor: pointer;
   background: rgba(255, 255, 255, 0.08);
   color: #f6f4ff;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .layout-tab-button.is-active {
@@ -144,11 +250,21 @@ body {
 
 
 .panel {
+  position: relative;
   background: linear-gradient(165deg, var(--dq-surface), rgba(10, 10, 20, 0.9));
   border: 1px solid var(--dq-border);
   border-radius: 24px;
   padding: 28px;
-  box-shadow: 0 20px 50px rgba(4, 4, 12, 0.6);
+  box-shadow: var(--dq-panel-shadow);
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 22px;
+  border: 1px solid var(--dq-panel-highlight);
+  pointer-events: none;
 }
 
 .panel-header {
@@ -189,6 +305,7 @@ body {
   color: inherit;
   padding: 10px 12px;
   font-size: 0.95rem;
+  box-shadow: inset 0 0 12px rgba(15, 23, 42, 0.4);
 }
 
 .auth-actions {
@@ -383,8 +500,9 @@ body {
   width: 100%;
   min-height: min(92vh, 960px);
   height: min(92vh, 960px);
-  border-radius: 22px;
+  border-radius: 26px;
   overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
 .battle-tab-layout {
@@ -409,7 +527,7 @@ body {
   border: 1px solid var(--dq-border);
   border-radius: 20px;
   padding: 20px;
-  box-shadow: 0 18px 40px rgba(3, 7, 18, 0.4);
+  box-shadow: 0 18px 40px rgba(3, 7, 18, 0.5);
 }
 
 @media (max-width: 980px) {
@@ -420,6 +538,16 @@ body {
   .battle-tab-main .battle-stage {
     min-height: min(76vh, 860px);
     height: min(76vh, 860px);
+  }
+}
+
+@media (max-width: 980px) {
+  .command-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .command-bar__status {
+    justify-items: start;
   }
 }
 
@@ -543,8 +671,8 @@ body {
 
 .map-game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr);
+  gap: 24px;
   align-items: stretch;
 }
 
@@ -556,13 +684,13 @@ body {
 .map-utility-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 20px;
+  gap: 24px;
   align-items: stretch;
 }
 
 .map-game-side {
   display: grid;
-  gap: 20px;
+  gap: 24px;
 }
 
 .map-panel .world-panel {
@@ -594,7 +722,7 @@ body {
       transparent 1px
     );
   background-size: auto, 48px 48px, 48px 48px;
-  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.35);
   cursor: crosshair;
 }
 
@@ -748,6 +876,7 @@ body {
   max-height: 320px;
   overflow-y: auto;
   border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: inset 0 0 16px rgba(15, 23, 42, 0.35);
 }
 
 .chat-input {
@@ -1298,8 +1427,9 @@ button.action {
 }
 
 button.secondary {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--dq-text);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 button:disabled {
