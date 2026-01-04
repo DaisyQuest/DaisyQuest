@@ -29,9 +29,11 @@ describe("world map markup", () => {
     const interactionPanel = mapPanel.querySelector("#interaction-panel");
     const chatPanel = mapPanel.querySelector(".chat-panel");
     const combatDock = mapPanel.querySelector(".combat-dock");
+    const combatPanel = document.querySelector('[data-tab-panel="combat"]');
 
     expect(interactionPanel).not.toBeNull();
     expect(chatPanel).not.toBeNull();
-    expect(combatDock).not.toBeNull();
+    expect(combatDock).toBeNull();
+    expect(combatPanel?.querySelector(".combat-dock")).not.toBeNull();
   });
 });

@@ -79,6 +79,17 @@
         </button>
         <button
           class="layout-tab-button"
+          id="tab-button-combat"
+          type="button"
+          data-tab-target="combat"
+          role="tab"
+          aria-controls="tab-panel-combat"
+          aria-selected="false"
+        >
+          Combat
+        </button>
+        <button
+          class="layout-tab-button"
           id="tab-button-inventory"
           type="button"
           data-tab-target="inventory"
@@ -126,7 +137,6 @@
         class="panel map-panel is-active"
         id="tab-panel-map"
         data-tab-panel="map"
-        data-tab-persistent="true"
         role="tabpanel"
         aria-labelledby="tab-button-map"
       >
@@ -276,6 +286,24 @@
             </section>
           </aside>
         </div>
+      </section>
+      <section
+        class="panel combat tab-overlay"
+        id="tab-panel-combat"
+        data-tab-panel="combat"
+        role="tabpanel"
+        aria-labelledby="tab-button-combat"
+        hidden
+      >
+        <header class="panel-header">
+          <div>
+            <h2>Combat Command Deck</h2>
+            <p class="subtitle">Engage encounters from a dedicated tactical view.</p>
+          </div>
+          <div class="map-status">
+            <span class="badge badge-accent">Combat Only</span>
+          </div>
+        </header>
         <section class="combat-dock" aria-label="Combat control deck">
           <div class="battle-stage battle-stage--compact">
             <div class="battle-scene game-world-panel" id="battle-scene" data-game-world-panel>
@@ -346,7 +374,7 @@
                   <div>
                     <h1>Combat Control</h1>
                     <p class="subtitle">
-                      Initiate encounters from the map and execute abilities without switching tabs.
+                      Initiate encounters from the map and execute abilities within this deck.
                     </p>
                   </div>
                   <div class="theme-selector">

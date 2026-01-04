@@ -168,13 +168,14 @@ const registryTabs = createTabController({
 let flowOrchestrator = null;
 const tabToFlowState = Object.freeze({
   map: FlowState.MAP,
+  combat: FlowState.COMBAT,
   inventory: FlowState.INVENTORY,
   crafting: FlowState.CRAFTING,
   trading: FlowState.TRADING,
   registry: FlowState.REGISTRY
 });
 const flowStateToTab = Object.freeze({
-  [FlowState.COMBAT]: "map",
+  [FlowState.COMBAT]: "combat",
   [FlowState.LOOT]: "inventory",
   [FlowState.MAP]: "map",
   [FlowState.INVENTORY]: "inventory",

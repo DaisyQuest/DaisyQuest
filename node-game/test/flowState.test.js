@@ -15,8 +15,8 @@ describe("flow state", () => {
 
   it("returns entry points for known screens", () => {
     expect(getFlowEntryPoint(FLOW_SCREENS.COMBAT)).toEqual({
-      tabKey: "map",
-      panelId: "tab-panel-map"
+      tabKey: "combat",
+      panelId: "tab-panel-combat"
     });
     expect(getFlowEntryPoint("missing")).toBeNull();
   });
@@ -24,6 +24,7 @@ describe("flow state", () => {
   it("resolves flow screens from tab keys", () => {
     expect(getFlowScreenFromTab("battle")).toBeNull();
     expect(getFlowScreenFromTab("map")).toBe(FLOW_SCREENS.MAP);
+    expect(getFlowScreenFromTab("combat")).toBe(FLOW_SCREENS.COMBAT);
     expect(getFlowScreenFromTab("inventory")).toBe(FLOW_SCREENS.LOOT);
     expect(getFlowScreenFromTab()).toBeNull();
     expect(getFlowScreenFromTab("unknown")).toBeNull();
