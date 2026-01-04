@@ -6,7 +6,7 @@ export const FLOW_SCREENS = Object.freeze({
 
 export const FLOW_SCREEN_ENTRY_POINTS = Object.freeze({
   [FLOW_SCREENS.MAP]: { tabKey: "map", panelId: "tab-panel-map" },
-  [FLOW_SCREENS.COMBAT]: { tabKey: "map", panelId: "tab-panel-map" },
+  [FLOW_SCREENS.COMBAT]: { tabKey: "combat", panelId: "tab-panel-combat" },
   [FLOW_SCREENS.LOOT]: { tabKey: "inventory", panelId: "tab-panel-inventory" }
 });
 

@@ -11,8 +11,10 @@ function buildLayoutDom() {
   const dom = new JSDOM(
     `
       <button class="layout-tab-button" data-tab-target="map"></button>
+      <button class="layout-tab-button" data-tab-target="combat"></button>
       <button class="layout-tab-button" data-tab-target="inventory"></button>
       <section data-tab-panel="map"></section>
+      <section data-tab-panel="combat"></section>
       <section data-tab-panel="inventory"></section>
     `
   );
@@ -44,13 +46,13 @@ describe("screen adapters", () => {
 
     flowState.setScreen(FLOW_SCREENS.LOOT);
 
-    expect(buttons[1].classList.contains("is-active")).toBe(true);
-    expect(panels[1].classList.contains("is-active")).toBe(true);
+    expect(buttons[2].classList.contains("is-active")).toBe(true);
+    expect(panels[2].classList.contains("is-active")).toBe(true);
 
     flowState.setScreen(FLOW_SCREENS.COMBAT);
 
-    expect(buttons[0].classList.contains("is-active")).toBe(true);
-    expect(panels[0].classList.contains("is-active")).toBe(true);
+    expect(buttons[1].classList.contains("is-active")).toBe(true);
+    expect(panels[1].classList.contains("is-active")).toBe(true);
 
     combatAdapter.sync();
     mapAdapter.destroy();

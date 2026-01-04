@@ -24,7 +24,7 @@ describe("layout tab markup", () => {
     panels.forEach((panel) => {
       if (panel.dataset.tabPanel === "map") {
         expect(panel.hasAttribute("hidden")).toBe(false);
-        expect(panel.dataset.tabPersistent).toBe("true");
+        expect(panel.dataset.tabPersistent).toBeUndefined();
       } else {
         expect(panel.hasAttribute("hidden")).toBe(true);
         expect(panel.classList.contains("tab-overlay")).toBe(true);
@@ -37,6 +37,13 @@ describe("layout tab markup", () => {
     expect(mapPanel).not.toBeNull();
     expect(mapPanel.querySelector("#log")).not.toBeNull();
     expect(mapPanel.querySelector("#milestone-list")).not.toBeNull();
-    expect(mapPanel.querySelector("#battle-scene")).not.toBeNull();
+    expect(mapPanel.querySelector("#battle-scene")).toBeNull();
+  });
+
+  test("keeps combat controls inside the combat panel card", () => {
+    const combatPanel = document.getElementById("tab-panel-combat");
+    expect(combatPanel).not.toBeNull();
+    expect(combatPanel.querySelector("#battle-scene")).not.toBeNull();
+    expect(combatPanel.querySelector("[data-action=\"attack\"]")).not.toBeNull();
   });
 });
