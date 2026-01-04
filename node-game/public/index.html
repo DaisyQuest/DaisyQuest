@@ -87,19 +87,77 @@
           <div class="caption-zone" id="caption-global" data-zone="global" aria-live="polite"></div>
           <div class="caption-zone" id="caption-player" data-zone="player" aria-live="polite"></div>
           <div class="caption-zone" id="caption-enemy" data-zone="enemy" aria-live="polite"></div>
-          <div class="battle-combatant battle-combatant--player" id="battle-player">
+          <div
+            class="battle-combatant battle-combatant--player"
+            id="battle-player"
+            data-interaction-type="player"
+            data-interaction-id="player"
+            data-interaction-label="Hero"
+            data-interaction-layer="20"
+          >
             <div class="status-banners" id="player-status-banners"></div>
             <div class="sprite-placeholder battle-sprite" id="player-battle-sprite">
               <span>Hero Sprite</span>
             </div>
             <div class="effect-bounds" data-role="player" aria-hidden="true"></div>
           </div>
-          <div class="battle-combatant battle-combatant--enemy" id="battle-enemy">
+          <div
+            class="battle-combatant battle-combatant--enemy"
+            id="battle-enemy"
+            data-interaction-type="npc"
+            data-interaction-id="enemy"
+            data-interaction-label="Challenger"
+            data-interaction-layer="30"
+          >
             <div class="status-banners" id="enemy-status-banners"></div>
             <div class="sprite-placeholder battle-sprite" id="enemy-battle-sprite">
               <span>Enemy Sprite</span>
             </div>
             <div class="effect-bounds" data-role="enemy" aria-hidden="true"></div>
+          </div>
+          <div
+            class="battle-scene__relic"
+            data-interaction-type="object"
+            data-interaction-id="battle-relic"
+            data-interaction-label="Ember Relic"
+            data-interaction-layer="10"
+          >
+            Ember Relic
+          </div>
+        </div>
+        <div class="world-panel" id="world-panel">
+          <header class="world-panel__header">
+            <h3>World Panel</h3>
+            <p class="subtitle">Right-click to inspect, trade, or interact with nearby entities.</p>
+          </header>
+          <div class="world-panel__surface">
+            <div
+              class="world-panel__target world-panel__target--player"
+              data-interaction-type="player"
+              data-interaction-id="wandering-merchant"
+              data-interaction-label="Wandering Merchant"
+              data-interaction-layer="25"
+            >
+              Wandering Merchant
+            </div>
+            <div
+              class="world-panel__target world-panel__target--npc"
+              data-interaction-type="npc"
+              data-interaction-id="shadow-warden"
+              data-interaction-label="Shadow Warden"
+              data-interaction-layer="20"
+            >
+              Shadow Warden
+            </div>
+            <div
+              class="world-panel__target world-panel__target--object"
+              data-interaction-type="object"
+              data-interaction-id="signal-beacon"
+              data-interaction-label="Signal Beacon"
+              data-interaction-layer="15"
+            >
+              Signal Beacon
+            </div>
           </div>
         </div>
         <div class="battlefield">

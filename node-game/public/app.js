@@ -3,6 +3,7 @@ import { initializeThemeEngine } from "./themeEngine.js";
 import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
 import { createTabController } from "./ui/tabController.js";
+import { createWorldInteractionClient } from "./ui/worldInteraction.js";
 
 const logList = document.getElementById("log");
 const playerHealth = document.getElementById("player-health");
@@ -80,6 +81,8 @@ const tradeRequestForm = document.getElementById("trade-request-form");
 const tradeTarget = document.getElementById("trade-target");
 const tradeRequestMessage = document.getElementById("trade-request-message");
 const tradeList = document.getElementById("trade-list");
+const worldPanel = document.getElementById("world-panel");
+const worldPanelSurface = worldPanel?.querySelector(".world-panel__surface") ?? null;
 
 const API_TOKEN_KEY = "dq-auth-token";
 
@@ -100,6 +103,7 @@ let combatTimers = {
 };
 let pendingAction = false;
 let battleSceneInitialized = false;
+let worldInteractionClient = null;
 const logFeed = createFeedPanel({ listElement: logList });
 const lootFeed = createFeedPanel({ listElement: lootList });
 const combatMeters = createCombatMeterPanel({
@@ -418,6 +422,50 @@ function initializeBattleScene() {
   applyBattlePolish(config.battleScene.polish);
   buildBattleSceneParticles();
   wireParallax();
+}
+
+function initializeWorldInteractions() {
+  if (worldInteractionClient || !battleScene) {
+    return;
+  }
+  const surfaces = [battleScene, worldPanelSurface].filter(Boolean);
+  worldInteractionClient = createWorldInteractionClient({
+    surfaces,
+    apiRequest,
+    onDecision: handleInteractionDecision,
+    onContextAction: handleContextActionResult
+  });
+}
+
+function handleInteractionDecision(payload) {
+  if (!payload) {
+    return;
+  }
+  const summary = describeInteractionTarget(payload.resolvedTarget);
+  if (payload.action === "move") {
+    pushLog([`You move toward ${summary}.`]);
+    return;
+  }
+  if (payload.action === "interact") {
+    pushLog([`You attempt to interact with ${summary}.`]);
+  }
+}
+
+function handleContextActionResult(payload) {
+  if (!payload) {
+    return;
+  }
+  const summary = describeInteractionTarget(payload.resolvedTarget);
+  pushLog([`Context action "${payload.selectedOption}" sent to ${summary}.`]);
+}
+
+function describeInteractionTarget(target) {
+  if (!target) {
+    return "the terrain";
+  }
+  const candidates = worldInteractionClient?.getLastCandidates?.() ?? [];
+  const match = candidates.find((candidate) => candidate.id === target.id);
+  return match?.label || target.id || target.type || "unknown target";
 }
 
 function updateActionButtons(now = Date.now()) {
@@ -1286,6 +1334,10 @@ async function handleLogout() {
     currentTrades = [];
     tradeList.innerHTML = "";
     updateAuthStatus(null);
+    if (worldInteractionClient) {
+      worldInteractionClient.destroy();
+      worldInteractionClient = null;
+    }
   }
 }
 
@@ -1317,6 +1369,7 @@ function initializeGameUI() {
   npcDescription.textContent = getSelectedNpc()?.description ?? "";
   enemyName.textContent = state.enemy.name;
   initializeBattleScene();
+  initializeWorldInteractions();
   updateBattleSceneSprites();
   updateMeters();
   updateActionButtons();
