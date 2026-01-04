@@ -282,6 +282,28 @@ describe("game session", () => {
     );
     expect(session.addItems({ "": 1 }).error).toBe("Invalid trade item quantities.");
 
+    const preview = session.previewInventoryTransaction({
+      removeItems: { ember_scale: 1 },
+      addItems: { moonsteel_ingot: 1 }
+    });
+    expect(preview.error).toBeUndefined();
+    expect(session.getSnapshot().state.inventory.moonsteel_ingot).toBeUndefined();
+    const commit = session.commitInventorySnapshot(preview.inventory);
+    expect(commit.error).toBeUndefined();
+    expect(session.getSnapshot().state.inventory.moonsteel_ingot).toBe(1);
+
+    const invalidPreview = session.previewInventoryTransaction({
+      addItems: { ember_scale: 0 }
+    });
+    expect(invalidPreview.error).toBe("Invalid trade item quantities.");
+    const invalidRemoval = session.previewInventoryTransaction({
+      removeItems: { "": 1 }
+    });
+    expect(invalidRemoval.error).toBe("Insufficient inventory for trade.");
+    const emptyPreview = session.previewInventoryTransaction();
+    expect(emptyPreview.inventory).toEqual(session.getSnapshot().state.inventory);
+    expect(session.commitInventorySnapshot(null).error).toBe("Invalid inventory snapshot.");
+
     expect(session.canAffordItems()).toBe(true);
     expect(session.removeItems().error).toBeUndefined();
     expect(session.addItems().error).toBeUndefined();
