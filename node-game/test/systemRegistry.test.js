@@ -45,6 +45,7 @@ describe("system registry", () => {
     const runtime = registry.createRuntime();
     expect(runtime.getSystem("beta").parent).toBe("alpha");
     expect(runtime.listSystems()).toEqual(["alpha", "beta"]);
+    expect(runtime.systems.alpha.tag).toBe("alpha");
   });
 
   test("supports optional dependencies without registration", () => {
@@ -57,6 +58,21 @@ describe("system registry", () => {
 
     const runtime = registry.createRuntime();
     expect(runtime.getSystem("beta").hasAlpha).toBe(true);
+  });
+
+  test("builds runtime systems for a subset of system names", () => {
+    const registry = createSystemRegistry();
+    registry.registerSystem("alpha", { create: () => ({ tag: "alpha" }) });
+    registry.registerSystem("beta", {
+      dependencies: ["alpha"],
+      create: ({ dependencies }) => ({ parent: dependencies.alpha.tag })
+    });
+    registry.registerSystem("gamma", { create: () => ({ tag: "gamma" }) });
+
+    const runtime = registry.createRuntime({ systemNames: ["beta"] });
+    expect(runtime.listSystems().sort()).toEqual(["alpha", "beta"]);
+    expect(runtime.getSystem("gamma").tag).toBe("gamma");
+    expect(runtime.listSystems().sort()).toEqual(["alpha", "beta", "gamma"]);
   });
 
   test("exposes definitions, list, and remove operations", () => {
@@ -101,6 +117,75 @@ describe("system registry", () => {
     expect(() => registry.registerSystem("alpha", {})).toThrow(
       'System "alpha" must provide a create function.'
     );
+  });
+
+  test("prevents duplicate registrations unless overrides are enabled", () => {
+    const registry = createSystemRegistry();
+    registry.registerSystem("alpha", { create: () => ({ tag: "alpha" }) });
+    expect(() => registry.registerSystem("alpha", { create: () => ({ tag: "beta" }) })).toThrow(
+      'System "alpha" is already registered.'
+    );
+
+    const overrideRegistry = createSystemRegistry({ allowOverrides: true });
+    overrideRegistry.registerSystem("alpha", { create: () => ({ tag: "alpha" }) });
+    overrideRegistry.registerSystem("alpha", { create: () => ({ tag: "beta" }) });
+    expect(overrideRegistry.createRuntime().getSystem("alpha").tag).toBe("beta");
+  });
+
+  test("rejects invalid dependency lists", () => {
+    const registry = createSystemRegistry();
+    expect(() =>
+      registry.registerSystem("alpha", {
+        dependencies: ["alpha"],
+        create: () => ({})
+      })
+    ).toThrow('System "alpha" cannot depend on itself.');
+
+    expect(() =>
+      registry.registerSystem("beta", {
+        dependencies: ["gamma"],
+        optionalDependencies: ["gamma"],
+        create: () => ({})
+      })
+    ).toThrow('System "beta" cannot mark "gamma" as both required and optional.');
+  });
+
+  test("analyzes registry dependency order and missing systems", () => {
+    const registry = createSystemRegistry();
+    registry.registerSystem("alpha", { create: () => ({ tag: "alpha" }) });
+    registry.registerSystem("beta", {
+      dependencies: ["alpha", "missing"],
+      optionalDependencies: ["optional"],
+      create: () => ({})
+    });
+
+    const analysis = registry.analyzeRegistry();
+    expect(analysis.order).toEqual(["alpha"]);
+    expect(analysis.targets.sort()).toEqual(["alpha", "beta"]);
+    expect(analysis.errors).toEqual([
+      {
+        type: "missing",
+        system: "missing",
+        stack: ["beta"]
+      }
+    ]);
+  });
+
+  test("analyzes circular dependencies and respects optional targets", () => {
+    const registry = createSystemRegistry();
+    registry.registerSystem("alpha", { dependencies: ["beta"], create: () => ({}) });
+    registry.registerSystem("beta", { dependencies: ["alpha"], create: () => ({}) });
+    registry.registerSystem("optional", { create: () => ({}) });
+
+    const analysis = registry.analyzeRegistry({ systemNames: ["alpha", "optional"] });
+    expect(analysis.targets).toEqual(["alpha", "optional"]);
+    expect(analysis.order).toEqual(["optional"]);
+    expect(analysis.errors).toEqual([
+      {
+        type: "circular",
+        chain: ["alpha", "beta", "alpha"]
+      }
+    ]);
   });
 });
 
