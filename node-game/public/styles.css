@@ -100,6 +100,10 @@ body {
   display: block;
 }
 
+[data-tab-panel][data-tab-persistent="true"] {
+  display: block;
+}
+
 [data-tab-panel][hidden] {
   display: none;
 }
@@ -514,6 +518,27 @@ body {
   gap: 20px;
   grid-column: 1 / -1;
   grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.tab-overlay {
+  position: fixed;
+  left: 50%;
+  top: 140px;
+  transform: translateX(-50%);
+  width: min(1100px, calc(100% - 48px));
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  z-index: 20;
+  backdrop-filter: blur(6px);
+}
+
+@media (max-width: 700px) {
+  .tab-overlay {
+    position: static;
+    transform: none;
+    width: 100%;
+    max-height: none;
+  }
 }
 
 .map-game-layout {
@@ -1012,6 +1037,16 @@ body {
   display: inline-block;
   margin-right: 8px;
   box-shadow: 0 0 12px currentColor;
+}
+
+.world-panel__target--hostile::after {
+  content: "⚔";
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  font-size: 0.9rem;
+  color: var(--dq-danger);
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.7);
 }
 
 .world-panel__target:hover {

@@ -8,7 +8,8 @@ export function sanitizeCandidates(candidates = []) {
     .map((candidate) => ({
       id: typeof candidate.id === "string" ? candidate.id : null,
       type: candidate.type,
-      layer: Number.isFinite(candidate.layer) ? candidate.layer : 0
+      layer: Number.isFinite(candidate.layer) ? candidate.layer : 0,
+      isHostile: Boolean(candidate.isHostile)
     }));
 }
 
@@ -27,6 +28,9 @@ export function resolveTopCandidate(candidates = []) {
 export function buildContextMenuOptions(candidates = []) {
   const hasPlayer = candidates.some((candidate) => candidate.type === "player");
   const hasNpc = candidates.some((candidate) => candidate.type === "npc");
+  const hasHostileNpc = candidates.some(
+    (candidate) => candidate.type === "npc" && candidate.isHostile
+  );
   const hasObject = candidates.some((candidate) => candidate.type === "object");
 
   const options = [];
@@ -36,7 +40,7 @@ export function buildContextMenuOptions(candidates = []) {
   if (hasPlayer) {
     options.push("trade");
   }
-  if (hasPlayer || hasNpc) {
+  if (hasPlayer || hasHostileNpc) {
     options.push("combat");
   }
   if (hasObject) {

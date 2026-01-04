@@ -24,8 +24,10 @@ describe("layout tab markup", () => {
     panels.forEach((panel) => {
       if (panel.dataset.tabPanel === "map") {
         expect(panel.hasAttribute("hidden")).toBe(false);
+        expect(panel.dataset.tabPersistent).toBe("true");
       } else {
         expect(panel.hasAttribute("hidden")).toBe(true);
+        expect(panel.classList.contains("tab-overlay")).toBe(true);
       }
     });
   });

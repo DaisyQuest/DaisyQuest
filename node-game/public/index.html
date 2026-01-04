@@ -104,6 +104,7 @@
         class="panel map-panel is-active"
         id="tab-panel-map"
         data-tab-panel="map"
+        data-tab-persistent="true"
         role="tabpanel"
         aria-labelledby="tab-button-map"
       >
@@ -179,8 +180,12 @@
                   </ul>
                 </div>
                 <div class="interaction-actions">
-                  <button class="secondary" type="button" disabled>Engage</button>
-                  <button class="secondary" type="button" disabled>Interact</button>
+                  <button class="secondary" id="interaction-engage" type="button" disabled>
+                    Engage
+                  </button>
+                  <button class="secondary" id="interaction-interact" type="button" disabled>
+                    Interact
+                  </button>
                 </div>
               </section>
             </div>
@@ -400,7 +405,7 @@
         </section>
       </section>
       <section
-        class="panel inventory"
+        class="panel inventory tab-overlay"
         id="tab-panel-inventory"
         data-tab-panel="inventory"
         role="tabpanel"
@@ -424,7 +429,7 @@
         </div>
       </section>
       <section
-        class="panel trading"
+        class="panel trading tab-overlay"
         id="tab-panel-trading"
         data-tab-panel="trading"
         role="tabpanel"
@@ -447,7 +452,7 @@
         <div class="trade-grid" id="trade-list"></div>
       </section>
       <section
-        class="panel crafting tab-panel"
+        class="panel crafting tab-overlay"
         id="tab-panel-crafting"
         data-tab-panel="crafting"
         role="tabpanel"
@@ -462,7 +467,7 @@
         <p id="crafting-result" class="crafting-result"></p>
       </section>
       <section
-        class="panel registry"
+        class="panel registry tab-overlay"
         id="tab-panel-registry"
         data-tab-panel="registry"
         role="tabpanel"

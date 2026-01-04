@@ -1,3 +1,5 @@
+import { NPCS } from "../battle.js";
+
 const DEFAULT_WORLD_MAP = Object.freeze({
   id: "ember-realm",
   width: 40,
@@ -21,11 +23,12 @@ function createSubmap({ id, parentMapId, width, height }) {
   return { id, parentMapId, width, height };
 }
 
-function createPlayer({ id, name, isNpc = false, location, position }) {
+function createPlayer({ id, name, isNpc = false, isHostile = false, location, position }) {
   return {
     id,
     name,
     isNpc,
+    isHostile,
     location: { ...location },
     position: { ...position }
   };
@@ -42,6 +45,12 @@ function createWorldObject({ id, name, objectType, location, position }) {
 }
 
 function createWorldState({ playerId, playerName }) {
+  const spawnPosition = Object.freeze({ x: 20, y: 20 });
+  const hostileSpawnOffsets = [
+    Object.freeze({ x: 2, y: 0 }),
+    Object.freeze({ x: -2, y: 1 }),
+    Object.freeze({ x: 1, y: -2 })
+  ];
   const worldMap = createWorldMap(DEFAULT_WORLD_MAP);
   const submaps = DEFAULT_SUBMAPS.map((submap) => createSubmap(submap));
   const players = [
@@ -49,12 +58,27 @@ function createWorldState({ playerId, playerName }) {
       id: playerId,
       name: playerName,
       location: { mapId: worldMap.id, submapId: null },
-      position: { x: 20, y: 20 }
+      position: spawnPosition
+    }),
+    ...NPCS.map((npc, index) => {
+      const offset = hostileSpawnOffsets[index % hostileSpawnOffsets.length];
+      return createPlayer({
+        id: npc.id,
+        name: npc.name,
+        isNpc: true,
+        isHostile: true,
+        location: { mapId: worldMap.id, submapId: null },
+        position: {
+          x: spawnPosition.x + offset.x,
+          y: spawnPosition.y + offset.y
+        }
+      });
     }),
     createPlayer({
       id: "sun-scout",
       name: "Sun Scout",
       isNpc: true,
+      isHostile: false,
       location: { mapId: worldMap.id, submapId: null },
       position: { x: 24, y: 20 }
     }),
@@ -62,6 +86,7 @@ function createWorldState({ playerId, playerName }) {
       id: "cavern-mystic",
       name: "Cavern Mystic",
       isNpc: true,
+      isHostile: false,
       location: { mapId: worldMap.id, submapId: "glimmer-cavern" },
       position: { x: 4, y: 4 }
     }),

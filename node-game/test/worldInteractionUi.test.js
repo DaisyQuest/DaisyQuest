@@ -16,7 +16,7 @@ describe("world interaction client", () => {
         <div id="player" data-interaction-type="player" data-interaction-id="hero" data-interaction-layer="10">
           Hero
         </div>
-        <div id="npc" data-interaction-type="npc" data-interaction-id="foe" data-interaction-layer="20">
+        <div id="npc" data-interaction-type="npc" data-interaction-id="foe" data-interaction-layer="20" data-interaction-hostile="true">
           Foe
         </div>
       </div>
@@ -57,9 +57,15 @@ describe("world interaction client", () => {
       targets
     });
 
-    expect(candidates[0]).toMatchObject({ id: "foe", type: "npc", layer: 20 });
+    expect(candidates[0]).toMatchObject({ id: "foe", type: "npc", layer: 20, isHostile: true });
     expect(candidates[1]).toMatchObject({ id: "hero", type: "player", layer: 10 });
     expect(candidates[candidates.length - 1]).toMatchObject({ type: "terrain" });
+  });
+
+  test("includes hostile metadata when collecting targets", () => {
+    const targets = collectInteractionTargets([surface]);
+    const npcTarget = targets.find((target) => target.id === "foe");
+    expect(npcTarget).toMatchObject({ isHostile: true, type: "npc" });
   });
 
   test("skips terrain candidates when disabled", () => {

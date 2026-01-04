@@ -31,6 +31,7 @@ const worldFixture = {
       id: "cavern-npc",
       name: "Cavern Mystic",
       isNpc: true,
+      isHostile: true,
       location: { mapId: "ember-realm", submapId: "glimmer-cavern" },
       position: { x: 1, y: 1 }
     }
@@ -103,6 +104,33 @@ describe("world map view", () => {
     const heroMarker = markers.find((marker) => marker.dataset.interactionId === "hero");
     expect(heroMarker.dataset.self).toBe("true");
     expect(heroMarker.dataset.interactionType).toBe("player");
+  });
+
+  test("marks hostile npc targets with metadata and styles", () => {
+    const dom = new JSDOM("<div></div>");
+    const world = {
+      ...worldFixture,
+      players: [
+        ...worldFixture.players,
+        {
+          id: "ember_wyrmling",
+          name: "Ember Wyrmling",
+          isNpc: true,
+          isHostile: true,
+          location: { mapId: "ember-realm", submapId: null },
+          position: { x: 4, y: 4 }
+        }
+      ]
+    };
+    const markers = buildWorldMarkers({
+      world,
+      playerId: "hero",
+      doc: dom.window.document
+    });
+    const hostile = markers.find((marker) => marker.dataset.interactionId === "ember_wyrmling");
+    expect(hostile).toBeDefined();
+    expect(hostile.classList.contains("world-panel__target--hostile")).toBe(true);
+    expect(hostile.dataset.interactionHostile).toBe("true");
   });
 
   test("returns no markers when world data is missing", () => {
