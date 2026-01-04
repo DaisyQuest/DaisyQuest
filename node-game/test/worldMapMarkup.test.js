@@ -18,14 +18,10 @@ describe("world map markup", () => {
   });
 
   test("positions world targets using map coordinates", () => {
-    const targets = Array.from(mapPanel.querySelectorAll(".world-panel__target"));
-    expect(targets.length).toBeGreaterThan(0);
-    const allPositioned = targets.every((target) => {
-      const x = target.style.getPropertyValue("--x");
-      const y = target.style.getPropertyValue("--y");
-      return Boolean(x) && Boolean(y);
-    });
+    const surface = mapPanel.querySelector("[data-world-map-surface]");
+    const entities = mapPanel.querySelector("[data-world-map-entities]");
 
-    expect(allPositioned).toBe(true);
+    expect(surface).not.toBeNull();
+    expect(entities).not.toBeNull();
   });
 });

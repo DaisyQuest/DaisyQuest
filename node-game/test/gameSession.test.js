@@ -201,6 +201,17 @@ describe("game session", () => {
     expect(claimedSecond.state.claimedRewards).toContain(secondReward.level);
   });
 
+  test("moves world players and advances world ticks", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    const move = session.moveWorldPlayer({ xPercent: 0.1, yPercent: 0.1 });
+    expect(move.error).toBeUndefined();
+    expect(move.movement).toMatchObject({ id: "hero", moved: true });
+
+    const tick = session.advanceWorldTick();
+    expect(tick.error).toBeUndefined();
+    expect(tick.otherMovements.length).toBeGreaterThan(0);
+  });
+
   test("awards xp and tracks milestones", () => {
     const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
 
