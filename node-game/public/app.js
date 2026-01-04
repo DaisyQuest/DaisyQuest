@@ -4,6 +4,7 @@ import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
 import { createMinimapPanel } from "./ui/minimapPanel.js";
 import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameWorldPanel.js";
+import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
 
@@ -32,6 +33,9 @@ const minimapPanelElement = document.getElementById("minimap-panel");
 const minimapCanvas = document.getElementById("minimap-canvas");
 const minimapLegend = document.getElementById("minimap-legend");
 const minimapToggle = document.getElementById("minimap-toggle");
+const worldMapPanel = document.getElementById("world-panel");
+const worldMapLayout = document.querySelector(".map-layout");
+const worldMapSurface = worldMapPanel?.querySelector(".world-panel__surface") ?? null;
 const captionGlobal = document.getElementById("caption-global");
 const captionPlayer = document.getElementById("caption-player");
 const captionEnemy = document.getElementById("caption-enemy");
@@ -139,6 +143,11 @@ const layoutTabs = createTabController({
 });
 applyGameWorldPanelLayout(gameWorldPanel);
 createGameWorldLayerStack({ container: gameWorldLayerStack });
+applyWorldMapPanelLayout({
+  layout: worldMapLayout,
+  panel: worldMapPanel,
+  surface: worldMapSurface
+});
 
 const minimapPanel = createMinimapPanel({
   container: minimapPanelElement,
