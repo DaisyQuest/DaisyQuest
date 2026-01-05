@@ -1,5 +1,6 @@
 import { createSpellRegistry } from "./systems/spellRegistry.js";
 import { createSpellbookSystem } from "./systems/spellbookSystem.js";
+import { createSpellUnlockRegistry } from "./systems/spellUnlockRegistry.js";
 
 export const SPELLS = Object.freeze([
   Object.freeze({
@@ -9,6 +10,7 @@ export const SPELLS = Object.freeze([
     manaCost: 20,
     cooldown: 10,
     spellSpritePath: "fireball_red",
+    isDefault: true,
     unlockRequirements: []
   }),
   Object.freeze({
@@ -60,9 +62,13 @@ export const SPELLS = Object.freeze([
 
 const spellRegistry = createSpellRegistry({ spells: SPELLS });
 const spellbookSystem = createSpellbookSystem({ spellRegistry });
+const spellUnlockRegistry = createSpellUnlockRegistry({ spells: SPELLS });
 
 export const getSpellById = spellRegistry.getSpell;
 export const listSpells = spellRegistry.listSpells;
+export const getSpellUnlock = spellUnlockRegistry.getUnlock;
+export const listSpellUnlocks = spellUnlockRegistry.listUnlocks;
+export const listDefaultSpellIds = spellUnlockRegistry.listDefaultSpellIds;
 export const createSpellbook = spellbookSystem.createSpellbook;
 export const equipSpell = spellbookSystem.equipSpell;
 export const unequipSpell = spellbookSystem.unequipSpell;

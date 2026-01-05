@@ -2,6 +2,7 @@ import { createItemRegistry } from "./systems/itemRegistry.js";
 import { COMBAT_CONFIG } from "./systems/combatConfig.js";
 import { initializeThemeEngine } from "./themeEngine.js";
 import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
+import { createCombatDockLayout } from "./ui/combatDockLayout.js";
 import { DEFAULT_ENGAGE_RANGE, resolveEngagementStatus } from "./ui/engagementRules.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
 import { createMinimapPanel } from "./ui/minimapPanel.js";
@@ -33,6 +34,7 @@ import{
   transition
 } from "./state/gameFlow.js";
 import { buildSkillList, buildWeaponAttackList } from "./battle.js";
+import { normalizeSpellbookState } from "./state/spellbookState.js";
 
 const logList = document.getElementById("log");
 const playerHealth = document.getElementById("player-health");
@@ -48,6 +50,9 @@ const npcSelect = document.getElementById("npc-select");
 const npcDescription = document.getElementById("npc-description");
 const enemyName = document.getElementById("enemy-name");
 const battleScene = document.getElementById("battle-scene");
+const combatPanel = document.getElementById("tab-panel-combat");
+const combatDock = combatPanel?.querySelector("[data-combat-dock]") ?? null;
+const battleStage = combatPanel?.querySelector("[data-battle-stage]") ?? null;
 const battleParticles = document.getElementById("battle-particles");
 const battlePlayerSprite = document.getElementById("player-battle-sprite");
 const battleEnemySprite = document.getElementById("enemy-battle-sprite");
@@ -250,6 +255,12 @@ applyWorldMapPanelLayout({
   panel: worldMapPanel,
   surface: worldMapSurface
 });
+const combatDockLayout = createCombatDockLayout({
+  dock: combatDock,
+  panel: combatPanel,
+  stage: battleStage,
+  viewport: window
+});
 
 const minimapPanel = createMinimapPanel({
   container: minimapPanelElement,
@@ -319,8 +330,14 @@ function applySessionSnapshot(payload) {
     registrySnapshot = payload.registry;
   }
   if (payload.state) {
+    const normalizedSpellbook = normalizeSpellbookState({
+      knownSpells: payload.state.knownSpells,
+      spellbook: payload.state.spellbook,
+      slotCount: config?.spellbookSlots
+    });
     state = {
       ...payload.state,
+      ...normalizedSpellbook,
       claimedRewards: new Set(payload.state.claimedRewards ?? [])
     };
   }
