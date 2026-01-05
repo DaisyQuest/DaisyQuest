@@ -1226,6 +1226,23 @@ body::after {
   text-shadow: 0 0 6px rgba(239, 68, 68, 0.7);
 }
 
+.world-panel__target--hostile {
+  min-width: 140px;
+  min-height: 48px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.28);
+  border: 2px solid rgba(239, 68, 68, 0.85);
+  color: #fef2f2;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.45);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.world-panel__target--hostile::before {
+  display: none;
+}
+
 .world-panel__target:hover {
   transform: translate(-50%, -50%) scale(1.03);
   box-shadow: 0 0 18px rgba(148, 163, 184, 0.35);
