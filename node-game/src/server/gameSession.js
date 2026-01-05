@@ -17,6 +17,7 @@ import {
   RARITY_COLORS,
   RECIPES
 } from "../items.js";
+import { COMBAT_CONFIG } from "../systems/combatConfig.js";
 import {
   createSpellbook,
   equipSpell as equipSpellbook,
@@ -309,6 +310,7 @@ export function createGameSession({
     return {
       actions: ACTION_CONFIG,
       battleScene: BATTLE_SCENE_CONFIG,
+      combatConfig: COMBAT_CONFIG,
       globalCooldownMs: GLOBAL_COOLDOWN_MS,
       npcs: NPCS,
       rarityColors: RARITY_COLORS,

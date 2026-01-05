@@ -3,6 +3,7 @@ import {
   createGameSession,
   REWARD_MILESTONES
 } from "../src/server/gameSession.js";
+import { COMBAT_CONFIG } from "../src/systems/combatConfig.js";
 
 describe("game session", () => {
   const rng = () => 0;
@@ -18,6 +19,7 @@ describe("game session", () => {
     expect(snapshot.timers.globalCooldownUntil).toBe(0);
     expect(config.rewardMilestones).toEqual(REWARD_MILESTONES);
     expect(config.battleScene).toEqual(BATTLE_SCENE_CONFIG);
+    expect(config.combatConfig).toEqual(COMBAT_CONFIG);
     expect(config.spells.length).toBeGreaterThan(0);
     expect(config.spellUnlocks.length).toBeGreaterThan(0);
   });

@@ -1135,11 +1135,10 @@ body::after {
 }
 
 .controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  justify-content: center;
-  padding: 18px;
+  display: grid;
+  gap: 18px;
+  justify-items: stretch;
+  padding: 16px;
   border-radius: 18px;
   background: rgba(15, 23, 42, 0.5);
   border: 1px solid rgba(148, 163, 184, 0.25);
@@ -1147,6 +1146,34 @@ body::after {
 
 .controls button {
   min-width: 150px;
+}
+
+.combat-action-group {
+  display: grid;
+  gap: 10px;
+}
+
+.combat-action-header h3 {
+  margin: 0;
+}
+
+.combat-action-header .subtitle {
+  margin: 4px 0 0;
+}
+
+.combat-action-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.combat-action-list .action {
+  flex: 1 1 160px;
+}
+
+.action--placeholder {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .world-panel {
