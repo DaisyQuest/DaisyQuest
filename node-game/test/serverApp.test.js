@@ -32,6 +32,13 @@ describe("server app", () => {
     const bootstrap = await request(app).get("/api/bootstrap").set(authHeader);
     expect(bootstrap.status).toBe(200);
 
+    const hotbarUpdate = await request(app)
+      .post("/api/hotbar")
+      .set(authHeader)
+      .send({ slots: ["heal", "attack", null, "special"] });
+    expect(hotbarUpdate.status).toBe(200);
+    expect(hotbarUpdate.body.state.hotbar).toEqual(["heal", "attack", null, "special"]);
+
     const minimapDefault = await request(app).get("/api/world/minimap").set(authHeader);
     expect(minimapDefault.status).toBe(200);
     expect(minimapDefault.body.radius).toBeGreaterThan(0);
@@ -61,6 +68,12 @@ describe("server app", () => {
       .set(authHeader)
       .send({ npcId: "ember_wyrmling" });
     expect(reset.status).toBe(200);
+
+    const hotbarBlocked = await request(app)
+      .post("/api/hotbar")
+      .set(authHeader)
+      .send({ slots: ["attack", null, null, null] });
+    expect(hotbarBlocked.status).toBe(400);
 
     const actionError = await request(app)
       .post("/api/battle/action")

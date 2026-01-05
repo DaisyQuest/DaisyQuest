@@ -566,6 +566,21 @@ body::after {
   pointer-events: none;
 }
 
+.combat-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 18px;
+  height: 100%;
+}
+
+.combat-panel--expanded .combat-dock {
+  min-height: min(78vh, 900px);
+}
+
+.combat-panel--compact .combat-dock {
+  min-height: min(62vh, 700px);
+}
+
 .battle-hud__panel {
   background: rgba(10, 14, 32, 0.62);
   border: 1px solid rgba(148, 163, 184, 0.35);
@@ -772,7 +787,7 @@ body::after {
 .battle-combatant {
   position: absolute;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
   justify-items: center;
   transform: translate(-50%, -50%) scale(var(--battle-scale, 1));
@@ -812,21 +827,26 @@ body::after {
 }
 
 .battle-stage--compact {
-  min-height: min(58vh, 600px);
-  height: min(58vh, 600px);
+  min-height: clamp(520px, 62vh, 700px);
+  height: clamp(520px, 62vh, 700px);
+}
+
+.battle-stage--expanded {
+  min-height: clamp(600px, 72vh, 820px);
+  height: clamp(600px, 72vh, 820px);
 }
 
 .battle-hud--compact {
-  gap: 12px;
-  padding: 14px;
+  gap: 16px;
+  padding: 18px;
 }
 
 .battle-hud--compact .battle-hud__top {
-  padding: 12px 14px;
+  padding: 14px 16px;
 }
 
 .battle-hud--compact .battle-hud__footer {
-  gap: 12px;
+  gap: 16px;
 }
 
 .interaction-panel {
@@ -1071,13 +1091,13 @@ body::after {
 
 .battlefield {
   display: grid;
-  gap: 20px;
+  gap: 24px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  padding: 16px;
+  padding: 18px;
 }
 
 .combatant {
-  padding: 20px;
+  padding: 24px;
   border-radius: 18px;
   background: radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 65%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1106,10 +1126,9 @@ body::after {
 }
 
 .controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
+  display: grid;
+  gap: 18px;
+  justify-items: stretch;
   padding: 16px;
   border-radius: 18px;
   background: rgba(15, 23, 42, 0.5);
@@ -1118,6 +1137,34 @@ body::after {
 
 .controls button {
   min-width: 150px;
+}
+
+.combat-action-group {
+  display: grid;
+  gap: 10px;
+}
+
+.combat-action-header h3 {
+  margin: 0;
+}
+
+.combat-action-header .subtitle {
+  margin: 4px 0 0;
+}
+
+.combat-action-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.combat-action-list .action {
+  flex: 1 1 160px;
+}
+
+.action--placeholder {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .world-panel {
@@ -1420,6 +1467,47 @@ body::after {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
+}
+
+.hotbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.hotbar-slot {
+  min-height: 44px;
+}
+
+.hotbar-slot.is-empty {
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  color: var(--dq-muted);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.spellbook-panel {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.spellbook-section h3 {
+  margin: 0 0 4px;
+}
+
+.spellbook-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.spellbook-item {
+  cursor: grab;
 }
 
 button {

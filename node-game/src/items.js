@@ -58,7 +58,14 @@ export const ITEMS = Object.freeze([
     rarity: "EPIC",
     equippable: true,
     equippableInStacks: false,
-    equipmentSlotTypeString: "RIGHT_HAND"
+    equipmentSlotTypeString: "RIGHT_HAND",
+    weaponAttacks: Object.freeze([
+      "Moonlit Slash",
+      "Crescent Lunge",
+      "Dueling Riposte",
+      "Starlight Feint",
+      "Lunar Sweep"
+    ])
   }),
   Object.freeze({
     id: "guardian_plate",

@@ -288,7 +288,7 @@
         </div>
       </section>
       <section
-        class="panel combat tab-overlay"
+        class="panel combat tab-overlay combat-panel"
         id="tab-panel-combat"
         data-tab-panel="combat"
         role="tabpanel"
@@ -449,10 +449,20 @@
                   </div>
                 </div>
                 <div class="controls battle-hud__panel">
-                  <button class="action" data-action="attack">Swift Strike</button>
-                  <button class="action" data-action="special">Ember Surge</button>
-                  <button class="action" data-action="heal">Serenity Bloom</button>
+                  <div class="hotbar" id="hotbar-slots" role="list" aria-label="Hotbar"></div>
                   <button class="secondary" id="reset">Reset Battle</button>
+                </div>
+                <div class="spellbook-panel battle-hud__panel" id="spellbook-panel">
+                  <div class="spellbook-section">
+                    <h3>Spellbook</h3>
+                    <p class="subtitle">Drag spells into your hotbar between fights.</p>
+                    <div class="spellbook-list" id="spellbook-list" data-spellbook="spells"></div>
+                  </div>
+                  <div class="spellbook-section">
+                    <h3>Skillbook</h3>
+                    <p class="subtitle">Organize your techniques for quick access.</p>
+                    <div class="spellbook-list" id="skillbook-list" data-spellbook="skills"></div>
+                  </div>
                 </div>
               </div>
             </div>
