@@ -15,6 +15,11 @@ import { createFlowState, FLOW_SCREENS, getFlowScreenFromTab } from "./ui/flowSt
 import { renderInteractionPanel, resolveInteractionPanelState } from "./ui/interactionPanel.js";
 import { renderCombatActionList } from "./ui/combatActions.js";
 import {
+  createHotbarDragHandlers,
+  createHotbarState,
+  DEFAULT_HOTBAR_SIZE
+} from "./ui/hotbarManager.js";
+import {
   createCombatScreenAdapter,
   createLootScreenAdapter,
   createMapScreenAdapter
@@ -62,6 +67,9 @@ const gameWorldPanel = document.querySelector("[data-game-world-panel]");
 const gameWorldLayerStack = document.getElementById("game-world-layer-stack");
 const playerStatusBanners = document.getElementById("player-status-banners");
 const enemyStatusBanners = document.getElementById("enemy-status-banners");
+const hotbarSlots = document.getElementById("hotbar-slots");
+const spellbookList = document.getElementById("spellbook-list");
+const skillbookList = document.getElementById("skillbook-list");
 const minimapPanelElement = document.getElementById("minimap-panel");
 const minimapCanvas = document.getElementById("minimap-canvas");
 const minimapLegend = document.getElementById("minimap-legend");
@@ -118,6 +126,9 @@ const layoutTabButtons = document.querySelectorAll(".layout-tab-button");
 const layoutPanels = document.querySelectorAll("[data-tab-panel]");
 const tabButtons = document.querySelectorAll(".tab-button");
 const registryPanes = document.querySelectorAll(".registry-pane");
+function getActionButtons() {
+  return Array.from(document.querySelectorAll("button.action[data-action]"));
+}
 const weaponAttackList = document.getElementById("weapon-attack-list");
 const skillList = document.getElementById("skill-list");
 let actionButtons = [];
@@ -155,6 +166,8 @@ let battleSceneInitialized = false;
 let worldInteractionClient = null;
 let gameFlowState = GameFlowState.MAP;
 let interactionSelection = { target: null, candidates: [] };
+let hotbarState = null;
+let hotbarDragHandlers = null;
 const combatEngageRange = DEFAULT_ENGAGE_RANGE;
 const logFeed = createFeedPanel({ listElement: logList });
 const lootFeed = createFeedPanel({ listElement: lootList });
@@ -340,6 +353,12 @@ function applySessionSnapshot(payload) {
       ...normalizedSpellbook,
       claimedRewards: new Set(payload.state.claimedRewards ?? [])
     };
+    if (hotbarState) {
+      hotbarState.replaceSlots(state.hotbar ?? []);
+      hotbarState.setCombatLocked(() => Boolean(state?.combatEngaged));
+      renderHotbarSlots();
+      updateActionButtons();
+    }
   }
   if (payload.timers) {
     combatTimers = {
@@ -353,6 +372,144 @@ function applySessionSnapshot(payload) {
   if (config && registrySnapshot) {
     runtime = buildRuntime(registrySnapshot);
   }
+}
+
+function getHotbarSize() {
+  return config?.hotbarSize ?? DEFAULT_HOTBAR_SIZE;
+}
+
+function getActionLabel(actionId) {
+  return config?.actions?.[actionId]?.label ?? actionId;
+}
+
+function buildSpellbookActions() {
+  const available = Object.keys(config?.actions ?? {});
+  const spells = [];
+  const skills = [];
+  available.forEach((actionId) => {
+    if (actionId === "attack") {
+      skills.push(actionId);
+    } else {
+      spells.push(actionId);
+    }
+  });
+  return { spells, skills };
+}
+
+function renderSpellbookList(listElement, actionIds, bookType) {
+  if (!listElement) {
+    return;
+  }
+  listElement.innerHTML = "";
+  actionIds.forEach((actionId) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "spellbook-item secondary";
+    button.textContent = getActionLabel(actionId);
+    button.dataset.spellId = actionId;
+    button.dataset.spellbook = bookType;
+    button.setAttribute("draggable", "true");
+    button.addEventListener("dragstart", hotbarDragHandlers.handleDragStart);
+    listElement.appendChild(button);
+  });
+}
+
+function renderSpellbook() {
+  if (!config) {
+    return;
+  }
+  const { spells, skills } = buildSpellbookActions();
+  renderSpellbookList(spellbookList, spells, "spells");
+  renderSpellbookList(skillbookList, skills, "skills");
+}
+
+function renderHotbarSlots() {
+  if (!hotbarSlots || !hotbarState || !hotbarDragHandlers) {
+    return;
+  }
+  hotbarSlots.innerHTML = "";
+  const slots = hotbarState.getSlots();
+  slots.forEach((actionId, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.classList.add("hotbar-slot");
+    button.dataset.hotbarSlot = String(index);
+    button.setAttribute("draggable", "true");
+    if (actionId) {
+      button.classList.add("action");
+      button.dataset.action = actionId;
+      const label = getActionLabel(actionId);
+      button.dataset.baseLabel = label;
+      button.textContent = label;
+    } else {
+      button.classList.add("secondary", "is-empty");
+      button.textContent = "Empty";
+    }
+    button.addEventListener("dragstart", hotbarDragHandlers.handleDragStart);
+    button.addEventListener("dragover", hotbarDragHandlers.handleDragOver);
+    button.addEventListener("drop", hotbarDragHandlers.handleDrop);
+    hotbarSlots.appendChild(button);
+  });
+}
+
+function handleHotbarReject(result) {
+  if (result?.error) {
+    pushLog([`Hotbar update blocked: ${result.error}`]);
+  }
+}
+
+function handleHotbarUpdate(nextSlots) {
+  if (!hotbarState) {
+    return;
+  }
+  hotbarState.replaceSlots(nextSlots);
+  if (state) {
+    state = { ...state, hotbar: hotbarState.getSlots() };
+  }
+  renderHotbarSlots();
+  updateActionButtons();
+  persistHotbarSelections();
+}
+
+async function persistHotbarSelections() {
+  if (!sessionToken || !state) {
+    return;
+  }
+  try {
+    const payload = await apiRequest("/api/hotbar", {
+      method: "POST",
+      body: { slots: state.hotbar }
+    });
+    applySessionSnapshot(payload);
+  } catch (error) {
+    pushLog([error.message]);
+  }
+}
+
+function initializeHotbarUI() {
+  if (!config || !state) {
+    return;
+  }
+  const size = getHotbarSize();
+  if (!hotbarState) {
+    hotbarState = createHotbarState({
+      slots: state.hotbar,
+      size,
+      isCombatLocked: () => Boolean(state?.combatEngaged)
+    });
+  } else {
+    hotbarState.replaceSlots(state.hotbar);
+    hotbarState.setCombatLocked(() => Boolean(state?.combatEngaged));
+  }
+  if (!hotbarDragHandlers) {
+    hotbarDragHandlers = createHotbarDragHandlers({
+      state: hotbarState,
+      onUpdate: handleHotbarUpdate,
+      onReject: handleHotbarReject
+    });
+  }
+  renderSpellbook();
+  renderHotbarSlots();
 }
 
 function pushLog(lines) {
@@ -897,7 +1054,7 @@ function updateActionButtons(now = Date.now()) {
   const gcdRemaining = Math.max(0, combatTimers.globalCooldownUntil - now);
   const combatLocked = !state || state.player.health <= 0 || state.enemy.health <= 0;
 
-  actionButtons.forEach((button) => {
+  getActionButtons().forEach((button) => {
     const action = button.dataset.action;
     const baseLabel = button.dataset.baseLabel ?? button.textContent;
     const actionRemaining = Math.max(0, (combatTimers.actionCooldowns[action] ?? 0) - now);
@@ -1720,6 +1877,15 @@ function updateAuthStatus(profile) {
   }
 }
 
+function updateActionLabels() {
+  getActionButtons().forEach((button) => {
+    const action = button.dataset.action;
+    const label = config?.actions?.[action]?.label ?? button.textContent;
+    button.dataset.baseLabel = label;
+    button.textContent = label;
+  });
+}
+
 async function bootstrapSession() {
   if (!sessionToken) {
     return false;
@@ -1770,6 +1936,17 @@ async function handleLogout() {
     state = null;
     currentTrades = [];
     tradeList.innerHTML = "";
+    hotbarState = null;
+    hotbarDragHandlers = null;
+    if (hotbarSlots) {
+      hotbarSlots.innerHTML = "";
+    }
+    if (spellbookList) {
+      spellbookList.innerHTML = "";
+    }
+    if (skillbookList) {
+      skillbookList.innerHTML = "";
+    }
     minimapPanel.stop();
     worldMapView.stop();
     updateAuthStatus(null);
@@ -1790,6 +1967,8 @@ function initializeGameUI() {
   if (state.enemy.id) {
     npcSelect.value = state.enemy.id;
   }
+  initializeHotbarUI();
+  updateActionLabels();
   renderCombatActions();
   populateRarityOptions();
   populateSlotOptions();
@@ -1835,6 +2014,14 @@ function initializeGameUI() {
   minimapPanel.start();
   worldMapView.start();
 }
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("button.action[data-action]");
+  if (!button) {
+    return;
+  }
+  queueAction(button.dataset.action);
+});
 
 document.getElementById("reset").addEventListener("click", resetBattle);
 npcSelect.addEventListener("change", resetBattle);

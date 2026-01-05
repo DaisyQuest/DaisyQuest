@@ -142,6 +142,17 @@ export function createApp({
     res.json(result);
   });
 
+  app.post("/api/hotbar", requireSession, async (req, res) => {
+    const { slots } = req.body ?? {};
+    const result = req.session.updateHotbar(slots);
+    if (result.error) {
+      res.status(400).json({ error: result.error });
+      return;
+    }
+    await persistSession(req.session);
+    res.json(result);
+  });
+
   app.post("/api/crafting/attempt", requireSession, async (req, res) => {
     const { recipeId } = req.body;
     const result = req.session.craftItem(recipeId);
