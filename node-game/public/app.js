@@ -25,6 +25,7 @@ import {
   createMapScreenAdapter
 } from "./ui/screenAdapters.js";
 import { createTabNavigationAdapter } from "./ui/tabNavigationAdapter.js";
+import { updateCombatOverlayState } from "./ui/combatOverlay.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
 import { createWorldMapView, getSurfacePercentFromEvent } from "./ui/worldMapView.js";
 import {
@@ -76,6 +77,7 @@ const minimapCanvas = document.getElementById("minimap-canvas");
 const minimapLegend = document.getElementById("minimap-legend");
 const minimapToggle = document.getElementById("minimap-toggle");
 const worldMapPanel = document.getElementById("world-panel");
+const mapPanel = document.getElementById("tab-panel-map");
 const worldMapSurface = worldMapPanel?.querySelector(".world-panel__surface") ?? null;
 const worldMapEntities = worldMapPanel?.querySelector("[data-world-map-entities]") ?? null;
 const worldMapCoordinates =
@@ -226,10 +228,13 @@ const layoutTabs = createTabController({
 flowOrchestrator = createFlowOrchestrator({
   initialState: FlowState.MAP,
   onTransition: ({ to }) => {
-    const nextTab = flowStateToTab[to];
-    if (nextTab) {
-      layoutTabs.setActive(nextTab);
-    }
+    updateCombatOverlayState({
+      mapPanel,
+      tabController: layoutTabs,
+      activeState: to,
+      flowStateToTab,
+      combatState: FlowState.COMBAT
+    });
   },
   onInvalidTransition: ({ error }) => {
     console.warn("Flow transition rejected.", error);

@@ -58,6 +58,18 @@ describe("game session", () => {
     const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
     const updated = session.updateHotbar(["heal", "attack", null, "special"]);
     expect(updated.state.hotbar).toEqual(["heal", "attack", null, "special"]);
+    const persisted = session.getPersistenceSnapshot();
+    const hydrated = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: persisted.state,
+      initialTimers: persisted.timers,
+      registrySnapshot: persisted.registry
+    });
+    expect(hydrated.getSnapshot().state.hotbar).toEqual(["heal", "attack", null, "special"]);
+  });
+
   test("persists learned spells and spellbooks", () => {
     const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
     session.grantItem("moonsteel_ingot", 1);
@@ -76,7 +88,10 @@ describe("game session", () => {
       initialTimers: persisted.timers,
       registrySnapshot: persisted.registry
     });
-    expect(hydrated.getSnapshot().state.hotbar).toEqual(["heal", "attack", null, "special"]);
+    const snapshot = hydrated.getSnapshot();
+    expect(snapshot.state.knownSpells).toContain("thunder");
+    expect(snapshot.state.spellbook.equippedSlots[0]).toBe("thunder");
+    expect(snapshot.state.consumedItems).toEqual([]);
   });
 
   test("rejects invalid hotbar updates and updates during combat", () => {
@@ -90,9 +105,6 @@ describe("game session", () => {
     expect(session.updateHotbar(["attack", null, null, null]).error).toBe(
       "Cannot update hotbar during combat."
     );
-    const snapshot = hydrated.getSnapshot();
-    expect(snapshot.state.knownSpells).toContain("thunder");
-    expect(snapshot.state.spellbook.equippedSlots[0]).toBe("thunder");
   });
 
   test("defaults progression when hydration is incomplete", () => {

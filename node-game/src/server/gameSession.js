@@ -237,7 +237,7 @@ function buildInitialState(snapshot) {
     progression: progressionSystem.getProgressSnapshot(0),
     pendingReward: null,
     claimedRewards: new Set(),
-    hotbar: normalizeHotbarSlots(DEFAULT_HOTBAR)
+    hotbar: normalizeHotbarSlots(DEFAULT_HOTBAR),
     ...spellState
   };
   const hydrated = hydrateState(snapshot);
@@ -252,6 +252,8 @@ function buildInitialState(snapshot) {
   return {
     ...defaultState,
     ...hydrated,
+    ...hydratedSpellState,
+    attributes: hydratedAttributes,
     claimedRewards: hydrated.claimedRewards,
     hotbar: normalizeHotbarSlots(hydrated.hotbar ?? defaultState.hotbar)
   };
