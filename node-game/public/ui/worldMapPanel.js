@@ -1,4 +1,4 @@
-export const WORLD_MAP_PANEL_HEIGHT = "min(58vh, 620px)";
+export const WORLD_MAP_PANEL_HEIGHT = "min(46vh, 520px)";
 
 export function applyWorldMapPanelLayout({
   layout,

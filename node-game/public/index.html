@@ -373,30 +373,33 @@
                 Ember Relic
               </div>
             </div>
-            <div class="battle-hud battle-hud--compact">
-              <div class="battle-hud__top battle-hud__panel">
-                <header class="hero-header">
-                  <div>
-                    <h1>Combat Control</h1>
-                    <p class="subtitle">
-                      Initiate encounters from the map and execute abilities within this deck.
-                    </p>
-                  </div>
+            <div class="combat-hud combat-hud--compact">
+              <header class="combat-hud__header">
+                <div class="combat-hud__intro">
+                  <h1>Combat Control</h1>
+                  <p class="subtitle">
+                    Initiate encounters from the map and execute abilities within this deck.
+                  </p>
+                </div>
+                <div class="combat-hud__selectors">
                   <div class="theme-selector">
                     <label for="theme-select">Theme</label>
                     <select id="theme-select" aria-label="Select a theme"></select>
                   </div>
-                </header>
-                <div class="npc-selector">
-                  <label for="npc-select">Choose a challenger</label>
-                  <select id="npc-select" aria-label="Select a challenger"></select>
-                  <p class="npc-description" id="npc-description"></p>
+                  <div class="npc-selector">
+                    <label for="npc-select">Choose a challenger</label>
+                    <select id="npc-select" aria-label="Select a challenger"></select>
+                    <p class="npc-description" id="npc-description"></p>
+                  </div>
                 </div>
-              </div>
-              <div class="battle-hud__footer">
-                <div class="battlefield battle-hud__panel">
-                  <div class="combatant" id="player-card">
-                    <h2 id="player-name">Hero</h2>
+              </header>
+              <div class="combat-hud__body">
+                <div class="combat-readouts">
+                  <div class="combatant-card" id="player-card">
+                    <div class="combatant-card__header">
+                      <h2 id="player-name">Hero</h2>
+                      <span class="combatant-card__role">Vanguard</span>
+                    </div>
                     <div class="sprite-frame">
                       <img
                         class="sprite-portrait"
@@ -421,8 +424,11 @@
                       <span class="value" id="player-mana-value"></span>
                     </div>
                   </div>
-                  <div class="combatant" id="enemy-card">
-                    <h2 id="enemy-name">Otherworldly Beast</h2>
+                  <div class="combatant-card" id="enemy-card">
+                    <div class="combatant-card__header">
+                      <h2 id="enemy-name">Otherworldly Beast</h2>
+                      <span class="combatant-card__role">Threat</span>
+                    </div>
                     <div class="sprite-frame">
                       <img
                         class="sprite-portrait"
@@ -448,11 +454,27 @@
                     </div>
                   </div>
                 </div>
-                <div class="controls battle-hud__panel">
-                  <div class="hotbar" id="hotbar-slots" role="list" aria-label="Hotbar"></div>
-                  <button class="secondary" id="reset">Reset Battle</button>
+                <div class="combat-actions-panel">
+                  <section class="combat-action-group">
+                    <header>
+                      <h3>Weapon Arts</h3>
+                      <p class="caption">Primary strikes and combos.</p>
+                    </header>
+                    <div class="combat-action-grid" id="weapon-attack-list"></div>
+                  </section>
+                  <section class="combat-action-group">
+                    <header>
+                      <h3>Skillchain</h3>
+                      <p class="caption">Spellcraft and utility abilities.</p>
+                    </header>
+                    <div class="combat-action-grid" id="skill-list"></div>
+                  </section>
+                  <div class="combat-utility">
+                    <div class="hotbar" id="hotbar-slots" role="list" aria-label="Hotbar"></div>
+                    <button class="secondary" id="reset">Reset Battle</button>
+                  </div>
                 </div>
-                <div class="spellbook-panel battle-hud__panel" id="spellbook-panel">
+                <div class="combat-library" id="spellbook-panel">
                   <div class="spellbook-section">
                     <h3>Spellbook</h3>
                     <p class="subtitle">Drag spells into your hotbar between fights.</p>

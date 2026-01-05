@@ -1,6 +1,7 @@
 const DEFAULTS = Object.freeze({
-  minDockHeight: 560,
-  minViewportHeight: 720
+  minDockHeight: 420,
+  minDockWidth: 820,
+  minViewportHeight: 640
 });
 
 const FALLBACK_VIEWPORT = globalThis?.window;
@@ -18,21 +19,29 @@ export function createCombatDockLayout({
   stage,
   viewport = FALLBACK_VIEWPORT,
   minDockHeight = DEFAULTS.minDockHeight,
-  minViewportHeight = DEFAULTS.minViewportHeight
+  minDockWidth = DEFAULTS.minDockWidth,
+  minViewportHeight = DEFAULTS.minViewportHeight,
+  createObserver
 } = {}) {
   if (!dock || !panel || !viewport) {
     return createNoopLayout();
   }
 
   const updateLayout = () => {
-    const dockHeight = dock.getBoundingClientRect().height;
+    const rect = dock.getBoundingClientRect();
+    const dockHeight = rect.height;
+    const dockWidth = rect.width;
     const viewportHeight = viewport.innerHeight ?? 0;
-    const isExpanded = dockHeight >= minDockHeight && viewportHeight >= minViewportHeight;
+    const isExpanded =
+      dockHeight >= minDockHeight &&
+      dockWidth >= minDockWidth &&
+      viewportHeight >= minViewportHeight;
 
     dock.classList.toggle("combat-dock--expanded", isExpanded);
     dock.classList.toggle("combat-dock--compact", !isExpanded);
     panel.classList.toggle("combat-panel--expanded", isExpanded);
     panel.classList.toggle("combat-panel--compact", !isExpanded);
+    panel.dataset.combatMode = isExpanded ? "expanded" : "compact";
 
     if (stage) {
       stage.classList.toggle("battle-stage--expanded", isExpanded);
@@ -41,6 +50,17 @@ export function createCombatDockLayout({
   };
 
   const handleResize = () => updateLayout();
+
+  let observer = null;
+  if (typeof createObserver === "function") {
+    observer = createObserver(handleResize);
+  } else if (viewport.ResizeObserver) {
+    observer = new viewport.ResizeObserver(handleResize);
+  } else if (globalThis?.ResizeObserver) {
+    observer = new ResizeObserver(handleResize);
+  }
+
+  observer?.observe?.(dock);
 
   if (viewport.addEventListener) {
     viewport.addEventListener("resize", handleResize);
@@ -53,6 +73,7 @@ export function createCombatDockLayout({
       if (viewport.removeEventListener) {
         viewport.removeEventListener("resize", handleResize);
       }
+      observer?.disconnect?.();
     },
     sync() {
       updateLayout();

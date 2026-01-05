@@ -221,9 +221,9 @@ describe("combat action rendering", () => {
       onAction: (action) => actions.push(action)
     });
 
-    expect(weaponContainer.querySelectorAll("button.action")).toHaveLength(2);
-    expect(skillContainer.querySelectorAll("button.action")).toHaveLength(2);
-    expect(skillContainer.querySelector(".action--placeholder").disabled).toBe(true);
+    expect(weaponContainer.querySelectorAll("button.combat-action")).toHaveLength(2);
+    expect(skillContainer.querySelectorAll("button.combat-action")).toHaveLength(2);
+    expect(skillContainer.querySelector(".combat-action--placeholder").disabled).toBe(true);
     expect(weaponButtons).toHaveLength(2);
     expect(skillButtons).toHaveLength(1);
 
@@ -241,7 +241,7 @@ describe("combat action rendering", () => {
     const buttons = renderCombatActionList({ container, entries: [ { action: "attack" } ] });
 
     expect(buttons).toHaveLength(1);
-    expect(container.querySelector("button").textContent).toBe("Unknown");
+    expect(container.querySelector(".combat-action__label").textContent).toBe("Unknown");
   });
 
   test("renderCombatActionList handles undefined entries", () => {
@@ -266,5 +266,27 @@ describe("combat action rendering", () => {
 
     expect(buttons).toHaveLength(1);
     expect(container.querySelector("button").dataset.baseLabel).toBe("Solo Strike");
+  });
+
+  test("renderCombatActionList prioritizes cooldown and detail metadata", () => {
+    const dom = new JSDOM('<div id="cooldown"></div><div id="detail"></div>');
+    global.document = dom.window.document;
+
+    const cooldownContainer = dom.window.document.getElementById("cooldown");
+    const detailContainer = dom.window.document.getElementById("detail");
+
+    renderCombatActionList({
+      container: cooldownContainer,
+      entries: [{ label: "Pulse", action: "attack", cooldown: 4 }]
+    });
+    renderCombatActionList({
+      container: detailContainer,
+      entries: [{ label: "Scan", action: "inspect", detail: "Utility" }]
+    });
+
+    expect(cooldownContainer.querySelector(".combat-action__meta").textContent).toBe(
+      "4s cooldown"
+    );
+    expect(detailContainer.querySelector(".combat-action__meta").textContent).toBe("Utility");
   });
 });

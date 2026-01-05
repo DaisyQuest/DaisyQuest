@@ -23,4 +23,12 @@ describe("combat dock markup", () => {
     expect(battleStage?.classList.contains("battle-stage")).toBe(true);
     expect(battleStage?.classList.contains("battle-stage--compact")).toBe(true);
   });
+
+  test("includes combat action grids and readouts", () => {
+    const combatPanel = document.getElementById("tab-panel-combat");
+    expect(combatPanel?.querySelector(".combat-hud__body")).not.toBeNull();
+    expect(combatPanel?.querySelector("#weapon-attack-list")).not.toBeNull();
+    expect(combatPanel?.querySelector("#skill-list")).not.toBeNull();
+    expect(combatPanel?.querySelector(".combat-readouts")).not.toBeNull();
+  });
 });

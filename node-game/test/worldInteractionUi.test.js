@@ -14,10 +14,10 @@ describe("world interaction client", () => {
     dom = new JSDOM(`
       <div id="menu-anchor"></div>
       <div id="surface">
-        <div id="player" data-interaction-type="player" data-interaction-id="hero" data-interaction-layer="10">
+        <div id="player" data-interaction-type="player" data-interaction-id="hero" data-interaction-layer="10" data-interaction-x-percent="0.1" data-interaction-y-percent="0.1">
           Hero
         </div>
-        <div id="npc" data-interaction-type="npc" data-interaction-id="foe" data-interaction-layer="20" data-interaction-hostile="true">
+        <div id="npc" data-interaction-type="npc" data-interaction-id="foe" data-interaction-layer="20" data-interaction-hostile="true" data-interaction-x-percent="0.1" data-interaction-y-percent="0.1">
           Foe
         </div>
       </div>
@@ -25,6 +25,14 @@ describe("world interaction client", () => {
     global.window = dom.window;
     global.document = dom.window.document;
     surface = document.getElementById("surface");
+    surface.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100
+    });
 
     const player = document.getElementById("player");
     const npc = document.getElementById("npc");
@@ -65,7 +73,8 @@ describe("world interaction client", () => {
     const targets = collectInteractionTargets([surface]);
     const candidates = resolveInteractionCandidates({
       point: { x: 10, y: 10 },
-      targets
+      targets,
+      surface
     });
 
     expect(candidates[0]).toMatchObject({ id: "foe", type: "npc", layer: 20, isHostile: true });
@@ -76,7 +85,7 @@ describe("world interaction client", () => {
   test("includes hostile metadata when collecting targets", () => {
     const targets = collectInteractionTargets([surface]);
     const npcTarget = targets.find((target) => target.id === "foe");
-    expect(npcTarget).toMatchObject({ isHostile: true, type: "npc" });
+    expect(npcTarget).toMatchObject({ isHostile: true, type: "npc", xPercent: 0.1, yPercent: 0.1 });
   });
 
   test("skips terrain candidates when disabled", () => {
@@ -84,6 +93,7 @@ describe("world interaction client", () => {
     const candidates = resolveInteractionCandidates({
       point: { x: 10, y: 10 },
       targets,
+      surface,
       includeTerrain: false
     });
 
@@ -122,6 +132,208 @@ describe("world interaction client", () => {
 
     expect(labeledTarget).toMatchObject({ id: "", label: "Treasure", layer: 0 });
     expect(blankTarget).toMatchObject({ id: "", label: "", layer: 0 });
+  });
+
+  test("filters proximity candidates when outside the interaction radius", () => {
+    const targets = collectInteractionTargets([surface]);
+    const candidates = resolveInteractionCandidates({
+      point: { x: 90, y: 90 },
+      targets,
+      surface,
+      maxDistance: 0.05
+    });
+
+    expect(candidates.some((candidate) => candidate.type === "npc")).toBe(false);
+    expect(candidates[candidates.length - 1]).toMatchObject({ type: "terrain" });
+  });
+
+  test("orders candidates by distance when layers are equal", () => {
+    const closer = document.createElement("div");
+    closer.dataset.interactionType = "object";
+    closer.dataset.interactionId = "near";
+    closer.dataset.interactionLayer = "5";
+    closer.dataset.interactionXPercent = "0.1";
+    closer.dataset.interactionYPercent = "0.1";
+    surface.appendChild(closer);
+
+    const farther = document.createElement("div");
+    farther.dataset.interactionType = "object";
+    farther.dataset.interactionId = "far";
+    farther.dataset.interactionLayer = "5";
+    farther.dataset.interactionXPercent = "0.16";
+    farther.dataset.interactionYPercent = "0.16";
+    surface.appendChild(farther);
+
+    const targets = collectInteractionTargets([surface]);
+    const candidates = resolveInteractionCandidates({
+      point: { x: 10, y: 10 },
+      targets,
+      surface
+    });
+
+    const objectCandidates = candidates.filter((candidate) => candidate.type === "object");
+    expect(objectCandidates[0].id).toBe("near");
+  });
+
+  test("sorts by distance when candidates are prebuilt", () => {
+    const customTargets = [
+      {
+        id: "a",
+        type: "object",
+        layer: 1,
+        label: "A",
+        xPercent: 0.1,
+        yPercent: 0.1,
+        isHostile: false
+      },
+      {
+        id: "b",
+        type: "object",
+        layer: 1,
+        label: "B",
+        xPercent: 0.12,
+        yPercent: 0.12,
+        isHostile: false
+      }
+    ];
+
+    const candidates = resolveInteractionCandidates({
+      point: { x: 10, y: 10 },
+      targets: customTargets,
+      surface,
+      includeTerrain: false
+    });
+
+    expect(candidates.map((candidate) => candidate.id)).toEqual(["a", "b"]);
+  });
+
+  test("uses fallback distance ordering when targets have no distance data", () => {
+    const a = document.createElement("div");
+    a.dataset.interactionType = "object";
+    a.dataset.interactionId = "alpha";
+    a.dataset.interactionLayer = "4";
+    a.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 20,
+      bottom: 20,
+      width: 20,
+      height: 20
+    });
+
+    const b = document.createElement("div");
+    b.dataset.interactionType = "object";
+    b.dataset.interactionId = "beta";
+    b.dataset.interactionLayer = "4";
+    b.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 20,
+      bottom: 20,
+      width: 20,
+      height: 20
+    });
+
+    surface.appendChild(a);
+    surface.appendChild(b);
+    const targets = collectInteractionTargets([surface]);
+    const candidates = resolveInteractionCandidates({
+      point: { x: 10, y: 10 },
+      targets,
+      surface,
+      includeTerrain: false
+    });
+
+    const objectCandidates = candidates.filter((candidate) => candidate.type === "object");
+    expect(objectCandidates.map((candidate) => candidate.id)).toEqual(["alpha", "beta"]);
+  });
+
+  test("falls back to bounding box checks when percent data is missing", () => {
+    const unlabeled = document.createElement("div");
+    unlabeled.dataset.interactionType = "object";
+    unlabeled.dataset.interactionId = "crate";
+    surface.appendChild(unlabeled);
+    unlabeled.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 20,
+      bottom: 20,
+      width: 20,
+      height: 20
+    });
+
+    const targets = collectInteractionTargets([surface]);
+    const candidates = resolveInteractionCandidates({
+      point: { x: 10, y: 10 },
+      targets,
+      surface
+    });
+
+    expect(candidates.some((candidate) => candidate.id === "crate")).toBe(true);
+  });
+
+  test("filters candidates using explicit interaction ranges", () => {
+    const ranged = document.createElement("div");
+    ranged.dataset.interactionType = "npc";
+    ranged.dataset.interactionId = "sniper";
+    ranged.dataset.interactionLayer = "15";
+    ranged.dataset.interactionXPercent = "0.3";
+    ranged.dataset.interactionYPercent = "0.3";
+    ranged.dataset.interactionRadius = "0.05";
+    surface.appendChild(ranged);
+
+    const targets = collectInteractionTargets([surface]);
+    const candidates = resolveInteractionCandidates({
+      point: { x: 40, y: 40 },
+      targets,
+      surface
+    });
+
+    expect(candidates.some((candidate) => candidate.id === "sniper")).toBe(false);
+  });
+
+  test("parses invalid percent metadata as null values", () => {
+    const invalid = document.createElement("div");
+    invalid.dataset.interactionType = "object";
+    invalid.dataset.interactionId = "glitch";
+    invalid.dataset.interactionXPercent = "bad";
+    invalid.dataset.interactionYPercent = "nope";
+    surface.appendChild(invalid);
+
+    const targets = collectInteractionTargets([surface]);
+    const target = targets.find((entry) => entry.id === "glitch");
+    expect(target.xPercent).toBeNull();
+    expect(target.yPercent).toBeNull();
+  });
+
+  test("ignores null targets and handles zero-sized surfaces", () => {
+    surface.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0
+    });
+
+    const candidates = resolveInteractionCandidates({
+      point: { x: 5, y: 5 },
+      targets: [null],
+      surface
+    });
+
+    expect(candidates).toEqual([{ id: "terrain", type: "terrain", layer: 0, label: "terrain", distance: null }]);
+  });
+
+  test("returns terrain-only candidates when the point is missing", () => {
+    const targets = collectInteractionTargets([surface]);
+    const candidates = resolveInteractionCandidates({
+      point: null,
+      targets,
+      surface
+    });
+
+    expect(candidates).toEqual([{ id: "terrain", type: "terrain", layer: 0, label: "terrain", distance: null }]);
   });
 
   test("dispatches primary click action requests", async () => {

@@ -1,4 +1,5 @@
 const DEFAULT_POLL_INTERVAL = 2000;
+const DEFAULT_MARKER_RADIUS = 0.14;
 
 const MARKER_LAYER = Object.freeze({
   self: 40,
@@ -65,6 +66,62 @@ export function getSurfacePercentFromEvent({ event, surface }) {
   return { xPercent, yPercent };
 }
 
+export function resolveWorldTargetFromEvent({
+  event,
+  surface,
+  world,
+  playerId,
+  fallbackRadius = DEFAULT_MARKER_RADIUS
+} = {}) {
+  const percent = getSurfacePercentFromEvent({ event, surface });
+  if (!percent) {
+    return null;
+  }
+  if (!world || !playerId) {
+    return { ...percent, precisionRadius: fallbackRadius };
+  }
+  const player = world.players?.find((entry) => entry.id === playerId);
+  if (!player) {
+    return { ...percent, precisionRadius: fallbackRadius };
+  }
+  const bounds = getWorldBoundsForLocation(world, player.location);
+  if (bounds.error) {
+    return { ...percent, precisionRadius: fallbackRadius };
+  }
+  return {
+    xPercent: percent.xPercent,
+    yPercent: percent.yPercent,
+    x: Math.round(percent.xPercent * bounds.maxX),
+    y: Math.round(percent.yPercent * bounds.maxY),
+    precisionRadius: fallbackRadius
+  };
+}
+
+function createMarkerLabel({ text, doc }) {
+  const label = doc.createElement("span");
+  label.className = "world-panel__marker-label";
+  label.textContent = text ?? "";
+  return label;
+}
+
+function createMarkerDot({ doc }) {
+  const dot = doc.createElement("span");
+  dot.className = "world-panel__marker-dot";
+  return dot;
+}
+
+function applyMarkerMetadata({ marker, positionPercent, position, bounds, radius }) {
+  marker.style.setProperty("--x", `${positionPercent.x}%`);
+  marker.style.setProperty("--y", `${positionPercent.y}%`);
+  marker.dataset.interactionXPercent = String(positionPercent.x / 100);
+  marker.dataset.interactionYPercent = String(positionPercent.y / 100);
+  marker.dataset.interactionX = String(position.x);
+  marker.dataset.interactionY = String(position.y);
+  marker.dataset.interactionMaxX = String(bounds.maxX);
+  marker.dataset.interactionMaxY = String(bounds.maxY);
+  marker.dataset.interactionRadius = String(radius);
+}
+
 export function buildWorldMarkers({ world, playerId, doc = document } = {}) {
   if (!world) {
     return [];
@@ -90,9 +147,19 @@ export function buildWorldMarkers({ world, playerId, doc = document } = {}) {
     if (player.isNpc && player.isHostile) {
       marker.classList.add("world-panel__target--hostile");
     }
-    marker.style.setProperty("--x", `${projectToPercent(player.position.x, bounds.maxX)}%`);
-    marker.style.setProperty("--y", `${projectToPercent(player.position.y, bounds.maxY)}%`);
-    marker.textContent = isSelf ? "You" : player.name;
+    const positionPercent = {
+      x: projectToPercent(player.position.x, bounds.maxX),
+      y: projectToPercent(player.position.y, bounds.maxY)
+    };
+    applyMarkerMetadata({
+      marker,
+      positionPercent,
+      position: player.position,
+      bounds,
+      radius: DEFAULT_MARKER_RADIUS
+    });
+    marker.appendChild(createMarkerDot({ doc }));
+    marker.appendChild(createMarkerLabel({ text: isSelf ? "You" : player.name, doc }));
     marker.dataset.interactionType = player.isNpc ? "npc" : "player";
     marker.dataset.interactionId = player.id;
     marker.dataset.interactionLabel = player.name;
@@ -114,9 +181,19 @@ export function buildWorldMarkers({ world, playerId, doc = document } = {}) {
     }
     const marker = doc.createElement("div");
     marker.className = "world-panel__target world-panel__target--object";
-    marker.style.setProperty("--x", `${projectToPercent(object.position.x, bounds.maxX)}%`);
-    marker.style.setProperty("--y", `${projectToPercent(object.position.y, bounds.maxY)}%`);
-    marker.textContent = object.name;
+    const positionPercent = {
+      x: projectToPercent(object.position.x, bounds.maxX),
+      y: projectToPercent(object.position.y, bounds.maxY)
+    };
+    applyMarkerMetadata({
+      marker,
+      positionPercent,
+      position: object.position,
+      bounds,
+      radius: DEFAULT_MARKER_RADIUS
+    });
+    marker.appendChild(createMarkerDot({ doc }));
+    marker.appendChild(createMarkerLabel({ text: object.name, doc }));
     marker.dataset.interactionType = "object";
     marker.dataset.interactionId = object.id;
     marker.dataset.interactionLabel = object.name;
@@ -178,6 +255,7 @@ export function createWorldMapView({
       start() {},
       stop() {},
       refresh: async () => null,
+      moveToTarget: async () => null,
       moveToPercent: async () => null
     };
   }
@@ -199,10 +277,10 @@ export function createWorldMapView({
     return payload;
   }
 
-  async function moveToPercent({ xPercent, yPercent } = {}) {
+  async function moveToTarget(target) {
     const payload = await apiRequest("/api/world/move", {
       method: "POST",
-      body: { target: { xPercent, yPercent } }
+      body: { target }
     });
     if (!payload) {
       return null;
@@ -217,6 +295,10 @@ export function createWorldMapView({
       regionLabel
     });
     return payload;
+  }
+
+  async function moveToPercent({ xPercent, yPercent } = {}) {
+    return moveToTarget({ xPercent, yPercent });
   }
 
   function start() {
@@ -240,6 +322,7 @@ export function createWorldMapView({
     start,
     stop,
     refresh,
+    moveToTarget,
     moveToPercent
   };
 }
