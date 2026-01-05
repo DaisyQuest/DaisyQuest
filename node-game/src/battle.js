@@ -1,4 +1,5 @@
 import { rollLoot } from "./items.js";
+import { COMBAT_CONFIG } from "./systems/combatConfig.js";
 
 export const DEFAULT_PLAYER = Object.freeze({
   name: "Hero",
@@ -101,6 +102,43 @@ export const ACTION_CONFIG = Object.freeze({
 
 export const GLOBAL_COOLDOWN_MS = 1200;
 
+const DEFAULT_WEAPON_ATTACK_SLOTS = Object.freeze({ minSlots: 2, maxSlots: 5 });
+const DEFAULT_SKILL_SLOTS = 5;
+
+function normalizeLabelList(labels) {
+  if (!Array.isArray(labels)) {
+    return [];
+  }
+  return labels
+    .filter((label) => typeof label === "string")
+    .map((label) => label.trim())
+    .filter((label) => label.length > 0);
+}
+
+function normalizeSkillEntries(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry && typeof entry.label === "string")
+    .map((entry) => ({
+      ...entry,
+      label: entry.label.trim()
+    }))
+    .filter((entry) => entry.label.length > 0);
+}
+
+function resolveWeaponSlots(config) {
+  const minSlots = Number.isFinite(config?.minSlots)
+    ? Math.max(DEFAULT_WEAPON_ATTACK_SLOTS.minSlots, config.minSlots)
+    : DEFAULT_WEAPON_ATTACK_SLOTS.minSlots;
+  const rawMax = Number.isFinite(config?.maxSlots)
+    ? config.maxSlots
+    : DEFAULT_WEAPON_ATTACK_SLOTS.maxSlots;
+  const maxSlots = Math.min(DEFAULT_WEAPON_ATTACK_SLOTS.maxSlots, Math.max(minSlots, rawMax));
+  return { minSlots, maxSlots };
+}
+
 export function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -133,6 +171,63 @@ export function calculateDamage(attacker, defender, rng = Math.random) {
     damage: totalDamage,
     isCrit
   };
+}
+
+export function buildWeaponAttackList({ weapon, config = COMBAT_CONFIG } = {}) {
+  const weaponConfig = config?.weaponAttacks ?? {};
+  const { minSlots, maxSlots } = resolveWeaponSlots(weaponConfig);
+  const weaponLabels = normalizeLabelList(weapon?.weaponAttacks);
+  const fallbackLabels = normalizeLabelList(weaponConfig.fallbackLabels);
+  const attacks = weaponLabels.slice(0, maxSlots);
+
+  if (attacks.length < minSlots) {
+    fallbackLabels.forEach((label) => {
+      if (attacks.length < minSlots) {
+        attacks.push(label);
+      }
+    });
+  }
+
+  while (attacks.length < minSlots) {
+    attacks.push(`Strike ${attacks.length + 1}`);
+  }
+
+  return attacks.slice(0, maxSlots).map((label, index) => ({
+    id: `weapon-${index + 1}`,
+    label,
+    action: ACTIONS.ATTACK
+  }));
+}
+
+export function buildSkillList({ entries, config = COMBAT_CONFIG } = {}) {
+  const skillConfig = config?.skills ?? {};
+  const slots =
+    Number.isFinite(skillConfig.slots) && skillConfig.slots > 0
+      ? skillConfig.slots
+      : DEFAULT_SKILL_SLOTS;
+  const primaryEntries = normalizeSkillEntries(
+    Array.isArray(entries) ? entries : skillConfig.entries
+  );
+  const skills = primaryEntries.slice(0, slots);
+
+  if (skills.length < slots) {
+    const fallbackEntries = normalizeSkillEntries(skillConfig.entries);
+    fallbackEntries.forEach((entry) => {
+      if (skills.length < slots) {
+        skills.push(entry);
+      }
+    });
+  }
+
+  while (skills.length < slots) {
+    const labelPrefix = skillConfig.fallbackLabelPrefix ?? "Skill";
+    skills.push({ label: `${labelPrefix} ${skills.length + 1}` });
+  }
+
+  return skills.slice(0, slots).map((entry, index) => ({
+    id: entry.id ?? `skill-${index + 1}`,
+    ...entry
+  }));
 }
 
 export function applyDamage(defender, damage) {

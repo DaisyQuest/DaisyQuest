@@ -1,4 +1,5 @@
 import { createItemRegistry } from "./systems/itemRegistry.js";
+import { COMBAT_CONFIG } from "./systems/combatConfig.js";
 import { initializeThemeEngine } from "./themeEngine.js";
 import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
 import { DEFAULT_ENGAGE_RANGE, resolveEngagementStatus } from "./ui/engagementRules.js";
@@ -11,6 +12,7 @@ import { applyWorldMapPanelLayout } from "./ui/worldMapPanel.js";
 import { createTabController } from "./ui/tabController.js";
 import { createFlowState, FLOW_SCREENS, getFlowScreenFromTab } from "./ui/flowState.js";
 import { renderInteractionPanel, resolveInteractionPanelState } from "./ui/interactionPanel.js";
+import { renderCombatActionList } from "./ui/combatActions.js";
 import {
   createCombatScreenAdapter,
   createLootScreenAdapter,
@@ -30,6 +32,7 @@ import{
   canTransition,
   transition
 } from "./state/gameFlow.js";
+import { buildSkillList, buildWeaponAttackList } from "./battle.js";
 
 const logList = document.getElementById("log");
 const playerHealth = document.getElementById("player-health");
@@ -110,9 +113,9 @@ const layoutTabButtons = document.querySelectorAll(".layout-tab-button");
 const layoutPanels = document.querySelectorAll("[data-tab-panel]");
 const tabButtons = document.querySelectorAll(".tab-button");
 const registryPanes = document.querySelectorAll(".registry-pane");
-const actionButtons = Array.from(document.querySelectorAll("button.action")).filter(
-  (button) => !["craft-button", "claim-reward"].includes(button.id)
-);
+const weaponAttackList = document.getElementById("weapon-attack-list");
+const skillList = document.getElementById("skill-list");
+let actionButtons = [];
 
 const authStatus = document.getElementById("auth-status");
 const authForm = document.getElementById("auth-form");
@@ -816,6 +819,63 @@ function handleInteractionInteract() {
   pushLog([`You study ${label}.`]);
 }
 
+function getCombatConfig() {
+  return config?.combatConfig ?? COMBAT_CONFIG;
+}
+
+function getEquippedWeapon() {
+  if (!state || !runtime) {
+    return null;
+  }
+  const combatConfig = getCombatConfig();
+  const weaponSlot = combatConfig?.weaponSlot ?? COMBAT_CONFIG.weaponSlot;
+  const weaponId = state.equipment?.[weaponSlot];
+  return weaponId ? runtime.itemRegistry.getItem(weaponId) : null;
+}
+
+function normalizeCombatEntries(entries) {
+  return entries.map((entry) => {
+    if (!entry.action) {
+      return entry;
+    }
+    if (!config?.actions?.[entry.action]) {
+      return { ...entry, action: null };
+    }
+    return entry;
+  });
+}
+
+function renderCombatActions() {
+  if (!weaponAttackList || !skillList) {
+    return;
+  }
+  const combatConfig = getCombatConfig();
+  const weapon = getEquippedWeapon();
+  const weaponEntries = normalizeCombatEntries(
+    buildWeaponAttackList({ weapon, config: combatConfig })
+  );
+  const skillEntries = normalizeCombatEntries(buildSkillList({ config: combatConfig }));
+  const newActionButtons = [];
+
+  newActionButtons.push(
+    ...renderCombatActionList({
+      container: weaponAttackList,
+      entries: weaponEntries,
+      onAction: queueAction
+    })
+  );
+  newActionButtons.push(
+    ...renderCombatActionList({
+      container: skillList,
+      entries: skillEntries,
+      onAction: queueAction
+    })
+  );
+
+  actionButtons = newActionButtons;
+  updateActionButtons();
+}
+
 function updateActionButtons(now = Date.now()) {
   const gcdRemaining = Math.max(0, combatTimers.globalCooldownUntil - now);
   const combatLocked = !state || state.player.health <= 0 || state.enemy.health <= 0;
@@ -1185,6 +1245,7 @@ function renderEquipment() {
     }
     equipmentList.appendChild(wrapper);
   });
+  renderCombatActions();
 }
 
 function populateRecipes() {
@@ -1642,15 +1703,6 @@ function updateAuthStatus(profile) {
   }
 }
 
-function updateActionLabels() {
-  actionButtons.forEach((button) => {
-    const action = button.dataset.action;
-    const label = config?.actions?.[action]?.label ?? button.textContent;
-    button.dataset.baseLabel = label;
-    button.textContent = label;
-  });
-}
-
 async function bootstrapSession() {
   if (!sessionToken) {
     return false;
@@ -1721,7 +1773,7 @@ function initializeGameUI() {
   if (state.enemy.id) {
     npcSelect.value = state.enemy.id;
   }
-  updateActionLabels();
+  renderCombatActions();
   populateRarityOptions();
   populateSlotOptions();
   populateRecipeResultOptions();
@@ -1766,12 +1818,6 @@ function initializeGameUI() {
   minimapPanel.start();
   worldMapView.start();
 }
-
-actionButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    queueAction(button.dataset.action);
-  });
-});
 
 document.getElementById("reset").addEventListener("click", resetBattle);
 npcSelect.addEventListener("change", resetBattle);

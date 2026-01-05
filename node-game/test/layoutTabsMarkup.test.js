@@ -44,6 +44,7 @@ describe("layout tab markup", () => {
     const combatPanel = document.getElementById("tab-panel-combat");
     expect(combatPanel).not.toBeNull();
     expect(combatPanel.querySelector("#battle-scene")).not.toBeNull();
-    expect(combatPanel.querySelector("[data-action=\"attack\"]")).not.toBeNull();
+    expect(combatPanel.querySelector("#weapon-attack-list")).not.toBeNull();
+    expect(combatPanel.querySelector("#skill-list")).not.toBeNull();
   });
 });

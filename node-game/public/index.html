@@ -444,9 +444,20 @@
                   </div>
                 </div>
                 <div class="controls battle-hud__panel">
-                  <button class="action" data-action="attack">Swift Strike</button>
-                  <button class="action" data-action="special">Ember Surge</button>
-                  <button class="action" data-action="heal">Serenity Bloom</button>
+                  <div class="combat-action-group">
+                    <div class="combat-action-header">
+                      <h3>Weapon Attacks</h3>
+                      <p class="subtitle">Drawn from your equipped weapon.</p>
+                    </div>
+                    <div class="combat-action-list" id="weapon-attack-list"></div>
+                  </div>
+                  <div class="combat-action-group">
+                    <div class="combat-action-header">
+                      <h3>Skills</h3>
+                      <p class="subtitle">Configured combat skills.</p>
+                    </div>
+                    <div class="combat-action-list" id="skill-list"></div>
+                  </div>
                   <button class="secondary" id="reset">Reset Battle</button>
                 </div>
               </div>
