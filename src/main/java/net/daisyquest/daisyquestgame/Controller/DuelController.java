@@ -61,11 +61,9 @@ public class DuelController {
         }
 
         if (target.isNPC()) {
-            // Automatically start combat with NPC
-            Combat combat = combatService.startCombat(Arrays.asList(challenger.getId(), target.getId()), Collections.emptyMap());
-            target.setDuelable(false);
-            playerService.updatePlayer(target);
-            return ResponseEntity.ok(new CombatStartedResponse(true, combat.getId()));
+            return ResponseEntity.ok(new SuccessResponse(true,
+                    "NPC duels no longer auto-start. Move closer to " + target.getUsername()
+                            + " and interact to engage in combat once you're within range."));
         } else {
             webSocketService.sendDuelRequest(target.getId(), challenger.getId());
             return ResponseEntity.ok(new SuccessResponse(true, "Duel request sent"));

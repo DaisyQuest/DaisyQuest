@@ -161,6 +161,7 @@ function buildInitialState(snapshot) {
   const defaultState = {
     player: createCombatant(DEFAULT_PLAYER),
     enemy: createCombatant({ ...getNpcById(NPCS[0]?.id), isEnemy: true }),
+    combatEngaged: false,
     inventory: {},
     equipment: {},
     progression: createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS }).getProgressSnapshot(0),
@@ -323,12 +324,15 @@ export function createGameSession({
     state = {
       ...state,
       player: createCombatant(DEFAULT_PLAYER),
-      enemy: createCombatant({ ...npc, isEnemy: true })
+      enemy: createCombatant({ ...npc, isEnemy: true }),
+      combatEngaged: true
     };
     timers = createCombatTimers();
     scheduleEnemyAction(state.enemy, nowFn());
     return {
-      log: [`A new duel begins against ${npc.name}. Choose your opening move.`],
+      log: [
+        `A new duel ignites against ${npc.name}. Steel and spell flare as you size up the threat, steady your breath, and choose your opening move with care.`
+      ],
       ...getSnapshot()
     };
   }
@@ -338,6 +342,7 @@ export function createGameSession({
       return { error: "Unknown action." };
     }
     if (isDefeated(state.player) || isDefeated(state.enemy)) {
+      state = { ...state, combatEngaged: false };
       return { error: "Combat has concluded." };
     }
     const now = nowFn();
@@ -362,6 +367,7 @@ export function createGameSession({
 
     if (result.victory) {
       timers = { ...timers, enemyNextActionAt: 0 };
+      state = { ...state, combatEngaged: false };
       const reward = getVictoryReward(state.enemy);
       log.push(...applyProgressionGain(reward.xp, reward.label).log);
       const lootDrops = runtime.lootSystem.rollLoot(state.enemy.id, rng);
@@ -392,6 +398,7 @@ export function createGameSession({
     }
     if (isDefeated(state.player) || isDefeated(state.enemy)) {
       timers = { ...timers, enemyNextActionAt: 0 };
+      state = { ...state, combatEngaged: false };
       return { log: [], battleEvent: null, ...getSnapshot() };
     }
 
@@ -406,6 +413,7 @@ export function createGameSession({
     if (isDefeated(state.player)) {
       log.push(`${state.player.name} falls. Defeat.`);
       timers = { ...timers, enemyNextActionAt: 0 };
+      state = { ...state, combatEngaged: false };
       return { log, battleEvent, ...getSnapshot() };
     }
 

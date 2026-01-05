@@ -9,7 +9,7 @@ const DEFAULT_ACTIONS = Object.freeze({
   interact: Object.freeze({ enabled: false, label: "Interact" })
 });
 
-export function resolveInteractionPanelState({ target, candidates = [] } = {}) {
+export function resolveInteractionPanelState({ target, candidates = [], engagement = null } = {}) {
   if (!target) {
     return {
       summary: "No target selected. Highlight a player, NPC, or object.",
@@ -27,15 +27,19 @@ export function resolveInteractionPanelState({ target, candidates = [] } = {}) {
   switch (target.type) {
     case "npc":
       if (isHostile) {
+        const canEngage = engagement?.canEngage ?? true;
+        const actionSummary = canEngage
+          ? "Engage to start combat."
+          : engagement?.reason ?? "Move closer to engage.";
         return {
-          summary: `${label} is looking for a fight.`,
+          summary: canEngage ? `${label} is looking for a fight.` : `${label} is out of reach.`,
           details: [
             { label: "Target", value: label },
             { label: "Threat", value: "Hostile" },
-            { label: "Action", value: "Engage to start combat." }
+            { label: "Action", value: actionSummary }
           ],
           actions: {
-            engage: { enabled: true, label: "Engage" },
+            engage: { enabled: canEngage, label: "Engage" },
             interact: { enabled: false, label: "Interact" }
           }
         };

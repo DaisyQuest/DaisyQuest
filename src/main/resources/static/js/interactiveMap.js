@@ -1586,19 +1586,19 @@
     if (inventory.length > 0) {
     const randomItem = inventory[Math.floor(Math.random() * inventory.length)];
     resultsDiv.innerHTML += `
-                        <p>You won the duel and took ${randomItem.name} from  ${loser} has fallen!</p>
+                        <p>You won the duel and claimed ${randomItem.name}. ${loser} has fallen, and the spoils of victory are now yours to carry forward.</p>
                     `;
     //transferItem(randomItem.id, loser, winner);
 } else {
     resultsDiv.innerHTML += `
-                        <p>You won the duel, ${loser} has fallen</p>
+                        <p>You won the duel. ${loser} has fallen, and the battlefield grows quiet as you catch your breath.</p>
                     `;
 }
 })
     .catch(error => console.error('Error fetching loser inventory:', error));
 } else {
     resultsDiv.innerHTML += `
-            <p>You lost the duel. The winner may have taken one of your items.</p>
+            <p>You lost the duel. The winner may have taken one of your items, so regroup, recover, and prepare for the next clash.</p>
         `;
 }
 
@@ -1743,14 +1743,16 @@
     console.log('Duel request response:', data); // Add this for debugging
     if (data.success) {
     if (data.combatId) {
-    // Combat started immediately (NPC)
+    // Combat started immediately
     console.log('Starting combat with NPC:', data.combatId);
     startCombat(data.combatId);
 } else {
-    alert(`Duel request sent to ${selectedPlayer.username}`);
+    const message = data.message || `Duel request sent to ${selectedPlayer.username}`;
+    alert(message);
 }
 } else {
-    alert(`Failed to send duel request: ${data.message}`);
+    const errorMessage = data.message || data.error || 'Unknown error';
+    alert(`Failed to send duel request: ${errorMessage}`);
 }
 })
     .catch(error => console.error('Error sending duel request:', error));
