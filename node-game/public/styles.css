@@ -822,17 +822,8 @@ body::after {
 
 .combat-dock {
   display: grid;
-  gap: 18px;
-  min-height: min(68vh, 760px);
-  height: 100%;
-}
-
-.combat-dock--expanded {
-  min-height: min(78vh, 900px);
-}
-
-.combat-dock--compact {
-  min-height: min(62vh, 700px);
+  gap: 16px;
+  position: relative;
 }
 
 .battle-stage--compact {
@@ -1330,6 +1321,17 @@ body::after {
   background: rgba(15, 23, 42, 0.95);
   border: 1px solid rgba(148, 163, 184, 0.4);
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.4);
+}
+
+.combat-context-menu-anchor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2100;
+}
+
+.combat-context-menu-anchor .context-menu {
+  pointer-events: auto;
 }
 
 .context-menu__list {

@@ -57,11 +57,13 @@ export function createWorldInteractionClient({
   surfaces,
   apiRequest,
   onDecision,
-  onContextAction
+  onContextAction,
+  contextMenuContainer
 }) {
   const targetSurfaces = Array.isArray(surfaces) ? surfaces : [surfaces];
   let lastCandidates = [];
   let contextMenu = null;
+  const resolvedContextMenuContainer = resolveContextMenuContainer(contextMenuContainer);
 
   function handlePrimaryClick(event) {
     if (!isValidSurfaceTarget(event.target)) {
@@ -120,7 +122,7 @@ export function createWorldInteractionClient({
     if (!contextMenu) {
       contextMenu = document.createElement("div");
       contextMenu.className = "context-menu";
-      document.body.appendChild(contextMenu);
+      resolvedContextMenuContainer.appendChild(contextMenu);
     }
     contextMenu.innerHTML = "";
     const list = document.createElement("ul");
@@ -136,8 +138,9 @@ export function createWorldInteractionClient({
       list.appendChild(item);
     });
     contextMenu.appendChild(list);
-    contextMenu.style.left = `${position.x}px`;
-    contextMenu.style.top = `${position.y}px`;
+    const menuPosition = resolveContextMenuPosition(position, resolvedContextMenuContainer);
+    contextMenu.style.left = `${menuPosition.x}px`;
+    contextMenu.style.top = `${menuPosition.y}px`;
     contextMenu.style.display = options.length ? "block" : "none";
   }
 
@@ -214,4 +217,22 @@ function formatOptionLabel(option) {
     return "";
   }
   return option.charAt(0).toUpperCase() + option.slice(1);
+}
+
+function resolveContextMenuContainer(container) {
+  if (container && container.nodeType === 1) {
+    return container;
+  }
+  return document.body;
+}
+
+function resolveContextMenuPosition(position, container) {
+  if (!container || container === document.body) {
+    return position;
+  }
+  const rect = container.getBoundingClientRect?.() ?? { left: 0, top: 0 };
+  return {
+    x: position.x - rect.left,
+    y: position.y - rect.top
+  };
 }

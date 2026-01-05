@@ -63,6 +63,7 @@ const battlePlayerSprite = document.getElementById("player-battle-sprite");
 const battleEnemySprite = document.getElementById("enemy-battle-sprite");
 const playerCardSprite = document.getElementById("player-sprite");
 const enemyCardSprite = document.getElementById("enemy-sprite");
+const combatContextMenuAnchor = document.getElementById("combat-context-menu-anchor");
 const gameWorldPanel = document.querySelector("[data-game-world-panel]");
 const gameWorldLayerStack = document.getElementById("game-world-layer-stack");
 const playerStatusBanners = document.getElementById("player-status-banners");
@@ -781,7 +782,8 @@ function initializeWorldInteractions() {
     surfaces: [worldMapSurface],
     apiRequest,
     onDecision: handleInteractionDecision,
-    onContextAction: handleContextActionResult
+    onContextAction: handleContextActionResult,
+    contextMenuContainer: combatContextMenuAnchor
   });
   setInteractionSelection(null, []);
 }
