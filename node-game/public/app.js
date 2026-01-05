@@ -1,6 +1,7 @@
 import { createItemRegistry } from "./systems/itemRegistry.js";
 import { initializeThemeEngine } from "./themeEngine.js";
 import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
+import { DEFAULT_ENGAGE_RANGE, resolveEngagementStatus } from "./ui/engagementRules.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
 import { createMinimapPanel } from "./ui/minimapPanel.js";
 import { applyGameWorldPanelLayout, createGameWorldLayerStack } from "./ui/gameWorldPanel.js";
@@ -146,6 +147,7 @@ let battleSceneInitialized = false;
 let worldInteractionClient = null;
 let gameFlowState = GameFlowState.MAP;
 let interactionSelection = { target: null, candidates: [] };
+const combatEngageRange = DEFAULT_ENGAGE_RANGE;
 const logFeed = createFeedPanel({ listElement: logList });
 const lootFeed = createFeedPanel({ listElement: lootList });
 const combatMeters = createCombatMeterPanel({
@@ -616,14 +618,44 @@ function resolveInteractionCandidate(target, candidates) {
   );
 }
 
+function buildEngagementStatus(target, candidates) {
+  if (!target || target.type !== "npc") {
+    return null;
+  }
+  const match = resolveInteractionCandidate(target, candidates);
+  const isHostile = Boolean(match?.isHostile ?? target.isHostile);
+  if (!isHostile) {
+    return null;
+  }
+  if (!sessionToken) {
+    return {
+      canEngage: false,
+      reason: "Log in to engage hostile NPCs.",
+      range: combatEngageRange,
+      distance: null
+    };
+  }
+  return resolveEngagementStatus({
+    world: worldMapView?.state?.world,
+    playerId: worldMapView?.state?.playerId,
+    targetId: target.id,
+    range: combatEngageRange
+  });
+}
+
 function setInteractionSelection(target, candidates) {
   interactionSelection = {
     target: target ?? null,
     candidates: candidates ?? []
   };
+  const engagement = buildEngagementStatus(
+    interactionSelection.target,
+    interactionSelection.candidates
+  );
   const state = resolveInteractionPanelState({
     target: interactionSelection.target,
-    candidates: interactionSelection.candidates
+    candidates: interactionSelection.candidates,
+    engagement
   });
   renderInteractionPanel({
     detailsElement: interactionDetails,
@@ -742,6 +774,11 @@ async function startCombatWithNpc(npc, { reason } = {}) {
 }
 
 function startCombatForTarget(target, candidates) {
+  const engagement = buildEngagementStatus(target, candidates);
+  if (engagement && !engagement.canEngage) {
+    pushLog([engagement.reason ?? "Move closer to engage this target."]);
+    return;
+  }
   const npc = getNpcByTarget(target, candidates);
   if (!npc) {
     return;
@@ -1203,6 +1240,20 @@ async function attemptCraft() {
 async function resetBattle() {
   const npc = getSelectedNpc();
   if (!npc) {
+    return;
+  }
+  if (!sessionToken) {
+    pushLog(["Log in to engage hostile NPCs."]);
+    return;
+  }
+  const engagement = resolveEngagementStatus({
+    world: worldMapView?.state?.world,
+    playerId: worldMapView?.state?.playerId,
+    targetId: npc.id,
+    range: combatEngageRange
+  });
+  if (engagement && !engagement.canEngage) {
+    pushLog([engagement.reason ?? "Move closer to engage this target."]);
     return;
   }
   await startCombatWithNpc(npc, { reason: "manual" });
@@ -1676,12 +1727,16 @@ function initializeGameUI() {
   populateRecipeResultOptions();
   wireTabs();
   wireLayoutTabs();
-  flowState.setScreen(FLOW_SCREENS.COMBAT, { source: "init" });
-  gameFlowActions.combatStarted({ npcId: state.enemy?.id, reason: "bootstrap" });
-  requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
   const hasActiveCombat = Boolean(
-    state?.enemy?.id && state?.player?.health > 0 && state?.enemy?.health > 0
+    state?.combatEngaged && state?.enemy?.id && state?.player?.health > 0 && state?.enemy?.health > 0
   );
+  flowState.setScreen(hasActiveCombat ? FLOW_SCREENS.COMBAT : FLOW_SCREENS.MAP, {
+    source: "init"
+  });
+  if (hasActiveCombat) {
+    gameFlowActions.combatStarted({ npcId: state.enemy?.id, reason: "bootstrap" });
+    requestGameFlowTransition(GameFlowEvent.SHOW_COMBAT);
+  }
   flowOrchestrator.requestTransition({
     type: FlowEvent.SESSION_INITIALIZED,
     hasActiveCombat,
@@ -1705,7 +1760,9 @@ function initializeGameUI() {
   updateBattleSceneSprites();
   updateMeters();
   updateActionButtons();
-  startCombatLoop();
+  if (hasActiveCombat) {
+    startCombatLoop();
+  }
   minimapPanel.start();
   worldMapView.start();
 }

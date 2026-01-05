@@ -196,7 +196,8 @@ public class WorldSimulationService {
         log.setActorId(entity.getId());
         log.setTargetId(targetEntity.getId());
         log.setActionType("COMBAT_START");
-        log.setDescription(entity.getName() + " engaged " + targetEntity.getName());
+        log.setDescription(entity.getName() + " closes the distance and challenges " + targetEntity.getName()
+                + ", sparks flying as the combat begins in earnest.");
         log.setNeutral(false);
         log.setTimestamp(Instant.now());
         state.combatLogs.put(log.getId(), log);

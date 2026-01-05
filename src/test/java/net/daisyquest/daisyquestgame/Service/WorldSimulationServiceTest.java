@@ -148,6 +148,10 @@ class WorldSimulationServiceTest {
         assertThat(attacker.getCurrentCombatId()).isNotNull();
         assertThat(defender.getCurrentCombatId()).isNotNull();
         assertThat(state.getCombatLogs()).hasSize(1);
+        CombatLog log = state.getCombatLogs().values().iterator().next();
+        assertThat(log.getDescription()).contains(attacker.getName());
+        assertThat(log.getDescription()).contains(defender.getName());
+        assertThat(log.getDescription()).contains("combat begins");
     }
 
     @Test

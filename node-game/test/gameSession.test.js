@@ -14,6 +14,7 @@ describe("game session", () => {
 
     expect(snapshot.state.player.name).toBe("Hero");
     expect(snapshot.state.enemy.name).toBe(config.npcs[0].name);
+    expect(snapshot.state.combatEngaged).toBe(false);
     expect(snapshot.timers.globalCooldownUntil).toBe(0);
     expect(config.rewardMilestones).toEqual(REWARD_MILESTONES);
     expect(config.battleScene).toEqual(BATTLE_SCENE_CONFIG);
@@ -65,8 +66,10 @@ describe("game session", () => {
     const reset = session.resetBattle("ember_wyrmling");
 
     expect(reset.state.enemy.name).toBe("Ember Wyrmling");
+    expect(reset.state.combatEngaged).toBe(true);
     expect(reset.timers.enemyNextActionAt).toBeGreaterThan(now);
     expect(reset.log[0]).toMatch("Ember Wyrmling");
+    expect(reset.log[0]).toMatch("opening move");
   });
 
   test("validates combat actions and cooldowns", () => {
@@ -100,6 +103,7 @@ describe("game session", () => {
 
     session.unsafeSetState({ enemy: { ...session.getSnapshot().state.enemy, health: 0 } });
     expect(session.attemptAction("attack").error).toBe("Combat has concluded.");
+    expect(session.getSnapshot().state.combatEngaged).toBe(false);
   });
 
   test("resolves victory rewards and loot", () => {
@@ -114,6 +118,7 @@ describe("game session", () => {
     expect(result.log.join(" ")).toMatch("Victory");
     expect(result.loot.length).toBeGreaterThan(0);
     expect(result.state.progression.totalXp).toBeGreaterThan(0);
+    expect(result.state.combatEngaged).toBe(false);
   });
 
   test("processes enemy ticks and defeat", () => {
@@ -136,6 +141,7 @@ describe("game session", () => {
     const result = session.processEnemyTick();
     expect(result.log.join(" ")).toMatch("Defeat");
     expect(result.timers.enemyNextActionAt).toBe(0);
+    expect(result.state.combatEngaged).toBe(false);
     expect(result.battleEvent).toMatchObject({
       source: "enemy"
     });

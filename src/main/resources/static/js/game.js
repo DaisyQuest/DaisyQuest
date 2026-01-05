@@ -1193,6 +1193,7 @@ function showCombatResults(combat) {
     resultsDiv.innerHTML = `
         <h2>Combat Ended</h2>
         <p>Winner: ${determineWinner(combat)}</p>
+        <p>The clash is over. Review the final health totals below and plan your next move before returning.</p>
         <p>Final Health:</p>
         <ul>
             ${Object.entries(combat.playerHealth).map(([id, health]) =>` <li>${id}: ${health}</li>`).join('')

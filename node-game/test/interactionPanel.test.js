@@ -24,6 +24,27 @@ describe("interaction panel", () => {
     expect(state.actions.interact.enabled).toBe(false);
   });
 
+  test("disables combat engage actions when a hostile npc is out of range", () => {
+    const state = resolveInteractionPanelState({
+      target: { id: "ember_wyrmling", type: "npc" },
+      candidates: [{ id: "ember_wyrmling", type: "npc", label: "Ember Wyrmling", isHostile: true }],
+      engagement: {
+        canEngage: false,
+        reason: "Move within 2 tiles to engage Ember Wyrmling.",
+        range: 2,
+        distance: 4
+      }
+    });
+
+    expect(state.summary).toMatch(/out of reach/);
+    expect(state.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "Action", value: "Move within 2 tiles to engage Ember Wyrmling." })
+      ])
+    );
+    expect(state.actions.engage.enabled).toBe(false);
+  });
+
   test("returns friendly npc state when the npc is not hostile", () => {
     const state = resolveInteractionPanelState({
       target: { id: "sun-scout", type: "npc" },
