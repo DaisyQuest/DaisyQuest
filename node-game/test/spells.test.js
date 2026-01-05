@@ -2,7 +2,9 @@ import {
   createSpellbook,
   equipSpell,
   getSpellById,
+  listDefaultSpellIds,
   listSpells,
+  listSpellUnlocks,
   SPELLBOOK_SLOTS,
   unequipSpell
 } from "../src/spells.js";
@@ -13,6 +15,12 @@ describe("spell systems", () => {
     const spell = getSpellById("fireball");
     expect(spell.name).toBe("Fireball");
     expect(listSpells().length).toBeGreaterThan(0);
+  });
+
+  test("spell unlock registry exposes defaults", () => {
+    const unlocks = listSpellUnlocks();
+    expect(unlocks.length).toBeGreaterThan(0);
+    expect(listDefaultSpellIds()).toContain("fireball");
   });
 
   test("createSpellbook normalizes slots", () => {
