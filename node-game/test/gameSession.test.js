@@ -3,6 +3,7 @@ import {
   createGameSession,
   REWARD_MILESTONES
 } from "../src/server/gameSession.js";
+import { COMBAT_CONFIG } from "../src/systems/combatConfig.js";
 
 describe("game session", () => {
   const rng = () => 0;
@@ -18,11 +19,24 @@ describe("game session", () => {
     expect(snapshot.timers.globalCooldownUntil).toBe(0);
     expect(config.rewardMilestones).toEqual(REWARD_MILESTONES);
     expect(config.battleScene).toEqual(BATTLE_SCENE_CONFIG);
+    expect(config.combatConfig).toEqual(COMBAT_CONFIG);
+    expect(config.spells.length).toBeGreaterThan(0);
+    expect(config.spellUnlocks.length).toBeGreaterThan(0);
   });
 
   test("creates default sessions without options", () => {
     const session = createGameSession();
     expect(session.getSnapshot().state.player.name).toBe("Hero");
+  });
+
+  test("accepts initial timers overrides", () => {
+    const session = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialTimers: { globalCooldownUntil: 2500 }
+    });
+    expect(session.getSnapshot().timers.globalCooldownUntil).toBe(2500);
   });
 
   test("persists and hydrates snapshots", () => {
@@ -44,6 +58,15 @@ describe("game session", () => {
     const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
     const updated = session.updateHotbar(["heal", "attack", null, "special"]);
     expect(updated.state.hotbar).toEqual(["heal", "attack", null, "special"]);
+  test("persists learned spells and spellbooks", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    session.grantItem("moonsteel_ingot", 1);
+    const learned = session.learnSpell("thunder");
+    expect(learned.state.knownSpells).toContain("thunder");
+
+    const equipped = session.equipSpell("thunder", 0);
+    expect(equipped.state.spellbook.equippedSlots[0]).toBe("thunder");
+
     const persisted = session.getPersistenceSnapshot();
     const hydrated = createGameSession({
       username: "hero",
@@ -67,6 +90,9 @@ describe("game session", () => {
     expect(session.updateHotbar(["attack", null, null, null]).error).toBe(
       "Cannot update hotbar during combat."
     );
+    const snapshot = hydrated.getSnapshot();
+    expect(snapshot.state.knownSpells).toContain("thunder");
+    expect(snapshot.state.spellbook.equippedSlots[0]).toBe("thunder");
   });
 
   test("defaults progression when hydration is incomplete", () => {
@@ -127,6 +153,16 @@ describe("game session", () => {
       initialState: { progression: null }
     });
     expect(session.getSnapshot().state.claimedRewards).toEqual([]);
+  });
+
+  test("hydrates default attributes when missing", () => {
+    const session = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: { attributes: null }
+    });
+    expect(session.getSnapshot().state.attributes.intelligence).toBe(10);
   });
 
   test("resets battles and schedules enemy action", () => {
@@ -276,6 +312,65 @@ describe("game session", () => {
     expect(claimedSecond.state.claimedRewards).toContain(secondReward.level);
   });
 
+  test("learnSpell validates requirements and consumes items", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+
+    const invalid = session.learnSpell();
+    expect(invalid.error).toBe("Spell id is required.");
+
+    const unknown = session.learnSpell("missing_spell");
+    expect(unknown.error).toBe("Spell not found.");
+
+    const locked = session.learnSpell("blizzard");
+    expect(locked.error).toBe("Requires intelligence 12.");
+
+    session.unsafeSetState({
+      attributes: { ...session.getSnapshot().state.attributes, intelligence: 12 }
+    });
+    const learned = session.learnSpell("blizzard");
+    expect(learned.state.knownSpells).toContain("blizzard");
+
+    const duplicate = session.learnSpell("blizzard");
+    expect(duplicate.error).toBe("Spell already known.");
+
+    session.grantItem("necrotic_tome", 1);
+    const consumed = session.learnSpell("skeleton_rot");
+    expect(consumed.state.inventory.necrotic_tome).toBeUndefined();
+    expect(consumed.state.consumedItems).toContain("necrotic_tome");
+  });
+
+  test("learnSpell does not duplicate consumed items", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    session.grantItem("necrotic_tome", 1);
+    session.unsafeSetState({ consumedItems: ["necrotic_tome"] });
+    const learned = session.learnSpell("skeleton_rot");
+    expect(learned.state.consumedItems).toEqual(["necrotic_tome"]);
+  });
+
+  test("learnSpell handles missing optional spell state", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    session.grantItem("moonsteel_ingot", 1);
+    session.unsafeSetState({ attributes: null, consumedItems: null, spellbook: null });
+    const learned = session.learnSpell("thunder");
+    expect(learned.state.knownSpells).toContain("thunder");
+    expect(learned.state.spellbook.equippedSlots.length).toBeGreaterThan(0);
+  });
+
+  test("equipSpell and unequipSpell handle errors", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    const equipError = session.equipSpell("missing", 0);
+    expect(equipError.error).toBe("Spell not found.");
+
+    session.grantItem("moonsteel_ingot", 1);
+    session.learnSpell("thunder");
+    const equipped = session.equipSpell("thunder", 0);
+    expect(equipped.state.spellbook.equippedSlots[0]).toBe("thunder");
+    const unequipError = session.unequipSpell(1);
+    expect(unequipError.error).toBe("No spell equipped in that slot.");
+    const unequipped = session.unequipSpell(0);
+    expect(unequipped.state.spellbook.equippedSlots[0]).toBeNull();
+  });
+
   test("moves world players and advances world ticks", () => {
     const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
     const move = session.moveWorldPlayer({ xPercent: 0.1, yPercent: 0.1 });
@@ -285,6 +380,7 @@ describe("game session", () => {
     const tick = session.advanceWorldTick();
     expect(tick.error).toBeUndefined();
     expect(tick.otherMovements.length).toBeGreaterThan(0);
+    expect(session.getWorldState()).toBeTruthy();
   });
 
   test("guards world state transitions and invalid movements", () => {
@@ -411,6 +507,7 @@ describe("game session", () => {
     session.grantItem("ember_scale", 3);
     expect(session.canAffordItems({ ember_scale: 2 })).toBe(true);
     expect(session.canAffordItems({ ember_scale: 5 })).toBe(false);
+    expect(session.canAffordItems({ missing: 1 })).toBe(false);
     expect(session.canAffordItems({ ember_scale: -1 })).toBe(false);
     expect(session.canAffordItems({ "": 1 })).toBe(false);
     expect(session.canAffordItems({ ember_scale: Number.NaN })).toBe(false);

@@ -18,9 +18,21 @@ import {
   RARITY_COLORS,
   RECIPES
 } from "../items.js";
+import { COMBAT_CONFIG } from "../systems/combatConfig.js";
+import {
+  createSpellbook,
+  equipSpell as equipSpellbook,
+  getSpellById,
+  listDefaultSpellIds,
+  listSpellUnlocks,
+  listSpells,
+  SPELLBOOK_SLOTS,
+  unequipSpell as unequipSpellbook
+} from "../spells.js";
 import { createCoreSystemRegistry } from "../systems/systemCatalog.js";
 import { createProgressionSystem } from "../systems/progressionSystem.js";
 import { createRegistryEditor } from "../systems/registryEditor.js";
+import { createUnlockSystem } from "../systems/unlockSystem.js";
 import { createWorldState } from "../world/worldState.js";
 import { applyWorldMovement, moveOtherPlayers } from "../world/movementEngine.js";
 
@@ -198,22 +210,45 @@ function hydrateState(snapshot) {
   };
 }
 
+function normalizeSpellState(snapshot) {
+  const knownSpells = Array.isArray(snapshot?.knownSpells)
+    ? snapshot.knownSpells
+    : listDefaultSpellIds();
+  const equippedSlots = Array.isArray(snapshot?.spellbook?.equippedSlots)
+    ? snapshot.spellbook.equippedSlots
+    : [];
+  return {
+    knownSpells,
+    consumedItems: Array.isArray(snapshot?.consumedItems) ? snapshot.consumedItems : [],
+    spellbook: createSpellbook({ knownSpells, equippedSlots })
+  };
+}
+
 function buildInitialState(snapshot) {
+  const spellState = normalizeSpellState(snapshot);
+  const progressionSystem = createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS });
   const defaultState = {
     player: createCombatant(DEFAULT_PLAYER),
     enemy: createCombatant({ ...getNpcById(NPCS[0]?.id), isEnemy: true }),
     combatEngaged: false,
     inventory: {},
     equipment: {},
-    progression: createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS }).getProgressSnapshot(0),
+    attributes: progressionSystem.createAttributes(),
+    progression: progressionSystem.getProgressSnapshot(0),
     pendingReward: null,
     claimedRewards: new Set(),
     hotbar: normalizeHotbarSlots(DEFAULT_HOTBAR)
+    ...spellState
   };
   const hydrated = hydrateState(snapshot);
   if (!hydrated) {
     return defaultState;
   }
+  const hydratedSpellState = normalizeSpellState(hydrated);
+  const hydratedAttributes =
+    hydrated.attributes && typeof hydrated.attributes === "object"
+      ? hydrated.attributes
+      : defaultState.attributes;
   return {
     ...defaultState,
     ...hydrated,
@@ -236,6 +271,7 @@ export function createGameSession({
     recipes: registrySnapshot?.recipes ?? RECIPES
   });
   const progressionSystem = createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS });
+  const unlockSystem = createUnlockSystem();
   const systemRegistry = systemRegistryFactory();
   let runtime = buildRuntimeSystems(systemRegistry, registryEditor);
   let state = buildInitialState(initialState);
@@ -315,12 +351,16 @@ export function createGameSession({
     return {
       actions: ACTION_CONFIG,
       battleScene: BATTLE_SCENE_CONFIG,
+      combatConfig: COMBAT_CONFIG,
       globalCooldownMs: GLOBAL_COOLDOWN_MS,
       hotbarSize: HOTBAR_SIZE,
       npcs: NPCS,
       rarityColors: RARITY_COLORS,
       equipmentSlots: EQUIPMENT_SLOTS,
-      rewardMilestones: REWARD_MILESTONES
+      rewardMilestones: REWARD_MILESTONES,
+      spells: listSpells(),
+      spellUnlocks: listSpellUnlocks(),
+      spellbookSlots: SPELLBOOK_SLOTS
     };
   }
 
@@ -542,6 +582,67 @@ export function createGameSession({
     return { log: result.log, ...getSnapshot() };
   }
 
+  function learnSpell(spellId) {
+    if (!spellId) {
+      return { error: "Spell id is required." };
+    }
+    const spell = getSpellById(spellId);
+    if (!spell) {
+      return { error: "Spell not found." };
+    }
+    if (state.knownSpells.includes(spellId)) {
+      return { error: "Spell already known." };
+    }
+    const requirements = unlockSystem.evaluateRequirements(spell.unlockRequirements, {
+      attributes: state.attributes ?? {},
+      inventory: state.inventory,
+      consumedItems: state.consumedItems ?? []
+    });
+    if (!requirements.ok) {
+      return { error: requirements.reason };
+    }
+    let nextInventory = state.inventory;
+    let nextConsumed = [...(state.consumedItems ?? [])];
+    requirements.consume.forEach((entry) => {
+      const removal = runtime.inventoryManager.removeItem(nextInventory, entry.itemId, entry.quantity);
+      nextInventory = removal.inventory;
+      if (removal.removed && !nextConsumed.includes(entry.itemId)) {
+        nextConsumed.push(entry.itemId);
+      }
+    });
+    const knownSpells = [...state.knownSpells, spellId];
+    const spellbook = createSpellbook({
+      knownSpells,
+      equippedSlots: state.spellbook?.equippedSlots ?? []
+    });
+    state = {
+      ...state,
+      inventory: nextInventory,
+      consumedItems: nextConsumed,
+      knownSpells,
+      spellbook
+    };
+    return { log: [`Learned ${spell.name}.`], ...getSnapshot() };
+  }
+
+  function equipSpell(spellId, slotIndex) {
+    const updated = equipSpellbook(state.spellbook, spellId, slotIndex);
+    if (updated.error) {
+      return { error: updated.error };
+    }
+    state = { ...state, spellbook: updated };
+    return { ...getSnapshot() };
+  }
+
+  function unequipSpell(slotIndex) {
+    const updated = unequipSpellbook(state.spellbook, slotIndex);
+    if (updated.error) {
+      return { error: updated.error };
+    }
+    state = { ...state, spellbook: updated };
+    return { ...getSnapshot() };
+  }
+
   function updateItem(item) {
     if (!item) {
       return { error: "Item payload is required." };
@@ -670,6 +771,9 @@ export function createGameSession({
     claimReward,
     awardXp,
     updateHotbar,
+    learnSpell,
+    equipSpell,
+    unequipSpell,
     updateItem,
     updateRecipe,
     grantItem,
