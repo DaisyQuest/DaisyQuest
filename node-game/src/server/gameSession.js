@@ -1,4 +1,5 @@
 import {
+  ACTIONS,
   ACTION_CONFIG,
   DEFAULT_PLAYER,
   GLOBAL_COOLDOWN_MS,
@@ -47,6 +48,46 @@ export const REWARD_MILESTONES = Object.freeze([
     label: "Wyrmling Relic"
   })
 ]);
+
+export const HOTBAR_SIZE = 4;
+
+const DEFAULT_HOTBAR = Object.freeze([
+  ACTIONS.ATTACK,
+  ACTIONS.SPECIAL,
+  ACTIONS.HEAL,
+  null
+]);
+
+const VALID_HOTBAR_ACTIONS = new Set(Object.keys(ACTION_CONFIG));
+
+function normalizeHotbarSlots(slots) {
+  const nextSlots = Array.isArray(slots) ? [...slots] : [];
+  if (nextSlots.length > HOTBAR_SIZE) {
+    nextSlots.length = HOTBAR_SIZE;
+  }
+  while (nextSlots.length < HOTBAR_SIZE) {
+    nextSlots.push(null);
+  }
+  return nextSlots.map((slot) => (slot == null ? null : slot));
+}
+
+function validateHotbarSlots(slots) {
+  if (!Array.isArray(slots)) {
+    return { error: "Hotbar slots are required." };
+  }
+  if (slots.length !== HOTBAR_SIZE) {
+    return { error: `Hotbar must have ${HOTBAR_SIZE} slots.` };
+  }
+  for (const slot of slots) {
+    if (slot == null) {
+      continue;
+    }
+    if (typeof slot !== "string" || !VALID_HOTBAR_ACTIONS.has(slot)) {
+      return { error: "Hotbar contains an unknown action." };
+    }
+  }
+  return { slots: normalizeHotbarSlots(slots) };
+}
 
 export const BATTLE_SCENE_CONFIG = Object.freeze({
   layout: Object.freeze({
@@ -166,7 +207,8 @@ function buildInitialState(snapshot) {
     equipment: {},
     progression: createProgressionSystem({ thresholds: PROGRESSION_THRESHOLDS }).getProgressSnapshot(0),
     pendingReward: null,
-    claimedRewards: new Set()
+    claimedRewards: new Set(),
+    hotbar: normalizeHotbarSlots(DEFAULT_HOTBAR)
   };
   const hydrated = hydrateState(snapshot);
   if (!hydrated) {
@@ -175,7 +217,8 @@ function buildInitialState(snapshot) {
   return {
     ...defaultState,
     ...hydrated,
-    claimedRewards: hydrated.claimedRewards
+    claimedRewards: hydrated.claimedRewards,
+    hotbar: normalizeHotbarSlots(hydrated.hotbar ?? defaultState.hotbar)
   };
 }
 
@@ -273,11 +316,24 @@ export function createGameSession({
       actions: ACTION_CONFIG,
       battleScene: BATTLE_SCENE_CONFIG,
       globalCooldownMs: GLOBAL_COOLDOWN_MS,
+      hotbarSize: HOTBAR_SIZE,
       npcs: NPCS,
       rarityColors: RARITY_COLORS,
       equipmentSlots: EQUIPMENT_SLOTS,
       rewardMilestones: REWARD_MILESTONES
     };
+  }
+
+  function updateHotbar(slots) {
+    if (state.combatEngaged) {
+      return { error: "Cannot update hotbar during combat." };
+    }
+    const validation = validateHotbarSlots(slots);
+    if (validation.error) {
+      return { error: validation.error };
+    }
+    state = { ...state, hotbar: validation.slots };
+    return getSnapshot();
   }
 
   function applyProgressionGain(amount, sourceLabel) {
@@ -613,6 +669,7 @@ export function createGameSession({
     unequipItem,
     claimReward,
     awardXp,
+    updateHotbar,
     updateItem,
     updateRecipe,
     grantItem,

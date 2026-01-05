@@ -40,6 +40,35 @@ describe("game session", () => {
     expect(hydrated.getSnapshot().state.inventory.ember_scale).toBe(2);
   });
 
+  test("updates hotbar when out of combat and persists it", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    const updated = session.updateHotbar(["heal", "attack", null, "special"]);
+    expect(updated.state.hotbar).toEqual(["heal", "attack", null, "special"]);
+    const persisted = session.getPersistenceSnapshot();
+    const hydrated = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: persisted.state,
+      initialTimers: persisted.timers,
+      registrySnapshot: persisted.registry
+    });
+    expect(hydrated.getSnapshot().state.hotbar).toEqual(["heal", "attack", null, "special"]);
+  });
+
+  test("rejects invalid hotbar updates and updates during combat", () => {
+    const session = createGameSession({ username: "hero", nowFn: () => 1000, rng });
+    expect(session.updateHotbar("bad").error).toBe("Hotbar slots are required.");
+    expect(session.updateHotbar(["attack"]).error).toBe("Hotbar must have 4 slots.");
+    expect(session.updateHotbar(["attack", "mystery", null, null]).error).toBe(
+      "Hotbar contains an unknown action."
+    );
+    session.resetBattle("ember_wyrmling");
+    expect(session.updateHotbar(["attack", null, null, null]).error).toBe(
+      "Cannot update hotbar during combat."
+    );
+  });
+
   test("defaults progression when hydration is incomplete", () => {
     const session = createGameSession({
       username: "hero",
@@ -48,6 +77,46 @@ describe("game session", () => {
       initialState: { progression: null, claimedRewards: [] }
     });
     expect(session.getSnapshot().state.progression.level).toBe(1);
+  });
+
+  test("normalizes hotbar snapshots during hydration", () => {
+    const session = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: {
+        hotbar: ["attack", "special"],
+        claimedRewards: []
+      }
+    });
+    expect(session.getSnapshot().state.hotbar).toEqual(["attack", "special", null, null]);
+
+    const overflow = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: {
+        hotbar: ["attack", "special", "heal", "attack", "extra"],
+        claimedRewards: []
+      }
+    });
+    expect(overflow.getSnapshot().state.hotbar).toEqual([
+      "attack",
+      "special",
+      "heal",
+      "attack"
+    ]);
+
+    const invalid = createGameSession({
+      username: "hero",
+      nowFn: () => 1000,
+      rng,
+      initialState: {
+        hotbar: "invalid",
+        claimedRewards: []
+      }
+    });
+    expect(invalid.getSnapshot().state.hotbar).toEqual([null, null, null, null]);
   });
 
   test("hydrates missing claimed rewards to empty set", () => {

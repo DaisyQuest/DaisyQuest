@@ -1410,6 +1410,47 @@ body::after {
   gap: 12px;
 }
 
+.hotbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.hotbar-slot {
+  min-height: 44px;
+}
+
+.hotbar-slot.is-empty {
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  color: var(--dq-muted);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.spellbook-panel {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.spellbook-section h3 {
+  margin: 0 0 4px;
+}
+
+.spellbook-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.spellbook-item {
+  cursor: grab;
+}
+
 button {
   border: none;
   padding: 12px 16px;
