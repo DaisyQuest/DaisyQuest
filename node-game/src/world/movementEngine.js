@@ -2,7 +2,9 @@ const DEFAULT_RULES = Object.freeze({
   maxStep: 3,
   allowDiagonal: true,
   otherPlayerStep: 1,
-  idleChance: 0.2
+  idleChance: 0.2,
+  otherPlayerMoveChance: 0.4,
+  npcMoveChance: 0.12
 });
 
 const MOVE_DIRECTIONS = Object.freeze([
@@ -195,6 +197,21 @@ export function moveOtherPlayers({ worldState, playerId, rng = Math.random, rule
     }
     const bounds = getMapBoundsForLocation(worldState, player.location);
     if (bounds.error) {
+      return player;
+    }
+
+    const moveChance = player.isNpc
+      ? ruleSet.npcMoveChance
+      : ruleSet.otherPlayerMoveChance;
+    const shouldAttemptMove =
+      !Number.isFinite(moveChance) || clamp(rng(), 0, 1) <= moveChance;
+    if (!shouldAttemptMove) {
+      movements.push({
+        id: player.id,
+        from: { ...player.position },
+        to: { ...player.position },
+        moved: false
+      });
       return player;
     }
 

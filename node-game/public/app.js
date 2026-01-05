@@ -27,7 +27,7 @@ import {
 import { createTabNavigationAdapter } from "./ui/tabNavigationAdapter.js";
 import { updateCombatOverlayState } from "./ui/combatOverlay.js";
 import { createWorldInteractionClient } from "./ui/worldInteraction.js";
-import { createWorldMapView, getSurfacePercentFromEvent } from "./ui/worldMapView.js";
+import { createWorldMapView, resolveWorldTargetFromEvent } from "./ui/worldMapView.js";
 import {
   createGameFlowActions,
   createGameFlowEmitter,
@@ -78,6 +78,7 @@ const minimapLegend = document.getElementById("minimap-legend");
 const minimapToggle = document.getElementById("minimap-toggle");
 const worldMapPanel = document.getElementById("world-panel");
 const mapPanel = document.getElementById("tab-panel-map");
+const appShell = document.querySelector(".app-shell");
 const worldMapSurface = worldMapPanel?.querySelector(".world-panel__surface") ?? null;
 const worldMapEntities = worldMapPanel?.querySelector("[data-world-map-entities]") ?? null;
 const worldMapCoordinates =
@@ -130,7 +131,7 @@ const layoutPanels = document.querySelectorAll("[data-tab-panel]");
 const tabButtons = document.querySelectorAll(".tab-button");
 const registryPanes = document.querySelectorAll(".registry-pane");
 function getActionButtons() {
-  return Array.from(document.querySelectorAll("button.action[data-action]"));
+  return Array.from(document.querySelectorAll("button.combat-action[data-action]"));
 }
 const weaponAttackList = document.getElementById("weapon-attack-list");
 const skillList = document.getElementById("skill-list");
@@ -172,6 +173,7 @@ let interactionSelection = { target: null, candidates: [] };
 let hotbarState = null;
 let hotbarDragHandlers = null;
 const combatEngageRange = DEFAULT_ENGAGE_RANGE;
+const interactionReach = 0.14;
 const logFeed = createFeedPanel({ listElement: logList });
 const lootFeed = createFeedPanel({ listElement: lootList });
 const combatMeters = createCombatMeterPanel({
@@ -233,7 +235,8 @@ flowOrchestrator = createFlowOrchestrator({
       tabController: layoutTabs,
       activeState: to,
       flowStateToTab,
-      combatState: FlowState.COMBAT
+      combatState: FlowState.COMBAT,
+      overlayRoot: appShell
     });
   },
   onInvalidTransition: ({ error }) => {
@@ -788,7 +791,8 @@ function initializeWorldInteractions() {
     apiRequest,
     onDecision: handleInteractionDecision,
     onContextAction: handleContextActionResult,
-    contextMenuContainer: combatContextMenuAnchor
+    contextMenuContainer: combatContextMenuAnchor,
+    interactionRange: interactionReach
   });
   setInteractionSelection(null, []);
 }
@@ -857,16 +861,18 @@ async function handleInteractionDecision(payload, meta) {
   const summary = describeInteractionTarget(payload.resolvedTarget);
   if (payload.action === "move") {
     setInteractionSelection(null, []);
-    const percent = getSurfacePercentFromEvent({
+    const target = resolveWorldTargetFromEvent({
       event: meta?.event,
-      surface: worldMapSurface
+      surface: worldMapSurface,
+      world: worldMapView?.state?.world,
+      playerId: worldMapView?.state?.playerId
     });
-    if (!percent) {
+    if (!target) {
       pushLog([`You move toward ${summary}.`]);
       return;
     }
     try {
-      const result = await worldMapView.moveToPercent(percent);
+      const result = await worldMapView.moveToTarget(target);
       const movement = result?.movement;
       if (movement?.moved) {
         pushLog([`You move toward ${summary}.`]);
@@ -1063,23 +1069,36 @@ function updateActionButtons(now = Date.now()) {
 
   getActionButtons().forEach((button) => {
     const action = button.dataset.action;
-    const baseLabel = button.dataset.baseLabel ?? button.textContent;
+    const label = button.querySelector(".combat-action__label");
+    const meta = button.querySelector(".combat-action__meta");
+    const baseLabel = button.dataset.baseLabel ?? label?.textContent ?? button.textContent;
     const actionRemaining = Math.max(0, (combatTimers.actionCooldowns[action] ?? 0) - now);
+    let status = "Ready";
     let suffix = "";
 
     if (actionRemaining > 0) {
+      status = `Recharging · ${Math.ceil(actionRemaining / 1000)}s`;
       suffix = ` (${Math.ceil(actionRemaining / 1000)}s)`;
       button.disabled = true;
     } else {
       if (combatTimers.queuedAction === action) {
+        status = "Queued";
         suffix = " (queued)";
       } else if (gcdRemaining > 0) {
+        status = `Global cooldown · ${Math.ceil(gcdRemaining / 1000)}s`;
         suffix = ` (${Math.ceil(gcdRemaining / 1000)}s)`;
       }
       button.disabled = combatLocked;
     }
 
-    button.textContent = `${baseLabel}${suffix}`;
+    if (label) {
+      label.textContent = baseLabel;
+    } else {
+      button.textContent = `${baseLabel}${suffix}`;
+    }
+    if (meta) {
+      meta.textContent = status;
+    }
   });
 }
 
@@ -2023,7 +2042,7 @@ function initializeGameUI() {
 }
 
 document.addEventListener("click", (event) => {
-  const button = event.target.closest("button.action[data-action]");
+  const button = event.target.closest("button[data-action]");
   if (!button) {
     return;
   }

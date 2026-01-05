@@ -1,4 +1,4 @@
-const DEFAULT_ENGAGE_RANGE = 2;
+const DEFAULT_ENGAGE_RANGE = 6;
 
 function isSameLocation(a, b) {
   return (

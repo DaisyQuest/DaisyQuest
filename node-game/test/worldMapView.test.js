@@ -6,7 +6,8 @@ import {
   getWorldBoundsForLocation,
   getSurfacePercentFromEvent,
   projectToPercent,
-  renderWorldMap
+  renderWorldMap,
+  resolveWorldTargetFromEvent
 } from "../public/ui/worldMapView.js";
 
 const worldFixture = {
@@ -66,6 +67,12 @@ describe("world map view", () => {
     });
     expect(error.error).toBe("Submap not found.");
 
+    const missingSubmaps = getWorldBoundsForLocation(
+      { worldMap: worldFixture.worldMap, submaps: null },
+      { mapId: "ember-realm", submapId: "glimmer-cavern" }
+    );
+    expect(missingSubmaps.error).toBe("Submap not found.");
+
     expect(getWorldBoundsForLocation(null, null).error).toBe("World map is required.");
     expect(getWorldBoundsForLocation(worldFixture, null).error).toBe("Location is required.");
   });
@@ -104,6 +111,9 @@ describe("world map view", () => {
     const heroMarker = markers.find((marker) => marker.dataset.interactionId === "hero");
     expect(heroMarker.dataset.self).toBe("true");
     expect(heroMarker.dataset.interactionType).toBe("player");
+    expect(heroMarker.querySelector(".world-panel__marker-dot")).not.toBeNull();
+    expect(heroMarker.querySelector(".world-panel__marker-label").textContent).toBe("You");
+    expect(Number(heroMarker.dataset.interactionXPercent)).toBeGreaterThan(0);
   });
 
   test("marks hostile npc targets with metadata and styles", () => {
@@ -131,6 +141,7 @@ describe("world map view", () => {
     expect(hostile).toBeDefined();
     expect(hostile.classList.contains("world-panel__target--hostile")).toBe(true);
     expect(hostile.dataset.interactionHostile).toBe("true");
+    expect(hostile.querySelector(".world-panel__marker-label").textContent).toBe("Ember Wyrmling");
   });
 
   test("returns no markers when world data is missing", () => {
@@ -199,6 +210,15 @@ describe("world map view", () => {
     expect(entities.children.length).toBe(0);
   });
 
+  test("returns early when the entities container is missing", () => {
+    const dom = new JSDOM("<div></div>");
+    const entities = dom.window.document.querySelector("#missing");
+    expect(entities).toBeNull();
+    expect(() =>
+      renderWorldMap({ world: worldFixture, playerId: "hero", entitiesContainer: entities })
+    ).not.toThrow();
+  });
+
   test("renders without HUD updates when the player is missing", () => {
     const dom = new JSDOM(
       "<div id=\"entities\"></div><div id=\"coords\"></div><div id=\"region\"></div>"
@@ -216,6 +236,87 @@ describe("world map view", () => {
 
     expect(coords.textContent).toBe("");
     expect(region.textContent).toBe("");
+  });
+
+  test("skips coordinate updates when bounds cannot be resolved", () => {
+    const dom = new JSDOM(
+      "<div id=\"entities\"></div><div id=\"coords\"></div><div id=\"region\"></div>"
+    );
+    const entities = dom.window.document.getElementById("entities");
+    const coords = dom.window.document.getElementById("coords");
+    const region = dom.window.document.getElementById("region");
+    const world = {
+      ...worldFixture,
+      players: worldFixture.players.map((player) =>
+        player.id === "hero"
+          ? { ...player, location: { mapId: player.location.mapId, submapId: "missing" } }
+          : player
+      )
+    };
+
+    renderWorldMap({
+      world,
+      playerId: "hero",
+      entitiesContainer: entities,
+      coordinatesLabel: coords,
+      regionLabel: region
+    });
+
+    expect(coords.textContent).toBe("");
+    expect(region.textContent).toMatch(/Region:/);
+  });
+
+  test("renders regions even when coordinates are omitted", () => {
+    const dom = new JSDOM(
+      "<div id=\"entities\"></div><div id=\"region\"></div>"
+    );
+    const entities = dom.window.document.getElementById("entities");
+    const region = dom.window.document.getElementById("region");
+
+    renderWorldMap({
+      world: worldFixture,
+      playerId: "hero",
+      entitiesContainer: entities,
+      coordinatesLabel: null,
+      regionLabel: region
+    });
+
+    expect(region.textContent).toMatch(/Region: ember-realm/);
+  });
+
+  test("renders submap ids when present and falls back to unknown regions", () => {
+    const dom = new JSDOM("<div id=\"entities\"></div><div id=\"region\"></div>");
+    const entities = dom.window.document.getElementById("entities");
+    const region = dom.window.document.getElementById("region");
+
+    const submapWorld = {
+      ...worldFixture,
+      players: worldFixture.players.map((player) =>
+        player.id === "hero"
+          ? { ...player, location: { mapId: player.location.mapId, submapId: "glimmer-cavern" } }
+          : player
+      )
+    };
+
+    renderWorldMap({
+      world: submapWorld,
+      playerId: "hero",
+      entitiesContainer: entities,
+      coordinatesLabel: null,
+      regionLabel: region
+    });
+
+    expect(region.textContent).toMatch(/glimmer-cavern/);
+
+    renderWorldMap({
+      world: { players: [{ id: "hero", location: { mapId: "missing", submapId: null }, position: { x: 0, y: 0 } }] },
+      playerId: "hero",
+      entitiesContainer: entities,
+      coordinatesLabel: null,
+      regionLabel: region
+    });
+
+    expect(region.textContent).toMatch(/Unknown/);
   });
 
   test("renders markers and refreshes via the view", async () => {
@@ -263,13 +364,156 @@ describe("world map view", () => {
     );
   });
 
+  test("moveToPercent uses default parameters when omitted", async () => {
+    const dom = new JSDOM(
+      "<div id=\"surface\"></div><div id=\"entities\"></div><div id=\"coords\"></div><div id=\"region\"></div>"
+    );
+    const surface = dom.window.document.getElementById("surface");
+    const entities = dom.window.document.getElementById("entities");
+    const coords = dom.window.document.getElementById("coords");
+    const region = dom.window.document.getElementById("region");
+    const apiRequest = jest.fn().mockResolvedValue({
+      playerId: "hero",
+      world: worldFixture,
+      movement: { moved: false }
+    });
+
+    const view = createWorldMapView({
+      surface,
+      entitiesContainer: entities,
+      coordinatesLabel: coords,
+      regionLabel: region,
+      apiRequest
+    });
+
+    await view.moveToPercent();
+    expect(apiRequest).toHaveBeenCalledWith(
+      "/api/world/move",
+      expect.objectContaining({
+        method: "POST",
+        body: { target: { xPercent: undefined, yPercent: undefined } }
+      })
+    );
+  });
+
   test("returns safe no-op view when dependencies are missing", async () => {
     const view = createWorldMapView({ apiRequest: () => ({}) });
     expect(view.state).toBeDefined();
     expect(await view.refresh()).toBeNull();
     expect(await view.moveToPercent({ xPercent: 0.2, yPercent: 0.2 })).toBeNull();
+    expect(await view.moveToTarget({ x: 2, y: 2 })).toBeNull();
     view.start();
     view.stop();
+  });
+
+  test("returns a no-op view when the apiRequest handler is missing", async () => {
+    const dom = new JSDOM("<div id=\"surface\"></div><div id=\"entities\"></div>");
+    const surface = dom.window.document.getElementById("surface");
+    const entities = dom.window.document.getElementById("entities");
+
+    const view = createWorldMapView({
+      surface,
+      entitiesContainer: entities
+    });
+
+    expect(await view.refresh()).toBeNull();
+    expect(await view.moveToTarget({ x: 1, y: 1 })).toBeNull();
+  });
+
+  test("returns a no-op view when the entities container is missing", async () => {
+    const dom = new JSDOM("<div id=\"surface\"></div>");
+    const surface = dom.window.document.getElementById("surface");
+    const view = createWorldMapView({
+      surface,
+      entitiesContainer: null,
+      apiRequest: () => ({})
+    });
+
+    expect(await view.refresh()).toBeNull();
+    expect(await view.moveToPercent({ xPercent: 0.1, yPercent: 0.2 })).toBeNull();
+  });
+
+  test("resolves world targets using player bounds and percent positions", () => {
+    const dom = new JSDOM("<div id=\"surface\"></div>");
+    const surface = dom.window.document.getElementById("surface");
+    surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100 });
+    const event = { clientX: 150, clientY: 25 };
+
+    const target = resolveWorldTargetFromEvent({
+      event,
+      surface,
+      world: worldFixture,
+      playerId: "hero"
+    });
+
+    expect(target).toMatchObject({ xPercent: 0.75, yPercent: 0.25 });
+    expect(target.x).toBeGreaterThanOrEqual(0);
+    expect(target.y).toBeGreaterThanOrEqual(0);
+    expect(Number.isFinite(target.precisionRadius)).toBe(true);
+  });
+
+  test("returns percent-only targets when world data is unavailable", () => {
+    const dom = new JSDOM("<div id=\"surface\"></div>");
+    const surface = dom.window.document.getElementById("surface");
+    surface.getBoundingClientRect = () => ({ left: 10, top: 10, width: 100, height: 100 });
+    const event = { clientX: 60, clientY: 60 };
+
+    const target = resolveWorldTargetFromEvent({ event, surface });
+    expect(target).toMatchObject({ xPercent: 0.5, yPercent: 0.5 });
+    expect(target.x).toBeUndefined();
+  });
+
+  test("falls back to percent-only targets when the player is missing", () => {
+    const dom = new JSDOM("<div id=\"surface\"></div>");
+    const surface = dom.window.document.getElementById("surface");
+    surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200 });
+    const event = { clientX: 100, clientY: 100 };
+
+    const target = resolveWorldTargetFromEvent({
+      event,
+      surface,
+      world: worldFixture,
+      playerId: "missing"
+    });
+
+    expect(target).toMatchObject({ xPercent: 0.5, yPercent: 0.5 });
+    expect(target.x).toBeUndefined();
+  });
+
+  test("falls back to percent-only targets when bounds cannot be resolved", () => {
+    const dom = new JSDOM("<div id=\"surface\"></div>");
+    const surface = dom.window.document.getElementById("surface");
+    surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 });
+    const event = { clientX: 10, clientY: 90 };
+
+    const brokenWorld = {
+      ...worldFixture,
+      players: worldFixture.players.map((player) =>
+        player.id === "hero"
+          ? { ...player, location: { mapId: player.location.mapId, submapId: "missing" } }
+          : player
+      )
+    };
+
+    const target = resolveWorldTargetFromEvent({
+      event,
+      surface,
+      world: brokenWorld,
+      playerId: "hero"
+    });
+
+    expect(target).toMatchObject({ xPercent: 0.1, yPercent: 0.9 });
+    expect(target.x).toBeUndefined();
+  });
+
+  test("returns null when percent data cannot be resolved", () => {
+    const dom = new JSDOM("<div id=\"surface\"></div>");
+    const surface = dom.window.document.getElementById("surface");
+    surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 0, height: 0 });
+    const event = { clientX: 10, clientY: 10 };
+
+    const target = resolveWorldTargetFromEvent({ event, surface });
+    expect(target).toBeNull();
   });
 
   test("handles null payloads and start/stop idempotency", async () => {

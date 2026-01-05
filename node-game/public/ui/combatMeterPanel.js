@@ -15,20 +15,47 @@ export function createCombatMeterPanel({
     }
     const enemyFocusCurrent = state.enemy.focus ?? 0;
     const enemyFocusMax = state.enemy.maxFocus ?? 0;
-    playerHealth.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
-    playerHealthValue.textContent = `${state.player.health} / ${state.player.maxHealth}`;
-    playerMana.style.width = `${(state.player.mana / state.player.maxMana) * 100}%`;
-    playerManaValue.textContent = `${state.player.mana} / ${state.player.maxMana}`;
-    enemyHealth.style.width = `${(state.enemy.health / state.enemy.maxHealth) * 100}%`;
-    enemyHealthValue.textContent = `${state.enemy.health} / ${state.enemy.maxHealth}`;
+    updateMeter({
+      bar: playerHealth,
+      value: playerHealthValue,
+      current: state.player.health,
+      max: state.player.maxHealth
+    });
+    updateMeter({
+      bar: playerMana,
+      value: playerManaValue,
+      current: state.player.mana,
+      max: state.player.maxMana
+    });
+    updateMeter({
+      bar: enemyHealth,
+      value: enemyHealthValue,
+      current: state.enemy.health,
+      max: state.enemy.maxHealth
+    });
     if (enemyFocusMax > 0) {
-      enemyFocusRow.classList.remove("is-hidden");
-      enemyFocus.style.width = `${(enemyFocusCurrent / enemyFocusMax) * 100}%`;
-      enemyFocusValue.textContent = `${enemyFocusCurrent} / ${enemyFocusMax}`;
+      enemyFocusRow?.classList.remove("is-hidden");
+      updateMeter({
+        bar: enemyFocus,
+        value: enemyFocusValue,
+        current: enemyFocusCurrent,
+        max: enemyFocusMax
+      });
     } else {
-      enemyFocusRow.classList.add("is-hidden");
+      enemyFocusRow?.classList.add("is-hidden");
     }
   }
 
   return Object.freeze({ render });
+}
+
+function updateMeter({ bar, value, current, max }) {
+  if (!bar || !value) {
+    return;
+  }
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 1;
+  const safeCurrent = Number.isFinite(current) ? current : 0;
+  const percent = Math.max(0, Math.min(100, (safeCurrent / safeMax) * 100));
+  bar.style.width = `${percent}%`;
+  value.textContent = `${safeCurrent} / ${safeMax}`;
 }

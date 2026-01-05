@@ -3,20 +3,24 @@ export function updateCombatOverlayState({
   tabController,
   activeState,
   flowStateToTab = {},
-  combatState = "combat"
+  combatState = "combat",
+  overlayRoot = null
 } = {}) {
   if (!mapPanel || !tabController) {
     return false;
   }
-  const shouldPersistMap = activeState === combatState;
-  if (shouldPersistMap) {
+  const isCombat = activeState === combatState;
+  if (isCombat) {
     mapPanel.dataset.tabPersistent = "true";
   } else {
     delete mapPanel.dataset.tabPersistent;
+  }
+  if (overlayRoot) {
+    overlayRoot.dataset.combatOverlay = isCombat ? "active" : "inactive";
   }
   const targetTab = flowStateToTab[activeState] ?? tabController.getActiveValue?.();
   if (targetTab) {
     tabController.setActive(targetTab);
   }
-  return shouldPersistMap;
+  return isCombat;
 }

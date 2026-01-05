@@ -6,6 +6,7 @@ describe("combat overlay state", () => {
   test("keeps the map panel persistent during combat", () => {
     const dom = new JSDOM("<section id=\"map\" data-tab-panel=\"map\"></section>");
     const mapPanel = dom.window.document.getElementById("map");
+    const appShell = dom.window.document.body;
     const tabController = {
       setActive: jest.fn(),
       getActiveValue: jest.fn(() => "map")
@@ -15,17 +16,20 @@ describe("combat overlay state", () => {
       mapPanel,
       tabController,
       activeState: "combat",
-      flowStateToTab: { combat: "combat", map: "map" }
+      flowStateToTab: { combat: "combat", map: "map" },
+      overlayRoot: appShell
     });
 
     expect(result).toBe(true);
     expect(mapPanel.dataset.tabPersistent).toBe("true");
+    expect(appShell.dataset.combatOverlay).toBe("active");
     expect(tabController.setActive).toHaveBeenCalledWith("combat");
   });
 
   test("removes persistence when combat ends", () => {
     const dom = new JSDOM("<section id=\"map\" data-tab-panel=\"map\" data-tab-persistent=\"true\"></section>");
     const mapPanel = dom.window.document.getElementById("map");
+    const appShell = dom.window.document.body;
     const tabController = {
       setActive: jest.fn(),
       getActiveValue: jest.fn(() => "map")
@@ -35,11 +39,13 @@ describe("combat overlay state", () => {
       mapPanel,
       tabController,
       activeState: "map",
-      flowStateToTab: { combat: "combat", map: "map" }
+      flowStateToTab: { combat: "combat", map: "map" },
+      overlayRoot: appShell
     });
 
     expect(result).toBe(false);
     expect(mapPanel.dataset.tabPersistent).toBeUndefined();
+    expect(appShell.dataset.combatOverlay).toBe("inactive");
     expect(tabController.setActive).toHaveBeenCalledWith("map");
   });
 

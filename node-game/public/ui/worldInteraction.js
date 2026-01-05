@@ -5,6 +5,8 @@ export const INTERACTION_TYPES = Object.freeze({
   TERRAIN: "terrain"
 });
 
+const DEFAULT_INTERACTION_RADIUS = 0.14;
+
 export function collectInteractionTargets(surfaces) {
   const targets = [];
   surfaces.forEach((surface) => {
@@ -22,31 +24,43 @@ export function collectInteractionTargets(surfaces) {
         label: element.dataset.interactionLabel ?? element.textContent?.trim() ?? "",
         type,
         layer: Number.parseInt(element.dataset.interactionLayer ?? "0", 10) || 0,
-        isHostile: element.dataset.interactionHostile === "true"
+        isHostile: element.dataset.interactionHostile === "true",
+        xPercent: parsePercent(element.dataset.interactionXPercent),
+        yPercent: parsePercent(element.dataset.interactionYPercent),
+        range: parsePercent(element.dataset.interactionRadius)
       });
     });
   });
   return targets;
 }
 
-export function resolveInteractionCandidates({ point, targets, includeTerrain = true }) {
+export function resolveInteractionCandidates({
+  point,
+  targets,
+  surface,
+  includeTerrain = true,
+  maxDistance = DEFAULT_INTERACTION_RADIUS
+}) {
+  const pointPercent = resolvePointPercent(point, surface);
   const candidates = targets
-    .filter((target) => isPointInsideRect(point, target.element.getBoundingClientRect()))
-    .map((target) => ({
-      id: target.id,
-      type: target.type,
-      layer: target.layer,
-      label: target.label,
-      isHostile: Boolean(target.isHostile)
-    }))
-    .sort((a, b) => b.layer - a.layer);
+    .map((target) => resolveCandidate(target, point, pointPercent, maxDistance))
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (b.layer !== a.layer) {
+        return b.layer - a.layer;
+      }
+      const distanceA = a.distance ?? Number.POSITIVE_INFINITY;
+      const distanceB = b.distance ?? Number.POSITIVE_INFINITY;
+      return distanceA - distanceB;
+    });
 
   if (includeTerrain) {
     candidates.push({
       id: "terrain",
       type: INTERACTION_TYPES.TERRAIN,
       layer: 0,
-      label: "terrain"
+      label: "terrain",
+      distance: null
     });
   }
 
@@ -58,7 +72,8 @@ export function createWorldInteractionClient({
   apiRequest,
   onDecision,
   onContextAction,
-  contextMenuContainer
+  contextMenuContainer,
+  interactionRange = DEFAULT_INTERACTION_RADIUS
 }) {
   const targetSurfaces = Array.isArray(surfaces) ? surfaces : [surfaces];
   let lastCandidates = [];
@@ -155,7 +170,12 @@ export function createWorldInteractionClient({
   function buildCandidatesFromEvent(event) {
     const targets = collectInteractionTargets(targetSurfaces);
     const point = { x: event.clientX, y: event.clientY };
-    return resolveInteractionCandidates({ point, targets });
+    return resolveInteractionCandidates({
+      point,
+      targets,
+      surface: event.currentTarget,
+      maxDistance: interactionRange
+    });
   }
 
   function isValidSurfaceTarget(target) {
@@ -235,4 +255,66 @@ function resolveContextMenuPosition(position, container) {
     x: position.x - rect.left,
     y: position.y - rect.top
   };
+}
+
+function parsePercent(value) {
+  if (value == null || value === "") {
+    return null;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function resolvePointPercent(point, surface) {
+  if (!point || !surface?.getBoundingClientRect) {
+    return null;
+  }
+  const rect = surface.getBoundingClientRect();
+  if (!rect?.width || !rect?.height) {
+    return null;
+  }
+  return {
+    xPercent: clamp((point.x - rect.left) / rect.width, 0, 1),
+    yPercent: clamp((point.y - rect.top) / rect.height, 0, 1)
+  };
+}
+
+function resolveCandidate(target, point, pointPercent, maxDistance) {
+  if (!target) {
+    return null;
+  }
+  let matches = false;
+  let distance = null;
+
+  if (
+    pointPercent &&
+    Number.isFinite(target.xPercent) &&
+    Number.isFinite(target.yPercent)
+  ) {
+    distance = Math.hypot(
+      pointPercent.xPercent - target.xPercent,
+      pointPercent.yPercent - target.yPercent
+    );
+    const range = Number.isFinite(target.range) ? target.range : maxDistance;
+    matches = distance <= range;
+  } else if (target.element?.getBoundingClientRect && point) {
+    matches = isPointInsideRect(point, target.element.getBoundingClientRect());
+  }
+
+  if (!matches) {
+    return null;
+  }
+
+  return {
+    id: target.id,
+    type: target.type,
+    layer: target.layer,
+    label: target.label,
+    isHostile: Boolean(target.isHostile),
+    distance
+  };
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }

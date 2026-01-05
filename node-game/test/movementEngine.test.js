@@ -143,7 +143,7 @@ describe("movement engine", () => {
       worldState: world,
       playerId: "hero",
       rng: () => 0.6,
-      rules: { idleChance: 0, otherPlayerStep: 1 }
+      rules: { idleChance: 0, otherPlayerStep: 1, npcMoveChance: 1 }
     });
     expect(result.movements.length).toBeGreaterThan(0);
     const moved = result.movements.some((movement) => movement.moved);
@@ -156,10 +156,23 @@ describe("movement engine", () => {
       worldState: world,
       playerId: "hero",
       rng: () => 0,
-      rules: { idleChance: 1, otherPlayerStep: 2 }
+      rules: { idleChance: 1, otherPlayerStep: 2, npcMoveChance: 1 }
     });
     const moved = result.movements.some((movement) => movement.moved);
     expect(moved).toBe(false);
+  });
+
+  test("skips movement when npc move chance is not met", () => {
+    const world = createWorldState({ playerId: "hero", playerName: "Hero" });
+    const result = moveOtherPlayers({
+      worldState: world,
+      playerId: "hero",
+      rng: () => 0.9,
+      rules: { npcMoveChance: 0.1 }
+    });
+
+    expect(result.movements.length).toBeGreaterThan(0);
+    expect(result.movements.every((movement) => movement.moved === false)).toBe(true);
   });
 
   test("skips moving players with invalid locations", () => {
