@@ -30,6 +30,7 @@ import{
   canTransition,
   transition
 } from "./state/gameFlow.js";
+import { normalizeSpellbookState } from "./state/spellbookState.js";
 
 const logList = document.getElementById("log");
 const playerHealth = document.getElementById("player-health");
@@ -316,8 +317,14 @@ function applySessionSnapshot(payload) {
     registrySnapshot = payload.registry;
   }
   if (payload.state) {
+    const normalizedSpellbook = normalizeSpellbookState({
+      knownSpells: payload.state.knownSpells,
+      spellbook: payload.state.spellbook,
+      slotCount: config?.spellbookSlots
+    });
     state = {
       ...payload.state,
+      ...normalizedSpellbook,
       claimedRewards: new Set(payload.state.claimedRewards ?? [])
     };
   }
