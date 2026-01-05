@@ -32,11 +32,29 @@ describe("layout tab markup", () => {
     });
   });
 
+  test("declares layered app surfaces for background, canvas, and overlay", () => {
+    const shell = document.querySelector(".app-shell");
+    expect(shell).not.toBeNull();
+    const layers = Array.from(shell?.children ?? []).filter((child) =>
+      child.classList.contains("app-layer")
+    );
+    const layerClasses = layers.map((layer) =>
+      Array.from(layer.classList).find((name) => name.startsWith("app-layer--"))
+    );
+    expect(layerClasses).toEqual([
+      "app-layer--background",
+      "app-layer--canvas",
+      "app-layer--overlay"
+    ]);
+  });
+
   test("keeps map-side content inside the map panel card", () => {
     const mapPanel = document.getElementById("tab-panel-map");
+    const overlayLayer = document.querySelector(".app-layer--overlay");
     expect(mapPanel).not.toBeNull();
-    expect(mapPanel.querySelector("#log")).not.toBeNull();
+    expect(mapPanel.querySelector("#log")).toBeNull();
     expect(mapPanel.querySelector("#milestone-list")).not.toBeNull();
+    expect(overlayLayer?.querySelector("#log")).not.toBeNull();
     expect(mapPanel.querySelector("#battle-scene")).toBeNull();
   });
 

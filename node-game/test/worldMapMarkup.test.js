@@ -27,12 +27,14 @@ describe("world map markup", () => {
 
   test("includes cohesive interaction, chat, and combat regions", () => {
     const interactionPanel = mapPanel.querySelector("#interaction-panel");
-    const chatPanel = mapPanel.querySelector(".chat-panel");
+    const overlayLayer = document.querySelector(".app-layer--overlay");
+    const chatPanel = overlayLayer?.querySelector(".chat-panel");
     const combatDock = mapPanel.querySelector(".combat-dock");
     const combatPanel = document.querySelector('[data-tab-panel="combat"]');
 
     expect(interactionPanel).not.toBeNull();
     expect(chatPanel).not.toBeNull();
+    expect(mapPanel.querySelector(".chat-panel")).toBeNull();
     expect(combatDock).toBeNull();
     expect(combatPanel?.querySelector(".combat-dock")).not.toBeNull();
   });

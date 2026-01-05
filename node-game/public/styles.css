@@ -1,6 +1,8 @@
 :root {
   color-scheme: dark;
   font-family: "Josefin Sans", system-ui, sans-serif;
+  --dq-header-height: 96px;
+  --dq-shell-gap: 20px;
   --dq-bg: #0b1020;
   --dq-surface: #16192d;
   --dq-surface-strong: #1e2240;
@@ -56,26 +58,38 @@ body {
 body {
   margin: 0;
   min-height: 100vh;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 16px 12px 20px;
-  background: radial-gradient(circle at top, rgba(91, 33, 182, 0.35), transparent 55%),
-    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.2), transparent 45%),
-    var(--dq-bg);
+  background: var(--dq-bg);
   color: var(--dq-text);
 }
 
-body::before,
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
+.app-shell {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
-body::before {
+.app-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.app-layer--background {
+  z-index: 0;
+  background: radial-gradient(circle at top, rgba(91, 33, 182, 0.35), transparent 55%),
+    radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.2), transparent 45%),
+    var(--dq-bg);
+}
+
+.app-layer--background::before,
+.app-layer--background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.app-layer--background::before {
   background-image:
     linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
@@ -83,36 +97,47 @@ body::before {
   opacity: 0.2;
 }
 
-body::after {
+.app-layer--background::after {
   background: radial-gradient(circle at center, transparent 35%, rgba(2, 6, 23, 0.8) 100%);
 }
 
-.app-shell {
-  position: relative;
+.app-layer--canvas {
   z-index: 1;
-  width: min(1500px, 100%);
-  display: grid;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 32px;
-  background: linear-gradient(145deg, rgba(8, 11, 25, 0.95), rgba(15, 23, 42, 0.7));
-  border: 1px solid var(--dq-frame-border);
-  box-shadow: var(--dq-panel-shadow);
-  height: calc(100vh - 36px);
-  max-height: calc(100vh - 36px);
-  overflow: hidden;
+  padding: calc(var(--dq-header-height) + var(--dq-shell-gap)) var(--dq-shell-gap)
+    var(--dq-shell-gap);
+  display: flex;
+  pointer-events: auto;
+}
+
+.app-layer--overlay {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.app-layer--overlay > * {
+  pointer-events: auto;
+}
+
+.wrapper-layer {
+  z-index: 3;
 }
 
 .command-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 20px;
   align-items: center;
-  padding: 16px 20px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  min-height: var(--dq-header-height);
+  padding: 16px 28px;
+  background: linear-gradient(135deg, rgba(10, 14, 32, 0.92), rgba(25, 33, 58, 0.85));
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
   box-shadow: inset 0 0 24px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(12px);
+  z-index: 3;
 }
 
 .command-bar__brand {
@@ -172,22 +197,26 @@ body::after {
 
 .app {
   display: grid;
-  gap: 18px;
   grid-template-columns: minmax(0, 1fr);
+  height: 100%;
   min-height: 0;
 }
 
 .layout-tabs {
-  grid-column: 1 / -1;
+  position: absolute;
+  top: calc(var(--dq-header-height) + var(--dq-shell-gap));
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
-  padding: 12px;
-  border-radius: 20px;
+  padding: 12px 16px;
+  border-radius: 999px;
   background: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(148, 163, 184, 0.3);
   box-shadow: inset 0 0 20px rgba(15, 23, 42, 0.4);
+  max-width: calc(100% - (2 * var(--dq-shell-gap)));
 }
 
 .layout-tab-button {
@@ -206,6 +235,26 @@ body::after {
   background: linear-gradient(135deg, #ff7b7b, #ffae4f);
   color: #1e0f24;
   box-shadow: var(--dq-glow);
+}
+
+@media (max-width: 900px) {
+  .layout-tabs {
+    left: var(--dq-shell-gap);
+    transform: none;
+    justify-content: flex-start;
+    border-radius: 20px;
+  }
+
+  .auth-panel {
+    left: var(--dq-shell-gap);
+    right: var(--dq-shell-gap);
+    width: auto;
+  }
+
+  .chat-panel--floating {
+    right: var(--dq-shell-gap);
+    width: auto;
+  }
 }
 
 [data-tab-panel] {
@@ -268,6 +317,14 @@ body::after {
   box-shadow: var(--dq-panel-shadow);
 }
 
+.panel--viewport {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 24px;
+}
+
 .panel::before {
   content: "";
   position: absolute;
@@ -286,7 +343,12 @@ body::after {
 }
 
 .auth-panel {
-  grid-column: 1 / -1;
+  position: absolute;
+  top: calc(var(--dq-header-height) + var(--dq-shell-gap));
+  right: var(--dq-shell-gap);
+  width: min(360px, calc(100vw - (2 * var(--dq-shell-gap))));
+  max-height: calc(100vh - var(--dq-header-height) - (2 * var(--dq-shell-gap)));
+  overflow: auto;
   backdrop-filter: blur(8px);
 }
 
@@ -742,6 +804,8 @@ body::after {
 .tab-overlay {
   position: relative;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   max-height: none;
   overflow: hidden;
   z-index: 1;
@@ -759,7 +823,7 @@ body::after {
 
 .map-game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(0, 2.6fr) minmax(280px, 1fr);
   gap: 16px;
   align-items: stretch;
   min-height: 0;
@@ -768,6 +832,7 @@ body::after {
 .map-game-main {
   display: grid;
   gap: 16px;
+  min-height: 0;
 }
 
 .map-utility-row {
@@ -780,6 +845,7 @@ body::after {
 .map-game-side {
   display: grid;
   gap: 16px;
+  min-height: 0;
 }
 
 .map-panel .world-panel {
@@ -945,6 +1011,15 @@ body::after {
   gap: 12px;
 }
 
+.chat-panel--floating {
+  position: absolute;
+  left: var(--dq-shell-gap);
+  bottom: var(--dq-shell-gap);
+  width: min(360px, calc(100vw - (2 * var(--dq-shell-gap))));
+  max-height: min(50vh, 420px);
+  backdrop-filter: blur(10px);
+}
+
 .chat-panel .panel-header {
   align-items: center;
 }
@@ -959,8 +1034,8 @@ body::after {
   background: rgba(10, 14, 32, 0.5);
   border-radius: 14px;
   padding: 12px;
-  min-height: 180px;
-  max-height: 320px;
+  min-height: 160px;
+  max-height: min(240px, 32vh);
   overflow-y: auto;
   border: 1px solid rgba(148, 163, 184, 0.25);
   box-shadow: inset 0 0 16px rgba(15, 23, 42, 0.35);
