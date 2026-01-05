@@ -1,6 +1,7 @@
 import { createItemRegistry } from "./systems/itemRegistry.js";
 import { initializeThemeEngine } from "./themeEngine.js";
 import { createCombatMeterPanel } from "./ui/combatMeterPanel.js";
+import { createCombatDockLayout } from "./ui/combatDockLayout.js";
 import { DEFAULT_ENGAGE_RANGE, resolveEngagementStatus } from "./ui/engagementRules.js";
 import { createFeedPanel } from "./ui/feedPanel.js";
 import { createMinimapPanel } from "./ui/minimapPanel.js";
@@ -45,6 +46,9 @@ const npcSelect = document.getElementById("npc-select");
 const npcDescription = document.getElementById("npc-description");
 const enemyName = document.getElementById("enemy-name");
 const battleScene = document.getElementById("battle-scene");
+const combatPanel = document.getElementById("tab-panel-combat");
+const combatDock = combatPanel?.querySelector("[data-combat-dock]") ?? null;
+const battleStage = combatPanel?.querySelector("[data-battle-stage]") ?? null;
 const battleParticles = document.getElementById("battle-particles");
 const battlePlayerSprite = document.getElementById("player-battle-sprite");
 const battleEnemySprite = document.getElementById("enemy-battle-sprite");
@@ -246,6 +250,12 @@ createGameWorldLayerStack({ container: gameWorldLayerStack });
 applyWorldMapPanelLayout({
   panel: worldMapPanel,
   surface: worldMapSurface
+});
+const combatDockLayout = createCombatDockLayout({
+  dock: combatDock,
+  panel: combatPanel,
+  stage: battleStage,
+  viewport: window
 });
 
 const minimapPanel = createMinimapPanel({
